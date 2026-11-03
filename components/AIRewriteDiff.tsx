@@ -2,6 +2,7 @@
 'use client';
 import { useState } from 'react';
 import type { Rewrite } from '@/lib/ai/schemas';
+import { hasClearLeadingDisclosure } from '@/lib/ai/disclosure';
 
 export function AIRewriteDiff({
   rewrite, verificationId,
@@ -10,8 +11,12 @@ export function AIRewriteDiff({
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
   async function accept() {
-    setSaving(true);
     setMessage('');
+    if (!hasClearLeadingDisclosure(caption)) {
+      setMessage('Vérifie que la mention « Publicité » ou « Collaboration commerciale » est visible dès le début si cette publication est sponsorisée.');
+      return;
+    }
+    setSaving(true);
     try {
       const response = await fetch('/api/rewrite/accept', {
         method: 'POST',
@@ -31,6 +36,7 @@ export function AIRewriteDiff({
     <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
       <h3 className="font-heading text-xl font-bold">Proposition de Mia</h3>
       <p className="mt-2 text-sm text-slate-600">Tu peux modifier le texte avant de l&apos;accepter.</p>
+      <p className="mt-2 text-sm text-slate-600">Cette proposition suppose une contrepartie commerciale : vérifie qu&apos;elle existe réellement. La mention doit rester immédiatement visible.</p>
       <textarea value={caption} onChange={(e) => setCaption(e.target.value)}
         className="mt-4 min-h-36 w-full rounded-xl border border-indigo-200 bg-white p-4" />
       {rewrite.changes.length > 0 && (

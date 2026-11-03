@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import { createAdminSupabase } from '@/lib/supabase/admin';
 import { requireUser, publicError } from '@/lib/security/auth';
+import { hasClearLeadingDisclosure, needsVisibleDisclosure } from '@/lib/ai/disclosure';
 
 const schema = z.object({
   verificationId: z.string().uuid(),
@@ -15,9 +16,19 @@ export async function POST(request: Request) {
     if (!data.success) return Response.json({ error: 'Texte invalide.' }, { status: 400 });
     const admin = createAdminSupabase();
     const { data: check, error } = await admin.from('verifications')
-      .select('content_text,prompt_version,status')
+      .select('content_text,prompt_version,status,ai_explanation')
       .eq('id', data.data.verificationId).eq('user_id', user.id).single();
     if (error || !check) return Response.json({ error: 'Vérification introuvable.' }, { status: 404 });
+    const explanation = check.ai_explanation as { violations?: Array<{ code?: string }> } | null;
+    const flags = explanation?.violations ?? [];
+    if (needsVisibleDisclosure(flags.filter((item): item is { code: string } =>
+      typeof item?.code === 'string')) &&
+      !hasClearLeadingDisclosure(data.data.caption)) {
+      // Règle produit de visibilité, non certification juridique.
+      return Response.json({
+        error: 'Pour une légende sponsorisée, place une mention explicite (« Publicité » ou « Collaboration commerciale ») au début avant de l’accepter.',
+      }, { status: 422, headers: { 'Cache-Control': 'no-store' } });
+    }
     if (check.status !== 'completed') return Response.json({
       error: 'Cette vérification est déjà finalisée.',
     }, { status: 409 });
