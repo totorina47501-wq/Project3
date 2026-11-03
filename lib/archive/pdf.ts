@@ -127,7 +127,9 @@ export async function buildArchivePdf(report: ArchivePdfData): Promise<Uint8Arra
   paragraph('L empreinte enregistree couvre les donnees canoniques de la verification, pas necessairement les octets originaux de chaque media. Aucune signature electronique qualifiee ou horodatage de confiance n est emis.');
   const pages = document.getPages();
   for (let i = 0; i < pages.length; i++) {
-    pages[i].drawText('MentionCheck - Rapport informatif - Page ' + (i + 1) + '/' + pages.length, {
+    const currentPage = pages[i];
+    if (!currentPage) continue;
+    currentPage.drawText('MentionCheck - Rapport informatif - Page ' + (i + 1) + '/' + pages.length, {
       x: margin, y: 29, font: regular, size: 9, color: rgb(0.45, 0.47, 0.53),
     });
   }
