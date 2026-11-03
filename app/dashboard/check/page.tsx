@@ -192,7 +192,15 @@ export default function CheckPage() {
             </section>
           )}
           {result.rewrite && <AIRewriteDiff rewrite={result.rewrite} verificationId={result.verificationId} />}
-          {result.score < 60 && !result.rewrite && <p className="rounded-lg bg-amber-50 p-3 text-amber-800">Aucune réécriture automatique disponible : vérifie ton quota.</p>}
+          {result.score < 60 && !result.rewrite && (
+            <p className="rounded-lg bg-amber-50 p-3 text-amber-800">
+              {result.analysisMode === 'rules_only'
+                ? 'Réécriture indisponible : Mia IA n’a pas pu analyser la publication.'
+                : result.analysisMode === 'partial'
+                  ? 'Réécriture indisponible : le service IA a rencontré une erreur.'
+                  : 'Aucune réécriture proposée : le quota de réécritures est peut-être atteint.'}
+            </p>
+          )}
         </div>
       )}
     </div>

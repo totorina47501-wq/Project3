@@ -1,6 +1,6 @@
 // Classification des erreurs IA sans journaliser les prompts, les clés ni la légende.
 export type AiFailureCategory =
-  | 'authentication' | 'permission' | 'credit' | 'rate_limit'
+  | 'missing_key' | 'authentication' | 'permission' | 'credit' | 'rate_limit'
   | 'request' | 'provider' | 'network' | 'unknown';
 type Details = { status?: unknown; code?: unknown; name?: unknown };
 export function classifyAiFailure(error: unknown): AiFailureCategory {
@@ -9,6 +9,7 @@ export function classifyAiFailure(error: unknown): AiFailureCategory {
   const status = typeof item.status === 'number' ? item.status : null;
   const code = typeof item.code === 'string' ? item.code : '';
   const name = typeof item.name === 'string' ? item.name : '';
+  if (name === 'MissingOpenAIKeyError') return 'missing_key';
   if (status === 401) return 'authentication';
   if (status === 403) return 'permission';
   if (/^(insufficient_quota|credit_balance_exhausted|organization_spend_limit_exceeded|project_spend_limit_exceeded|organization_usage_limit_exceeded|billing_hard_limit_reached)$/.test(code)) {

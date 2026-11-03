@@ -6,9 +6,17 @@ import type { ModelTelemetry } from '@/lib/ai/schemas';
 
 const MODEL = 'gpt-4o';
 
+// Erreur typée : diagnostic fiable sans lire ni journaliser la valeur de la clé.
+class MissingOpenAIKeyError extends Error {
+  constructor() {
+    super('OPENAI_API_KEY manquante.');
+    this.name = 'MissingOpenAIKeyError';
+  }
+}
+
 function client() {
   if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY manquante.');
+    throw new MissingOpenAIKeyError();
   }
   return new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
