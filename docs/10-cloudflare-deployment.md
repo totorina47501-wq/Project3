@@ -115,9 +115,9 @@ Le domaine `mentioncheck.fr` est un objectif de marque, **pas un nom de domaine 
 
 ## Dépannage — build « could not determine executable »
 
-Le dépôt GitHub a initialement seulement un README sur `main`. Les dépendances `@opennextjs/cloudflare` sont sur `feat/mentioncheck-bloc-1-fondations`. Dans Cloudflare Workers > projet > Settings > Build > Branch control, sélectionner cette branche puis relancer le build.
+Le dépôt GitHub avait initialement seulement un README sur `main`. Les dépendances `@opennextjs/cloudflare` sont sur `feat/mentioncheck-bloc-1-fondations`. Dans Cloudflare Workers > projet > Settings > Build > Branch control, sélectionner cette branche puis relancer le build.
 
-Le Worker Cloudflare visible dans la capture s'appelle `project3`, aussi le `name` dans `wrangler.jsonc` correspond désormais à `project3`. Si le Worker a été renommé après la capture, les noms doivent être à nouveau alignés.
+Le build Cloudflare du 3 novembre 2026 a confirmé que le Worker réel est `mentioncheck`, publié sur `https://mentioncheck.toto-rina47501.workers.dev`. `wrangler.jsonc` utilise donc `name: mentioncheck`, en cohérence avec le nom attendu par Cloudflare Workers Builds. La mention `project3` provenait du formulaire initial.
 
 Commandes recommandées dans Workers Builds :
 
@@ -131,3 +131,13 @@ npx wrangler preview
 ```
 
 Depuis Deployments > View Build History, menu `...` du build en échec > Retry build. Les opérations de base Supabase ne sont pas nécessaires pour afficher la landing initiale.
+
+## Confirmation de publication du 3 novembre 2026
+
+Le journal transmis indique : compilation Next.js réussie, bundle OpenNext créé, 26 assets téléversés, déploiement du Worker `mentioncheck` terminé sur `https://mentioncheck.toto-rina47501.workers.dev`. Les flags `workers_dev` et `preview_urls` sont explicités en configuration pour éviter les avertissements par défaut.
+
+La compilation publiée correspond à une **page d'accueil de fondation**, pas au SaaS complet. Aucune route métier, connexion Supabase ou moteur IA n'est encore validée.
+
+### Cache des dépendances Bun
+
+Cloudflare résout bien les 856 dépendances, mais n'enregistre pas de cache tant que le dépôt ne possède ni `bun.lock` ni `package-lock.json`. Lors d'une installation sur un environnement autorisant l'accès au registre npm, générer et versionner un lockfile (`npm install --package-lock-only` ou `bun install`) puis faire valider le build en CI. Ne jamais ajouter un lockfile fabriqué sans résolution réelle du graphe de dépendances.
