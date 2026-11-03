@@ -14,7 +14,7 @@ import { HttpError } from '@/lib/security/auth';
 type Input = {
   caption: string;
   platform: Platform;
-  mediaUrl?: string;
+  mediaUrl?: string | undefined;
   mediaType?: MediaType;
   userId: string;
 };
@@ -35,7 +35,7 @@ export async function validateMedia(userId: string, path: string) {
   const admin = createAdminSupabase();
   const bucket = admin.storage.from('verification-media');
   const { data: info, error } = await bucket.info(path);
-  if (error || !info || info.size > 8 * 1024 * 1024
+  if (error || !info || !info.size || info.size > 8 * 1024 * 1024
       || !['image/jpeg', 'image/png', 'image/webp'].includes(info.contentType || '')) {
     throw new HttpError(422, 'Image indisponible ou format non autorisé (8 Mo max).');
   }

@@ -11,9 +11,9 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  webServer: process.env.PLAYWRIGHT_BASE_URL ? undefined : {
+  ...(process.env.PLAYWRIGHT_BASE_URL ? {} : { webServer: {
     command: 'npm run dev',
     url: 'http://127.0.0.1:3000',
     reuseExistingServer: !process.env.CI,
-  },
+  } }),
 });
