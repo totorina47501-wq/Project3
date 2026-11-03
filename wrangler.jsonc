@@ -1,0 +1,31 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "mentioncheck",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-11-03",
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "ratelimits": [
+    {
+      "name": "API_SOLO_LIMITER",
+      "namespace_id": "11001",
+      "simple": {
+        "limit": 30,
+        "period": 60
+      }
+    },
+    {
+      "name": "API_PAID_LIMITER",
+      "namespace_id": "11002",
+      "simple": {
+        "limit": 120,
+        "period": 60
+      }
+    }
+  ]
+}

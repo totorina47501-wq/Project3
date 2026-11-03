@@ -16,6 +16,19 @@ npm run dev
 
 Visiter http://localhost:3000.
 
+## Hébergement Cloudflare
+
+Le projet est configuré pour **Cloudflare Workers + OpenNext**, sans Vercel ni Upstash. Les comptes Supabase, OpenAI, Stripe et Resend seront créés et connectés au fur et à mesure. 
+
+```bash
+npm install
+npm run preview:cloudflare
+# Déploiement après vérification :
+npm run deploy:cloudflare
+```
+
+Voir [le guide de déploiement Cloudflare](docs/10-cloudflare-deployment.md). Aucun déploiement n'a encore été exécuté.
+
 ## Références
 
 - [Bloc 1 — architecture technique](docs/01-architecture.md)

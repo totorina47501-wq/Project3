@@ -10,3 +10,11 @@ test-results
 !.env.example
 .DS_Store
 npm-debug.log*
+
+# Fichiers générés par OpenNext et Wrangler
+.open-next
+.wrangler
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+cloudflare-env.d.ts

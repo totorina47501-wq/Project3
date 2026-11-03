@@ -17,7 +17,7 @@ Référence : https://github.com/vercel/next.js/security/advisories/GHSA-2464-fh
                              |
                         HTTPS / WAF
                              |
-                   VERCEL (NEXT.JS)
+                   CLOUDFLARE WORKERS (NEXT.JS)
           +------------------+------------------+
           |                                     |
       APP ROUTER                          API ROUTES
@@ -52,7 +52,7 @@ Référence : https://github.com/vercel/next.js/security/advisories/GHSA-2464-fh
                 SUPABASE POSTGRES + RLS
                AUTH / STORAGE / PGVECTOR
                              |
-            STRIPE / RESEND / UPSTASH REDIS
+            STRIPE / RESEND / CLOUDFLARE KV
 ```
 
 ## Flux IA en six étapes
@@ -78,14 +78,14 @@ Référence : https://github.com/vercel/next.js/security/advisories/GHSA-2464-fh
 
 ## Services, environnements et droits
 
-- **Web** : Vercel, runtime Node.js, Route Handlers App Router, rendu serveur par défaut, client components isolés.
-- **Worker vidéo** : conteneur Docker + FFmpeg/ffprobe, QStash signé, invocation par job non exposée aux utilisateurs ; aucune URL arbitraire depuis le navigateur n'est ouverte côté serveur.
+- **Web** : Cloudflare Workers + OpenNext, compatibilité Node.js, Route Handlers App Router, rendu serveur par défaut, client components isolés.
+- **Worker vidéo** : traitement isolé Cloudflare Queues + Containers/FFmpeg (à implémenter selon le plan Cloudflare), aucun exécutable FFmpeg natif dans un Worker Next.js ; aucune URL arbitraire depuis le navigateur n'est ouverte côté serveur.
 - **Données** : Supabase Auth (mots de passe uniquement dans `auth.users`), Postgres `public` RLS, Storage privé, pgvector.
-- **Secrets** : variables serveur côté Vercel et worker, Supabase Vault pour les tokens sociaux ; interdiction d'exposer `service_role` au navigateur.
+- **Secrets** : Cloudflare Workers Secrets et variables de build, Supabase Vault pour les tokens sociaux ; interdiction d'exposer `service_role` au navigateur.
 - **IA** : `gpt-4o` texte et vision, `whisper-1` transcription, `text-embedding-3-small` (1536 dimensions) pour RAG ; versionner les prompts et le score.
 - **Paiements** : Stripe Checkout/Billing et webhooks vérifiés par signature, accès tarifaires dérivés de l'état serveur.
 - **Emails** : Resend, alertes de quotas, rapports et événements d'abonnement.
-- **Coûts** : Upstash cache 30 jours sur SHA de médias et version de prompt, limitation par utilisateur/plan, budgets mensuels et fair-use.
+- **Coûts** : Cloudflare KV pour cache IA de 30 jours sur hash de médias et version de prompt ; rate limiting Cloudflare local et quotas mensuels transactionnels dans Supabase, budgets et fair-use.
 - **Isolation** : jamais accepter `userId` comme preuve d'identité ; lignes protégées RLS ; accès Studio par membership explicite.
 - **RGPD** : consentement distinct/retirable pour l'entraînement, minimisation des médias, suppression planifiée, journal des accès et des préférences.
 - **Transparence** : les données légales versées dans le RAG viennent de sources officielles versionnées ; toute réponse Mia renvoie les références juridiques.
@@ -223,6 +223,8 @@ mentioncheck/
 │   ├── 07-integrations.md
 │   ├── 08-security.md
 │   └── 09-deployment.md
+├── wrangler.jsonc
+├── open-next.config.ts
 ├── middleware.ts
 ├── next.config.mjs
 ├── next-env.d.ts
@@ -254,9 +256,6 @@ mentioncheck/
 - `@radix-ui/react-tooltip@1.2.16`
 - `@supabase/ssr@0.12.7`
 - `@supabase/supabase-js@2.118.0`
-- `@upstash/qstash@2.12.1`
-- `@upstash/ratelimit@2.2.0`
-- `@upstash/redis@1.41.0`
 - `class-variance-authority@0.7.1`
 - `clsx@2.1.1`
 - `date-fns@4.4.0`
@@ -279,7 +278,9 @@ mentioncheck/
 - `tailwind-merge@2.6.1`
 - `zod@4.6.7`
 
-**Développement et tests :**  
+**Développement et tests (ajouts Cloudflare) :**
+- `@opennextjs/cloudflare@1.20.15`
+- `wrangler@4.156.2`  
 - `@playwright/test@1.64.1`
 - `@types/node@24.19.2`
 - `@types/react@19.3.0`
@@ -305,3 +306,7 @@ npm run build
 ```
 
 Les services Supabase/OpenAI/Stripe/Resend/Upstash demandent des comptes et clés externes. Le bloc 1 ne comporte ni schéma SQL, ni moteur de vérification, ni déploiement effectif. Le test du registre npm n'a pas été possible dans l'environnement de génération ; ne pas interpréter les versions déclarées comme une preuve de compilation.
+
+## Mise à jour Cloudflare — 03 novembre 2026
+
+Cloudflare est l'hébergeur réel visé : **aucun compte Vercel ou Upstash n'est nécessaire**. Les services Supabase/OpenAI/Stripe/Resend sont des SaaS managés et seront activés uniquement lorsqu'ils auront des identifiants. Lire `docs/10-cloudflare-deployment.md` pour les commandes concrètes et les limites vidéo.
