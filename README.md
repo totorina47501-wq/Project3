@@ -1,50 +1,41 @@
 # MentionCheck
 
-**MentionCheckIA** — **MentionCheck**  
+**MentionCheckIA — MentionCheck**  
 *L'IA qui check vos mentions légales avant publication.*
 
-SaaS français d'analyse et de correction de la transparence des partenariats commerciaux pour créateurs, freelances UGC et agences.
+SaaS français d'analyse de publications sponsorisées pour créateurs et agences.
 
-## Démarrage
+## Stack
 
-Prérequis : Node.js 22 LTS ou 24 LTS, npm, puis :
+Cloudflare Workers + Next.js App Router + TypeScript strict + Supabase Auth/PostgreSQL/Storage + GPT-4o + OpenNext.
 
-```bash
-npm install
-npm run dev
-```
+## Développement
 
-Visiter http://localhost:3000.
+Commandes : npm install, npm run dev, npm run lint, npm run typecheck, npm run test, npm run build, npm run preview:cloudflare.
 
-## Hébergement Cloudflare
+Le dépôt ne dispose pas encore de lockfile enregistré. La CI utilise Bun avec les versions exactes du package.json.
 
-Le projet est configuré pour **Cloudflare Workers + OpenNext**, sans Vercel ni Upstash. Les comptes Supabase, OpenAI, Stripe et Resend seront créés et connectés au fur et à mesure. 
+## Fonctionnalités développées dans la branche
 
-```bash
-npm install
-npm run preview:cloudflare
-# Déploiement après vérification :
-npm run deploy:cloudflare
-```
+- Landing responsive, inscription et connexion Supabase Auth.
+- Tableau de bord et historique des vérifications.
+- Analyse texte et image, scores et détection des mentions ambiguës.
+- SSE, réécriture sous quota et confirmation explicite.
+- Journalisation des analyses et de leurs coûts estimés.
+- Limitation de débit Cloudflare et quotas transactionnels Supabase.
 
-Voir [le guide de déploiement Cloudflare](docs/10-cloudflare-deployment.md). Aucun déploiement n'a encore été exécuté.
+**Le SaaS n'est pas encore intégralement prêt à commercialiser.** Vidéo, carrousel, chat Mia RAG, Stripe, Resend, export PDF, documents RGPD et intégrations sociales restent à développer et tester.
 
-## Références
+## Documentation
 
-- [Bloc 1 — architecture technique](docs/01-architecture.md)
-- Bloc 2 : base de données Supabase / RLS.
-- Bloc 3 : moteur IA multimodal.
-- Bloc 4 : interfaces publiques et privées.
-- Bloc 5 : marque et documents juridiques.
-- Bloc 6 : API et abonnements.
-- Bloc 7 : intégrations externes.
-- Bloc 8 : sécurité et coûts IA.
-- Bloc 9 : déploiement et lancement.
+- Architecture : docs/01-architecture.md
+- Base SQL : docs/02-database.md
+- IA : docs/03-ai.md
+- Déploiement : docs/10-cloudflare-deployment.md
+- Connexion Supabase + Cloudflare : docs/11-supabase-cloudflare-setup.md
 
-## Sécurité
+## Environnements
 
-Le repo ne doit pas contenir de clés privées. Les identifiants sont exclusivement transmis par variables d'environnement serveur. Le socle utilise Next.js 15.5.28, choisi à la place de Next.js 14 pour bénéficier des correctifs de sécurité.
+Le Worker de fondation a été publié sur https://mentioncheck.toto-rina47501.workers.dev ; cela ne valide pas encore les nouvelles routes privées.
 
-## État
-
-Socle de projet en cours de construction, **non prêt pour la production**. Voir l'arborescence cible dans le bloc 1.
+Créer et connecter Supabase, appliquer les migrations, ajouter les variables Cloudflare puis effectuer les tests d'accès. Aucune clé ne doit être poussée sur GitHub.

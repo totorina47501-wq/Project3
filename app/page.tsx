@@ -1,3 +1,4 @@
+// Chemin : app/page.tsx
 import Link from 'next/link';
 import { BRAND } from '@/lib/branding';
 
@@ -12,11 +13,15 @@ export default function Home() {
             </span>
             {BRAND.publicName}
           </Link>
-          <a href="#fonctionnement" className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold hover:bg-white">
-            Comment ça marche
-          </a>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/login" className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold hover:bg-white">
+              Connexion
+            </Link>
+            <Link href="/register" className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">
+              Créer un compte
+            </Link>
+          </div>
         </header>
-
         <section className="mx-auto flex max-w-4xl flex-col items-center py-24 text-center sm:py-32">
           <span className="rounded-full border border-indigo-200 bg-indigo-50 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-accent">
             Conçu pour les créateurs français
@@ -25,22 +30,21 @@ export default function Home() {
             L&apos;IA qui check vos mentions légales <span className="text-accent">avant publication.</span>
           </h1>
           <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-600">
-            Un copilote IA pour repérer les mentions manquantes, proposer des corrections
-            et archiver les collaborations. Votre style reste le vôtre.
+            Mia analyse vos légendes et images, explique les risques de transparence
+            commerciale et propose une réécriture qui respecte votre style.
           </p>
-          <a href="#fonctionnement" className="mt-10 rounded-2xl bg-accent px-7 py-4 font-bold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700">
-            Découvrir MentionCheck
-          </a>
+          <Link href="/register" className="mt-10 rounded-2xl bg-accent px-7 py-4 font-bold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700">
+            Check ma publication
+          </Link>
           <p className="mt-5 text-sm text-slate-500">
-            Mia : votre assistante IA pour les partenariats commerciaux.
+            Une aide à la relecture, pas une certification juridique automatique.
           </p>
         </section>
-
         <section id="fonctionnement" className="grid gap-5 pb-20 md:grid-cols-3">
           {[
-            { title: 'Mention', text: 'Repérez les informations commerciales qui doivent être clairement signalées.' },
-            { title: 'Check', text: 'Analysez votre texte et vos visuels avec un contrôle explicable.' },
-            { title: 'IA', text: 'Obtenez une proposition de réécriture fidèle à votre voix.' },
+            { title: 'Mention', text: 'Repérez les indications commerciales qui doivent être clairement signalées.' },
+            { title: 'Check', text: 'Analysez une légende et son visuel, et consultez un score explicable.' },
+            { title: 'IA', text: 'Mia vous propose une réécriture fidèle à votre voix, sous votre contrôle.' },
           ].map(({ title, text }) => (
             <article key={title} className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
               <h2 className="font-heading text-2xl font-bold text-primary">{title}</h2>

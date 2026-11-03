@@ -1,0 +1,85 @@
+// Chemin : components/AuthForm.tsx
+'use client';
+
+import { FormEvent, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const isLogin = mode === 'login';
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError('');
+    setMessage('');
+    setLoading(true);
+    try {
+      const response = await fetch('/api/auth/' + mode, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await response.json() as { ok?: boolean; error?: string; message?: string };
+      if (!response.ok) throw new Error(data.error ?? 'Opération impossible.');
+      if (isLogin) {
+        router.push('/dashboard');
+        router.refresh();
+      } else {
+        setMessage(data.message ?? 'Vérifie tes emails pour activer le compte.');
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Opération impossible.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-5 py-12">
+      <section className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
+        <Link href="/" className="font-heading text-xl font-bold text-primary">✓ MentionCheck</Link>
+        <h1 className="mt-8 font-heading text-3xl font-bold">
+          {isLogin ? 'Content de te retrouver !' : 'Rejoins MentionCheck'}
+        </h1>
+        <p className="mt-2 text-slate-600">
+          {isLogin ? 'Connecte-toi pour checker une publication.' : 'Crée ton compte pour découvrir Mia.'}
+        </p>
+        <form onSubmit={submit} className="mt-7 space-y-5">
+          <label className="block text-sm font-semibold">
+            Adresse email
+            <input type="email" required autoComplete="email" value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-accent"
+              placeholder="toi@exemple.fr" />
+          </label>
+          <label className="block text-sm font-semibold">
+            Mot de passe
+            <input type="password" required minLength={isLogin ? 8 : 10}
+              autoComplete={isLogin ? 'current-password' : 'new-password'}
+              value={password} onChange={(e) => setPassword(e.target.value)}
+              className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-accent" />
+          </label>
+          {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+          {message && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{message}</p>}
+          <button disabled={loading} type="submit"
+            className="w-full rounded-xl bg-accent px-5 py-3 font-bold text-white hover:bg-indigo-700 disabled:opacity-50">
+            {loading ? 'Connexion en cours…' : isLogin ? 'Se connecter' : "Créer mon compte"}
+          </button>
+        </form>
+        <p className="mt-7 text-center text-sm text-slate-600">
+          {isLogin ? 'Pas encore de compte ? ' : 'Déjà inscrit ? '}
+          <Link className="font-semibold text-accent underline" href={isLogin ? '/register' : '/login'}>
+            {isLogin ? 'Inscris-toi' : 'Connecte-toi'}
+          </Link>
+        </p>
+      </section>
+    </main>
+  );
+}

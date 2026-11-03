@@ -1,0 +1,187 @@
+// Chemin : app/dashboard/check/page.tsx
+'use client';
+
+import { FormEvent, useState } from 'react';
+import { createBrowserSupabase } from '@/lib/supabase/browser';
+import { ComplianceScore } from '@/components/ComplianceScore';
+import { ViolationList } from '@/components/ViolationList';
+import { AIRewriteDiff } from '@/components/AIRewriteDiff';
+import { AIStreamProgress, type Stage, type StageStatus } from '@/components/AIStreamProgress';
+import type { AnalysisResult, Platform } from '@/lib/ai/schemas';
+
+type StreamData = { status?: StageStatus; score?: number; message?: string };
+const platformNames: { value: Platform; name: string }[] = [
+  { value: 'instagram', name: 'Instagram' },
+  { value: 'tiktok', name: 'TikTok' },
+  { value: 'youtube', name: 'YouTube' },
+  { value: 'linkedin', name: 'LinkedIn' },
+];
+
+async function uploadImage(file: File) {
+  const accepted = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!accepted.includes(file.type) || file.size > 8 * 1024 * 1024) {
+    throw new Error('Choisis une image JPEG, PNG ou WebP de moins de 8 Mo.');
+  }
+  // Réduire le visuel côté navigateur avant l'envoi (1024 px maximum).
+  const bitmap = await createImageBitmap(file);
+  let prepared: File;
+  try {
+    const scale = Math.min(1, 1024 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Compression image impossible.');
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob((value) => value ? resolve(value) : reject(new Error('Conversion impossible.')),
+        'image/webp', 0.86));
+    prepared = new File([blob], 'publication.webp', { type: 'image/webp' });
+  } finally {
+    bitmap.close();
+  }
+  const response = await fetch('/api/media/upload-url', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mime: prepared.type, size: prepared.size }),
+  });
+  const data = await response.json() as { path?: string; token?: string; error?: string };
+  if (!response.ok || !data.path || !data.token) {
+    throw new Error(data.error ?? 'Impossible de préparer le média.');
+  }
+  const { error } = await createBrowserSupabase()
+    .storage.from('verification-media')
+    .uploadToSignedUrl(data.path, data.token, prepared, { contentType: prepared.type });
+  if (error) throw new Error('Impossible de transférer le média privé.');
+  return data.path;
+}
+
+export default function CheckPage() {
+  const [caption, setCaption] = useState('');
+  const [platform, setPlatform] = useState<Platform>('instagram');
+  const [image, setImage] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [stages, setStages] = useState<Partial<Record<Stage, StageStatus>>>({});
+  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [error, setError] = useState('');
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setStages({});
+    setResult(null);
+    setError('');
+    try {
+      const path = image ? await uploadImage(image) : undefined;
+      const response = await fetch('/api/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          caption, platform, mediaUrl: path, mediaType: path ? 'image' : 'none',
+        }),
+      });
+      if (!response.ok) {
+        const data = await response.json() as { error?: string };
+        throw new Error(data.error ?? 'La vérification est indisponible.');
+      }
+      if (!response.body) throw new Error('Le flux de vérification est indisponible.');
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let receivedDone = false;
+      while (true) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        buffer += decoder.decode(chunk.value, { stream: true });
+        const blocks = buffer.split('\n\n');
+        buffer = blocks.pop() ?? '';
+        for (const block of blocks) {
+          const kind = block.match(/^event: (.+)$/m)?.[1];
+          const payload = block.match(/^data: (.+)$/m)?.[1];
+          if (!kind || !payload) continue;
+          const data = JSON.parse(payload) as StreamData & AnalysisResult;
+          if (['scan_text', 'scan_visual', 'scoring', 'rewriting'].includes(kind)) {
+            const stage = kind as Stage;
+            setStages((previous) => ({
+              ...previous, [stage]: data.status ?? 'complete',
+            }));
+          }
+          if (kind === 'error') throw new Error(data.message ?? 'Échec de l analyse.');
+          if (kind === 'done') {
+            receivedDone = true;
+            setResult(data);
+          }
+        }
+      }
+      if (!receivedDone) throw new Error('Le flux a été interrompu avant la fin du check.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Une erreur est survenue.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-7">
+      <div>
+        <p className="text-sm font-bold uppercase tracking-widest text-accent">Avec Mia</p>
+        <h1 className="mt-2 font-heading text-4xl font-bold text-primary">Check ma publication</h1>
+        <p className="mt-3 text-slate-600">Colle une légende et, si tu veux, ajoute une image. Mia repère les signaux à corriger avant publication.</p>
+      </div>
+      <form onSubmit={submit} className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <label className="block font-semibold">
+          Plateforme
+          <select value={platform} onChange={(event) => setPlatform(event.target.value as Platform)}
+            className="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-4 py-3">
+            {platformNames.map((item) => <option key={item.value} value={item.value}>{item.name}</option>)}
+          </select>
+        </label>
+        <label className="block font-semibold">
+          Légende sponsorisée
+          <textarea required minLength={1} maxLength={10000} value={caption}
+            onChange={(event) => setCaption(event.target.value)}
+            placeholder="Voici mon dernier produit préféré…"
+            className="mt-2 block min-h-48 w-full rounded-xl border border-slate-300 p-4 font-normal outline-none focus:border-accent" />
+        </label>
+        <label className="block font-semibold">
+          Visuel (facultatif)
+          <input type="file" accept="image/jpeg,image/png,image/webp"
+            onChange={(event) => setImage(event.target.files?.[0] ?? null)}
+            className="mt-2 block w-full text-sm font-normal text-slate-600" />
+          <span className="mt-2 block text-xs font-normal text-slate-500">
+            JPEG, PNG ou WebP, 8 Mo max. Les vidéos et carrousels arrivent prochainement.
+          </span>
+        </label>
+        <button disabled={loading || !caption.trim()} type="submit"
+          className="w-full rounded-xl bg-accent px-6 py-3.5 font-bold text-white shadow-md hover:bg-indigo-700 disabled:opacity-50">
+          {loading ? 'Mia analyse…' : 'Check ma publication'}
+        </button>
+      </form>
+      <AIStreamProgress stages={stages} />
+      {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{error}</p>}
+      {result && (
+        <div className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6">
+          <h2 className="font-heading text-2xl font-bold">
+            {result.score >= 80 ? "✅ C'est carré. Mia valide." :
+              '⚠️ Aïe. Mia a repéré des problèmes. On les corrige ?'}
+          </h2>
+          <ComplianceScore score={result.score} />
+          <ViolationList violations={result.violations} />
+          {result.aiFlags.length > 0 && (
+            <section>
+              <h3 className="font-heading text-lg font-bold">Observations complémentaires de Mia</h3>
+              <ul className="mt-3 space-y-2">
+                {result.aiFlags.map((flag, index) => (
+                  <li key={index} className="rounded-lg bg-slate-50 p-3 text-sm">
+                    <strong>{flag.title}</strong> — {flag.explanation}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {result.rewrite && <AIRewriteDiff rewrite={result.rewrite} verificationId={result.verificationId} />}
+          {result.score < 60 && !result.rewrite && <p className="rounded-lg bg-amber-50 p-3 text-amber-800">Aucune réécriture automatique disponible : vérifie ton quota.</p>}
+        </div>
+      )}
+    </div>
+  );
+}

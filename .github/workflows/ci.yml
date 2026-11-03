@@ -1,0 +1,27 @@
+# Chemin : .github/workflows/ci.yml
+name: MentionCheck CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, feat/mentioncheck-bloc-1-fondations]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: Installer les dépendances
+        run: bun install
+      - name: Vérification TypeScript
+        run: bun run typecheck
+      - name: Lint
+        run: bun run lint
+      - name: Tests unitaires
+        run: bun run test
+      - name: Compilation Next.js
+        run: bun run build
