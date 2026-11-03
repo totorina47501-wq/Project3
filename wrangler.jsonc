@@ -27,5 +27,8 @@
         "period": 60
       }
     }
+  ],
+  "compatibility_flags": [
+    "nodejs_compat"
   ]
 }
