@@ -38,6 +38,16 @@ export default async function DashboardPage() {
           <strong className="mt-3 block text-5xl text-primary">{checks?.length ?? 0}</strong>
         </article>
       </div>
+      <section aria-label="Outils MentionCheck" className="grid gap-4 sm:grid-cols-2">
+        <Link href="/dashboard/mia" className="rounded-2xl border border-indigo-200 bg-indigo-50 p-6 hover:border-indigo-400">
+          <h2 className="font-heading text-xl font-bold text-primary">Parler avec Mia</h2>
+          <p className="mt-2 text-sm text-slate-700">Questions sur les mentions et les règles juridiques référencées.</p>
+        </Link>
+        <Link href="/dashboard/archive" className="rounded-2xl border border-slate-200 bg-white p-6 hover:border-indigo-400">
+          <h2 className="font-heading text-xl font-bold text-primary">Mes archives</h2>
+          <p className="mt-2 text-sm text-slate-700">Retrouver tes contrôles et exporter un rapport PDF informatif.</p>
+        </Link>
+      </section>
       <section className="rounded-2xl border border-slate-200 bg-white p-7">
         <h2 className="font-heading text-xl font-bold">Derniers checks</h2>
         {checks?.length ? (

@@ -21,16 +21,19 @@ Le dépôt ne dispose pas encore de lockfile enregistré. La CI utilise Bun avec
 - Tableau de bord et historique des vérifications.
 - Analyse texte et image, scores et détection des mentions ambiguës.
 - SSE, réécriture sous quota et confirmation explicite.
+- Mia conversationnelle avec sources juridiques référencées, historique privé et quotas.
+- Archives paginées, détail des vérifications et export PDF informatif privé.
 - Journalisation des analyses et de leurs coûts estimés.
 - Limitation de débit Cloudflare et quotas transactionnels Supabase.
 
-**Le SaaS n'est pas encore intégralement prêt à commercialiser.** Vidéo, carrousel, chat Mia RAG, Stripe, Resend, export PDF, documents RGPD et intégrations sociales restent à développer et tester.
+**Le SaaS n'est pas encore intégralement prêt à commercialiser.** Vidéo, carrousel, Stripe, Resend, documents RGPD, signature probante, tests E2E authentifiés de production et intégrations sociales restent à développer. Le chat Mia utilise cinq synthèses juridiques via recherche documentaire; l'indexation vectorielle est toujours à initialiser.
 
 ## Documentation
 
 - Architecture : docs/01-architecture.md
 - Base SQL : docs/02-database.md
 - IA : docs/03-ai.md
+- Mia, archives, PDF et tests : docs/04-mia-archives.md
 - Déploiement : docs/10-cloudflare-deployment.md
 - Connexion Supabase + Cloudflare : docs/11-supabase-cloudflare-setup.md
 

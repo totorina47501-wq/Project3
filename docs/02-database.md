@@ -89,3 +89,8 @@ Après avoir appliqué les migrations + le seed, exécuter `tests/sql/security_s
 - Bloc 6 : webhooks Stripe, contrôles atomiques de quotas côté API et vérifications des autorisations.
 - Bloc 7 : ingestion réelle du corpus officiel, embeddings et versionnage documentaire.
 - Bloc 8 : politiques de conservation des données et purge des objets externes.
+
+
+## Actualisation 2026-11-04
+
+Migration 202611042001_mia_quota_and_append.sql exécutée sur Supabase. Quotas Mia mensuels : Solo 20 / Pro 300 / Studio 1500, consommation atomique et remboursement. La fonction append_mia_exchange ajoute deux messages de façon transactionnelle, propriété contrôlée par user_id. Les fonctions sont strictement réservées au service_role et interdites au rôle authenticated. Le corpus juridique contient 5 synthèses et 0 embeddings : la recherche est donc lexicale, pas encore pgvector.

@@ -310,3 +310,8 @@ Les services Supabase/OpenAI/Stripe/Resend/Upstash demandent des comptes et clé
 ## Mise à jour Cloudflare — 03 novembre 2026
 
 Cloudflare est l'hébergeur réel visé : **aucun compte Vercel ou Upstash n'est nécessaire**. Les services Supabase/OpenAI/Stripe/Resend sont des SaaS managés et seront activés uniquement lorsqu'ils auront des identifiants. Lire `docs/10-cloudflare-deployment.md` pour les commandes concrètes et les limites vidéo.
+
+
+## Actualisation 2026-11-04
+
+L'architecture ancienne dans ce document est une cible et ne prouve pas les fonctionnalités développées. Limiteur opérationnel : Cloudflare Workers, pas Upstash. Nouveaux parcours /dashboard/mia et /dashboard/archive décrits dans docs/04-mia-archives.md. La recherche pgvector active, la vidéo et la signature probante ne sont pas encore disponibles.

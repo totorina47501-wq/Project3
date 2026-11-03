@@ -23,6 +23,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <div className="flex flex-wrap items-center gap-2 sm:gap-5">
             <Link href="/dashboard" className="text-sm font-semibold hover:text-accent">Tableau de bord</Link>
             <Link href="/dashboard/check" className="text-sm font-semibold hover:text-accent">Check ma publication</Link>
+            <Link href="/dashboard/mia" className="text-sm font-semibold hover:text-accent">Parler à Mia</Link>
+            <Link href="/dashboard/archive" className="text-sm font-semibold hover:text-accent">Archives</Link>
             <LogoutButton />
           </div>
         </nav>
