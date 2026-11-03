@@ -41,7 +41,7 @@ export default async function ArchiveDetail({
           <p className="mt-2 text-xl font-bold">{checkLabel(item.status,item.ai_score)}</p>
         </article>
         <article className="rounded-2xl border bg-white p-5">
-          <p className="text-sm text-slate-500">Mode d'analyse</p>
+          <p className="text-sm text-slate-500">Mode d&apos;analyse</p>
           <p className="mt-2 text-xl font-bold">{mode}</p>
         </article>
       </div>
@@ -63,7 +63,7 @@ export default async function ArchiveDetail({
               <p className="mt-1 text-xs text-slate-500">{finding.source}</p>
             </li>)}</ul>}
         <p className="mt-4 text-xs text-slate-500">
-          Ce contrôle n'est pas une certification juridique. Version : {item.prompt_version}.
+          Ce contrôle n&apos;est pas une certification juridique. Version : {item.prompt_version}.
         </p>
       </section>
       <section className="rounded-2xl border bg-white p-6">
@@ -71,7 +71,7 @@ export default async function ArchiveDetail({
         <p className="mt-2 break-all font-mono text-xs">{item.hash_sha256 ?? 'Non disponible'}</p>
         <p className="mt-2 text-xs text-slate-500">
           SHA-256 des données canoniques du contrôle. Aucune signature qualifiée ni
-          horodatage tiers n'est inclus.
+          horodatage tiers n&apos;est inclus.
         </p>
       </section>
       <div className="flex flex-wrap gap-3">
