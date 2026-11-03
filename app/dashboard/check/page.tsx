@@ -164,6 +164,19 @@ export default function CheckPage() {
             {result.score >= 80 ? "✅ C'est carré. Mia valide." :
               '⚠️ Aïe. Mia a repéré des problèmes. On les corrige ?'}
           </h2>
+          {result.analysisMode !== 'full' && (
+            <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
+              <p className="font-bold">{result.analysisMode === 'rules_only'
+                ? 'Contrôle limité aux règles : Mia IA indisponible'
+                : 'Analyse partielle : une fonction IA est indisponible'}</p>
+              <p className="mt-2 text-sm">
+                Le score ci-dessous est provisoire, pas une validation juridique.
+                Une absence de signalement ne garantit pas la conformité.
+              </p>
+              {result.warnings.map((warning, index) =>
+                <p key={index} className="mt-1 text-sm">{warning}</p>)}
+            </div>
+          )}
           <ComplianceScore score={result.score} />
           <ViolationList violations={result.violations} />
           {result.aiFlags.length > 0 && (

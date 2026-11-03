@@ -10,6 +10,7 @@ import type {
   AnalysisResult, MediaType, Platform, Violation, ModelTelemetry,
 } from '@/lib/ai/schemas';
 import { HttpError } from '@/lib/security/auth';
+import { reportAiFailure } from '@/lib/ai/failure';
 
 type Input = {
   caption: string;
@@ -94,6 +95,7 @@ export async function runCheck(input: Input, emit: Emit = () => {}): Promise<Ana
     emit('scan_text', { status: 'running' });
     if (signedUrl) emit('scan_visual', { status: 'running' });
 
+    // Les contrôles déterministes restent disponibles si le fournisseur IA échoue.
     const textTask = analyzeText(input.caption, input.platform)
       .then((result) => {
         emit('scan_text', { status: 'complete' });
@@ -106,23 +108,38 @@ export async function runCheck(input: Input, emit: Emit = () => {}): Promise<Ana
       })
       : Promise.resolve(null);
 
-    const [text, visual] = await Promise.all([textTask, visualTask]);
-
-    await recordUsage(verificationId, 'text', text.usage,
-      { flags: text.aiFlags.length, violations: text.ruleViolations.length });
-
+    const [textOutcome, visualOutcome] = await Promise.allSettled([textTask, visualTask]);
+    const text = textOutcome.status === 'fulfilled' ? textOutcome.value : null;
+    const visual = visualOutcome.status === 'fulfilled' ? visualOutcome.value : null;
+    let analysisMode: AnalysisResult['analysisMode'] = 'full';
+    const warnings: string[] = [];
+    if (textOutcome.status === 'rejected') {
+      reportAiFailure('text', textOutcome.reason);
+      analysisMode = 'rules_only';
+      warnings.push('Le service IA est indisponible : seuls les contrôles automatisés des mentions ont été effectués.');
+      emit('scan_text', { status: 'unavailable' });
+    }
+    if (signedUrl && visualOutcome.status === 'rejected') {
+      reportAiFailure('vision', visualOutcome.reason);
+      if (analysisMode !== 'rules_only') analysisMode = 'partial';
+      warnings.push("L'analyse du visuel est momentanément indisponible.");
+      emit('scan_visual', { status: 'unavailable' });
+    }
+    if (text) {
+      await recordUsage(verificationId, 'text', text.usage,
+        { flags: text.aiFlags.length, violations: text.ruleViolations.length });
+    }
     if (visual) {
       await recordUsage(verificationId, 'vision', visual.usage,
         { hasBrandLogo: visual.hasBrandLogo, hasPromoCode: visual.hasPromoCode });
     }
     const violations: Violation[] = applyRules(input.caption, input.platform);
-    const aiFlags = [...text.aiFlags];
-
-    // Un logo déclenche une vérification humaine, pas une accusation automatique.
+    const aiFlags = text ? [...text.aiFlags] : [];
+    // Un logo est une observation, pas une preuve de contrepartie.
     if (visual?.hasBrandLogo) {
       aiFlags.push({
         title: 'Marque détectée dans le visuel',
-        explanation: 'Vérifie que la relation commerciale est bien expliquée dans la légende si une contrepartie existe.',
+        explanation: 'Vérifie la transparence si une contrepartie commerciale existe.',
         confidence: visual.confidence,
       });
     }
@@ -136,7 +153,7 @@ export async function runCheck(input: Input, emit: Emit = () => {}): Promise<Ana
     emit('scoring', { status: 'complete', score, riskLevel });
 
     let rewrite: AnalysisResult['rewrite'] = null;
-    if (score < 60) {
+    if (score < 60 && text) {
       // La génération automatique consomme le quota de réécritures du plan.
       const { data: allowed, error: quotaError } = await admin.rpc('consume_usage_quota', {
         p_user_id: input.userId, p_action: 'rewrite',
@@ -155,10 +172,13 @@ export async function runCheck(input: Input, emit: Emit = () => {}): Promise<Ana
             { changes: suggested.changes.length, confidence: suggested.confidence });
           emit('rewriting', { status: 'complete' });
         } catch (error) {
+          reportAiFailure('rewrite', error);
           await admin.rpc('refund_usage_quota', {
             p_user_id: input.userId, p_action: 'rewrite',
           });
-          throw error;
+          if (analysisMode === 'full') analysisMode = 'partial';
+          warnings.push("La réécriture IA n'a pas pu être générée.");
+          emit('rewriting', { status: 'unavailable' });
         }
       } else {
         emit('rewriting', { status: 'quota_exceeded' });
@@ -173,17 +193,25 @@ export async function runCheck(input: Input, emit: Emit = () => {}): Promise<Ana
     );
     const result: AnalysisResult = {
       score, riskLevel, violations, aiFlags, rewrite, hashSha256, verificationId,
+      analysisMode, warnings,
     };
     const { error: updateError } = await admin.from('verifications').update({
       ai_score: score,
       ai_risk_level: riskLevel,
-      ai_explanation: { violations, aiFlags, scoringVersion: PROMPT_VERSION },
+      ai_explanation: { violations, aiFlags, analysisMode, warnings, scoringVersion: PROMPT_VERSION },
       ai_rewrite_suggestion: rewrite?.rewrittenCaption ?? null,
       hash_sha256: hashSha256,
       status: 'completed',
       completed_at: new Date().toISOString(),
     }).eq('id', verificationId).eq('user_id', input.userId);
     if (updateError) throw new Error('Impossible de finaliser la vérification.');
+    if (analysisMode === 'rules_only') {
+      // Aucun appel IA réussi : cette vérification n'épuise pas le quota payant.
+      const { error: refundError } = await admin.rpc('refund_usage_quota', {
+        p_user_id: input.userId, p_action: 'check',
+      });
+      if (refundError) console.error('[mentioncheck][quota_refund_failed]');
+    }
     return result;
   } catch (error) {
     await admin.from('verifications').update({ status: 'failed' })

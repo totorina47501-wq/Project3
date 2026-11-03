@@ -72,4 +72,6 @@ export type AnalysisResult = {
   rewrite: Rewrite | null;
   hashSha256: string;
   verificationId: string;
+  analysisMode: 'full' | 'partial' | 'rules_only';
+  warnings: string[];
 };

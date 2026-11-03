@@ -13,7 +13,6 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     const { user } = await requireUser();
-    if (!process.env.OPENAI_API_KEY) throw new HttpError(503, 'IA non configurée.');
     const payload = checkInputSchema.safeParse(await request.json());
     if (!payload.success) {
       return Response.json({ error: 'Publication ou plateforme invalide.' }, { status: 400 });
