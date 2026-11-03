@@ -141,3 +141,28 @@ La compilation publiée correspond à une **page d'accueil de fondation**, pas a
 ### Cache des dépendances Bun
 
 Cloudflare résout bien les 856 dépendances, mais n'enregistre pas de cache tant que le dépôt ne possède ni `bun.lock` ni `package-lock.json`. Lors d'une installation sur un environnement autorisant l'accès au registre npm, générer et versionner un lockfile (`npm install --package-lock-only` ou `bun install`) puis faire valider le build en CI. Ne jamais ajouter un lockfile fabriqué sans résolution réelle du graphe de dépendances.
+
+
+## Diagnostic connexion — 3 novembre 2026
+
+Un échec POST /api/auth/login renvoyant HTTP 503 était masqué par un
+message générique. Le journal Cloudflare indiquait seulement le niveau error.
+Un diagnostic minimal a été ajouté, filtrable sous :
+
+`[mentioncheck][auth_login_failure]`
+
+Les catégories sont : `missing_runtime_config`, `invalid_credentials`,
+`rate_limited`, `provider_unavailable`, `configuration_error`, `unknown`.
+Les journaux affichent au maximum les NOMS des variables absentes ou deux
+indicateurs booléens. Aucune valeur, aucun mot de passe, email, cookie ou jeton
+ne doit être journalisé.
+
+Dans Cloudflare, ouvrir Workers & Pages > mentioncheck > Settings >
+Variables and Secrets. Vérifier que `NEXT_PUBLIC_SUPABASE_URL` et
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` existent AUSSI au runtime.
+Renseigner les variables publiques en Build pour leur injection dans les pages
+Next.js. Ensuite sauvegarder, redéployer, retester une seule connexion puis
+contrôler Observability > Logs.
+
+Une compilation CI verte ne prouve pas que les variables de production sont
+configurées.
