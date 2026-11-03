@@ -1,6 +1,6 @@
 // Diagnostic sans valeurs de configuration, adresses email ni mots de passe.
 export function missingAuthConfig(config: {
-  supabaseUrl?: string; supabaseKey?: string;
+  supabaseUrl?: string | undefined; supabaseKey?: string | undefined;
 }): string[] {
   const missing: string[] = [];
   if (!config.supabaseUrl) missing.push('NEXT_PUBLIC_SUPABASE_URL');
