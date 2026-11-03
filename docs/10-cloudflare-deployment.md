@@ -112,3 +112,22 @@ Le domaine `mentioncheck.fr` est un objectif de marque, **pas un nom de domaine 
 - https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/
 - https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/
 - https://developers.cloudflare.com/workers/databases/connecting-to-databases/
+
+## Dépannage — build « could not determine executable »
+
+Le dépôt GitHub a initialement seulement un README sur `main`. Les dépendances `@opennextjs/cloudflare` sont sur `feat/mentioncheck-bloc-1-fondations`. Dans Cloudflare Workers > projet > Settings > Build > Branch control, sélectionner cette branche puis relancer le build.
+
+Le Worker Cloudflare visible dans la capture s'appelle `project3`, aussi le `name` dans `wrangler.jsonc` correspond désormais à `project3`. Si le Worker a été renommé après la capture, les noms doivent être à nouveau alignés.
+
+Commandes recommandées dans Workers Builds :
+
+```sh
+# Build command
+npx @opennextjs/cloudflare build
+# Deploy command
+npx @opennextjs/cloudflare deploy
+# Preview command
+npx wrangler preview
+```
+
+Depuis Deployments > View Build History, menu `...` du build en échec > Retry build. Les opérations de base Supabase ne sont pas nécessaires pour afficher la landing initiale.
