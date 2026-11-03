@@ -1,6 +1,7 @@
 // Chemin : app/dashboard/page.tsx
 import Link from 'next/link';
 import { createServerSupabase } from '@/lib/supabase/server';
+import { checkLabel, isScoredCheck } from '@/lib/check-status';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,7 +11,7 @@ export default async function DashboardPage() {
     .select('id,platform,ai_score,created_at,status')
     .order('created_at', { ascending: false })
     .limit(10);
-  const completed = (checks ?? []).filter((item) => item.ai_score !== null);
+  const completed = (checks ?? []).filter(isScoredCheck);
   const average = completed.length
     ? Math.round(completed.reduce((sum, item) => sum + (item.ai_score ?? 0), 0) / completed.length)
     : null;
@@ -45,7 +46,7 @@ export default async function DashboardPage() {
               <li className="flex items-center justify-between gap-4 py-4" key={item.id}>
                 <span className="capitalize text-slate-700">{item.platform} — {new Date(item.created_at).toLocaleDateString('fr-FR')}</span>
                 <span className="font-semibold text-primary">
-                  {item.ai_score === null ? 'En traitement' : item.ai_score + '/100'}
+                  {checkLabel(item.status, item.ai_score)}
                 </span>
               </li>
             ))}
