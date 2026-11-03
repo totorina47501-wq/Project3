@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { BRAND } from '@/lib/branding';
 
 export default function Home() {
@@ -5,12 +6,12 @@ export default function Home() {
     <main className="min-h-screen overflow-hidden bg-slate-50">
       <div className="mx-auto max-w-6xl px-6 py-8">
         <header className="flex items-center justify-between gap-4">
-          <a href="/" className="font-heading text-xl font-bold text-primary" aria-label="MentionCheck, accueil">
+          <Link href="/" className="font-heading text-xl font-bold text-primary" aria-label="MentionCheck, accueil">
             <span className="mr-2 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-xl text-white">
               ✓
             </span>
             {BRAND.publicName}
-          </a>
+          </Link>
           <a href="#fonctionnement" className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold hover:bg-white">
             Comment ça marche
           </a>
