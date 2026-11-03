@@ -11,7 +11,7 @@ function flag(code: string, severity: Violation['severity'], title: string, expl
   return { code, severity, title, explanation, source };
 }
 
-export function applyRules(caption: string, _platform: Platform): Violation[] {
+export function applyRules(caption: string, platform: Platform): Violation[] {
   const violations: Violation[] = [];
   const match = caption.match(explicit);
   if (!match) {
@@ -20,7 +20,7 @@ export function applyRules(caption: string, _platform: Platform): Violation[] {
       'Loi n° 2023-451, art. 5-2'));
   } else if ((match.index ?? 0) > 125) {
     violations.push(flag('R2', 'medium', 'Mention peu visible',
-      'La mention apparaît après les 125 premiers caractères : avance-la pour renforcer sa visibilité (heuristique UX).',
+      'Sur ' + platform + ', la mention apparaît après les 125 premiers caractères : avance-la pour renforcer sa visibilité (heuristique UX).',
       'Heuristique de visibilité'));
   }
   if (match && (match.index ?? 0) > caption.length * 0.75 && /#[\wÀ-ÿ]+/.test(caption.slice(-100))) {

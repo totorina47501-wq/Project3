@@ -21,7 +21,7 @@ export default async function DashboardPage() {
         <div>
           <p className="text-sm font-bold uppercase tracking-wide text-accent">Ton cockpit</p>
           <h1 className="mt-2 font-heading text-4xl font-bold text-primary">Tableau de bord</h1>
-          <p className="mt-2 text-slate-600">Mia t'aide à publier des collaborations plus transparentes.</p>
+          <p className="mt-2 text-slate-600">Mia t&apos;aide à publier des collaborations plus transparentes.</p>
         </div>
         <Link href="/dashboard/check" className="rounded-xl bg-accent px-6 py-3 font-bold text-white shadow-md hover:bg-indigo-700">
           Check ma publication
