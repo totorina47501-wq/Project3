@@ -2,7 +2,7 @@
 import type { Platform, Violation } from '@/lib/ai/schemas';
 
 // Ces détecteurs exposent des indicateurs : certains sont des heuristiques UX.
-const explicit = /(?:\bpublicit[eé]\b|\bcollaboration commerciale\b|\bpartenariat r[eé]mun[eé]r[eé]\b|\bcontenu sponsoris[eé]\b|\bsponsoris[eé]\b|#(?:publicit[eé]|sponsoris[eé]|ad)\b|\ben collaboration avec\b)/i;
+const explicit = /(?:\bpublicit[eé](?![\p{L}\p{N}_])|\bcollaboration commerciale\b|\bpartenariat r[eé]mun[eé]r[eé](?![\p{L}\p{N}_])|\bcontenu sponsoris[eé](?![\p{L}\p{N}_])|\bsponsoris[eé](?![\p{L}\p{N}_])|#(?:publicit[eé]|sponsoris[eé]|ad)(?![\p{L}\p{N}_])|\ben collaboration avec\b)/iu;
 const ambiguous = /(?:#collab\b|#sp\b|\bcollab\b|\bmerci\s+@[\w.]+)/i;
 const affiliate = /(?:affili(?:ation|[eé])|lien partenaire|commission sur les ventes|[?&](?:aff|affiliate|ref)=)/i;
 const promo = /(?:code\s+promo|-\s?\d{1,2}\s?%|r[eé]duction)/i;
