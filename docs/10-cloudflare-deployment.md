@@ -166,3 +166,40 @@ contrôler Observability > Logs.
 
 Une compilation CI verte ne prouve pas que les variables de production sont
 configurées.
+
+## Prévention des variables supprimées par les déploiements (novembre 2026)
+
+**Cause diagnostiquée :** Wrangler remplace les variables Text configurées depuis
+le Dashboard si elles ne sont pas déclarées dans la configuration, lors d'un
+déploiement. Les secrets chiffrés sont conservés par défaut. Le projet utilise
+Cloudflare Workers Builds + OpenNext ; il est donc important de préserver les
+variables Runtime ajoutées depuis le tableau de bord.
+
+**Correction dans le dépôt :** `"keep_vars": true` au niveau racine de
+`wrangler.jsonc`. Le script npm `deploy:cloudflare` passe aussi
+`-- --keep-vars` à Wrangler via OpenNext.
+
+**Commande de déploiement à configurer dans Cloudflare Workers Builds :**
+
+```sh
+npx @opennextjs/cloudflare deploy -- --keep-vars
+```
+
+Conserver comme commande de build : `npx @opennextjs/cloudflare build`.
+La commande de preview peut rester `npx wrangler preview`.
+
+**Important :** le flag préserve les variables existantes, il ne les recrée
+pas. Il faut d'abord restaurer dans Workers > mentioncheck > Settings >
+Variables and Secrets (Production) :
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Text),
+`SUPABASE_SERVICE_KEY`, `OPENAI_API_KEY` (Secret).
+
+Pour Next.js, les deux `NEXT_PUBLIC_` doivent aussi exister dans
+Settings > Builds > Build variables and secrets pour l'injection au build.
+Les variables de build et les variables d'exécution sont distinctes.
+NE JAMAIS copier la valeur d'une clé secrète dans `wrangler.jsonc`
+ou dans GitHub. La clé OpenAI exposée précédemment doit rester révoquée.
+
+**Validation :** vérifier après un nouveau déploiement que les deux variables
+Text restent présentes en Production et que la connexion fonctionne. Cette
+validation réelle Cloudflare est distincte du test CI.

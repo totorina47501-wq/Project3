@@ -32,5 +32,6 @@
     "nodejs_compat"
   ],
   "workers_dev": true,
-  "preview_urls": true
+  "preview_urls": true,
+  "keep_vars": true
 }
