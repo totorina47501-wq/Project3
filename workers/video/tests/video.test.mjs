@@ -87,3 +87,22 @@ it('interrompt un processus FFmpeg trop long sans appel réseau', {skip:!ffmpegA
 it('refuse un exécutable non autorisé',async()=>{
   await assert.rejects(command('curl',[]),VideoInputError);
 });
+
+it('préserve un répertoire de sortie préexistant sans écraser de preuve', {skip:!ffmpegAvailable}, async()=>{
+  const root=await mkdtemp(join(tmpdir(),'mc-existing-output-'));
+  const input=join(root,'video.mp4'),out=join(root,'existing');
+  try{
+    const generated=spawnSync('ffmpeg',[
+      '-hide_banner','-loglevel','error','-f','lavfi',
+      '-i','testsrc=size=320x240:rate=6','-t','1',
+      '-c:v','mpeg4','-pix_fmt','yuv420p','-y',input,
+    ],{timeout:15000,stdio:'pipe'});
+    assert.equal(generated.status,0);
+    const {mkdir,writeFile,readdir}=await import('node:fs/promises');
+    await mkdir(out);
+    await writeFile(join(out,'proof.txt'),'existing');
+    await assert.rejects(processVideo(input,out),{code:'EEXIST'});
+    assert.deepEqual(await readdir(out),['proof.txt']);
+    assert.equal(await readFile(join(out,'proof.txt'),'utf8'),'existing');
+  }finally{await rm(root,{recursive:true,force:true})}
+});
