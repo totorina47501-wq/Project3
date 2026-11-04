@@ -4,6 +4,8 @@ const nextConfig = {
   // OpenNext doit disposer de .next/standalone pour construire le Worker.
   output: 'standalone',
   poweredByHeader: false,
+  // Borner les workers de build évite de dépendre du nombre de CPU de la CI.
+  experimental: { cpus: 2 },
   // Les fichiers SVG utilisateurs ne passent jamais par l'optimiseur d'images.
   images: { dangerouslyAllowSVG: false, remotePatterns: [] },
   async headers() {

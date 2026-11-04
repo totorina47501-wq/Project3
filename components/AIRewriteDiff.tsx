@@ -37,7 +37,7 @@ export function AIRewriteDiff({
       <h3 className="font-heading text-xl font-bold">Proposition de Mia</h3>
       <p className="mt-2 text-sm text-slate-600">Tu peux modifier le texte avant de l&apos;accepter.</p>
       <p className="mt-2 text-sm text-slate-600">Cette proposition suppose une contrepartie commerciale : vérifie qu&apos;elle existe réellement. La mention doit rester immédiatement visible.</p>
-      <textarea value={caption} onChange={(e) => setCaption(e.target.value)}
+      <textarea aria-label="Texte proposé par Mia" disabled={saving} value={caption} onChange={(e) => setCaption(e.target.value)}
         className="mt-4 min-h-36 w-full rounded-xl border border-indigo-200 bg-white p-4" />
       {rewrite.changes.length > 0 && (
         <ul className="mt-4 space-y-2 text-sm">

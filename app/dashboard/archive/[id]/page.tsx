@@ -1,7 +1,7 @@
 // Chemin : app/dashboard/archive/[id]/page.tsx
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { createServerSupabase } from '@/lib/supabase/server';
+import { requireUser } from '@/lib/security/auth';
 import { checkLabel } from '@/lib/check-status';
 import { violationSchema } from '@/lib/ai/schemas';
 import { z } from 'zod';
@@ -12,10 +12,10 @@ export default async function ArchiveDetail({
 }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!z.string().uuid().safeParse(id).success) notFound();
-  const supabase = await createServerSupabase();
+  const { user, client: supabase } = await requireUser();
   const { data: item, error } = await supabase.from('verifications')
     .select('id,platform,content_text,accepted_caption,ai_score,ai_risk_level,status,created_at,completed_at,hash_sha256,prompt_version,ai_explanation,media_type')
-    .eq('id', id).single();
+    .eq('id', id).eq('user_id', user.id).single();
   if (error || !item) notFound();
   const details = item.ai_explanation && typeof item.ai_explanation === 'object'
     ? item.ai_explanation as { violations?: unknown; analysisMode?: unknown; warnings?: unknown }

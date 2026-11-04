@@ -30,10 +30,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <Link href="/dashboard/media" className="text-sm font-semibold hover:text-accent">Médias</Link>
             <Link href="/dashboard/mia" className="text-sm font-semibold hover:text-accent">Parler à Mia</Link>
             <Link href="/dashboard/archive" className="text-sm font-semibold hover:text-accent">Archives</Link>
+            <Link href="/dashboard/brand-deals" className="text-sm font-semibold hover:text-accent">Collaborations</Link>
+            <Link href="/dashboard/studio" className="text-sm font-semibold hover:text-accent">Studio</Link>
             <Link href="/dashboard/settings" className="text-sm font-semibold hover:text-accent">Paramètres</Link>
             <LogoutButton />
           </div>
-          <div className="flex items-center gap-3 md:hidden">
+          <div className="flex min-w-0 max-w-full flex-wrap items-center gap-3 md:hidden">
+            <Link href="/dashboard/brand-deals" className="text-sm font-semibold text-slate-700">Collaborations</Link>
+            <Link href="/dashboard/studio" className="text-sm font-semibold text-slate-700">Studio</Link>
             <Link href="/dashboard/settings" className="text-sm font-semibold text-slate-700">Paramètres</Link>
             <LogoutButton />
           </div>

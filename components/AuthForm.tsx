@@ -1,7 +1,7 @@
 // Chemin : components/AuthForm.tsx
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -13,9 +13,14 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const isLogin = mode === 'login';
+  const pending = useRef<AbortController | null>(null);
+  useEffect(() => () => { pending.current?.abort(); }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending.current) return;
+    const controller = new AbortController();
+    pending.current = controller;
     setError('');
     setMessage('');
     setLoading(true);
@@ -23,10 +28,13 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
       const response = await fetch('/api/auth/' + mode, {
         method: 'POST',
         credentials: 'same-origin',
+        signal: controller.signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      const data = await response.json() as { ok?: boolean; error?: string; message?: string };
+      const data = await response.json().catch(() => {
+        throw new Error('Le service est momentanément indisponible. Réessaie dans un instant.');
+      }) as { ok?: boolean; error?: string; message?: string };
       if (!response.ok) throw new Error(data.error ?? 'Opération impossible.');
       if (isLogin) {
         router.push('/dashboard');
@@ -35,9 +43,13 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
         setMessage(data.message ?? 'Vérifie tes emails pour activer le compte.');
       }
     } catch (cause) {
+      if (controller.signal.aborted) return;
       setError(cause instanceof Error ? cause.message : 'Opération impossible.');
     } finally {
-      setLoading(false);
+      if (pending.current === controller) {
+        pending.current = null;
+        if (!controller.signal.aborted) setLoading(false);
+      }
     }
   }
 
@@ -51,17 +63,17 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
         <p className="mt-2 text-slate-600">
           {isLogin ? 'Connecte-toi pour checker une publication.' : 'Crée ton compte pour découvrir Mia.'}
         </p>
-        <form onSubmit={submit} className="mt-7 space-y-5">
+        <form onSubmit={submit} aria-busy={loading} className="mt-7 space-y-5">
           <label className="block text-sm font-semibold">
             Adresse email
-            <input type="email" required autoComplete="email" value={email}
+            <input type="email" required disabled={loading} autoComplete="email" value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-accent"
               placeholder="toi@exemple.fr" />
           </label>
           <label className="block text-sm font-semibold">
             Mot de passe
-            <input type="password" required minLength={isLogin ? 8 : 10}
+            <input type="password" required disabled={loading} minLength={isLogin ? 8 : 10}
               autoComplete={isLogin ? 'current-password' : 'new-password'}
               value={password} onChange={(e) => setPassword(e.target.value)}
               className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-accent" />
@@ -70,7 +82,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
           {message && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{message}</p>}
           <button disabled={loading} type="submit"
             className="w-full rounded-xl bg-accent px-5 py-3 font-bold text-white hover:bg-indigo-700 disabled:opacity-50">
-            {loading ? 'Connexion en cours…' : isLogin ? 'Se connecter' : "Créer mon compte"}
+            {loading ? isLogin ? 'Connexion en cours…' : 'Création en cours…' : isLogin ? 'Se connecter' : "Créer mon compte"}
           </button>
         </form>
         <p className="mt-7 text-center text-sm text-slate-600">

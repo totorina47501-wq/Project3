@@ -11,6 +11,7 @@ import type {
 } from '@/lib/ai/schemas';
 import { HttpError } from '@/lib/security/auth';
 import { reportAiFailure } from '@/lib/ai/failure';
+import { readRewriteTone } from '@/lib/social/preferences';
 
 type Input = {
   caption: string;
@@ -162,7 +163,8 @@ export async function runCheck(input: Input, emit: Emit = () => {}): Promise<Ana
       if (allowed) {
         emit('rewriting', { status: 'running' });
         try {
-          const suggested = await rewriteCompliant(input.caption, violations);
+          const tone = await readRewriteTone(admin, input.userId);
+          const suggested = await rewriteCompliant(input.caption, violations, tone);
           rewrite = {
             rewrittenCaption: suggested.rewrittenCaption,
             changes: suggested.changes,

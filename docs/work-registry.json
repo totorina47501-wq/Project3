@@ -131,10 +131,10 @@
     {
       "id": "media-offline",
       "name": "FFmpeg et Sharp hors ligne",
-      "status": "prepared_disabled",
-      "anchor": "workers/video/src/process.mjs",
-      "test": "workers/video/tests/video.test.mjs",
-      "doc": "docs/27-video-job-contract.md",
+      "status": "implemented_code",
+      "anchor": "workers/media-jobs/src/jobs.mjs",
+      "test": "workers/media-jobs/tests/jobs.test.mjs",
+      "doc": "workers/media-jobs/README.md",
       "aliases": [
         "video",
         "carrousel",
@@ -145,8 +145,8 @@
       "routes": [],
       "migrations": [],
       "next": [
-        "Contrat vidéo local validant une ligne Supabase cohérente, bail par tentative, SHA-256 serveur ; aucun traitement automatique actif.",
-        "Ajouter contrainte UNIQUE, claim/finalisation atomiques en base, exécuteur FFmpeg isolé et E2E authentifiés avant activation."
+        "Exécuteur local vérifié ; raccordement distant non activé.",
+        "Contrat vidéo avec bail par tentative conservé ; intégration atomique à la base et exécuteur distant non activés."
       ]
     },
     {
@@ -174,10 +174,10 @@
     {
       "id": "privacy-export",
       "name": "Consentement et export RGPD",
-      "status": "partial",
-      "anchor": "app/api/account/export/route.ts",
-      "test": "tests/unit/privacy-export.test.ts",
-      "doc": "docs/05-zero-credit-workstreams.md",
+      "status": "implemented_code",
+      "anchor": "lib/privacy/personal-data.ts",
+      "test": "tests/unit/privacy-personal-data.test.ts",
+      "doc": "docs/12-privacy-security.md",
       "aliases": [
         "rgpd",
         "consentement",
@@ -190,16 +190,16 @@
       ],
       "migrations": [],
       "next": [
-        "Storage et données des prestataires exclus du JSON."
+        "Appliquer séparément la migration finale ; export des fichiers sous forme de manifeste privé, prestataires exclus."
       ]
     },
     {
       "id": "privacy-erasure",
       "name": "Dépôt de demandes d'effacement",
       "status": "partial",
-      "anchor": "app/api/account/erasure/route.ts",
-      "test": "tests/unit/privacy-erasure.test.ts",
-      "doc": "docs/02-database.md",
+      "anchor": "lib/privacy/erasure-plan.ts",
+      "test": "tests/unit/privacy-erasure-plan.test.ts",
+      "doc": "docs/12-privacy-security.md",
       "aliases": [
         "suppression",
         "compte",
@@ -214,7 +214,7 @@
         "supabase/migrations/202611042004_privacy_erasure_requests.sql"
       ],
       "next": [
-        "Suivi non destructif, effacement complet Auth/Storage non mis en oeuvre."
+        "Préparation et journal dry-run terminés ; exécution destructive volontairement désactivée."
       ]
     },
     {
@@ -304,11 +304,11 @@
     },
     {
       "id": "resend",
-      "name": "Emails transactionnels Resend",
-      "status": "planned",
-      "anchor": ".env.example",
-      "test": null,
-      "doc": "docs/01-architecture.md",
+      "name": "Templates emails transactionnels hors ligne",
+      "status": "prepared_disabled",
+      "anchor": "lib/email/templates.ts",
+      "test": "tests/unit/email-templates.test.ts",
+      "doc": "docs/09-internal-settings.md",
       "aliases": [
         "emails",
         "resend",
@@ -317,16 +317,16 @@
       "routes": [],
       "migrations": [],
       "next": [
-        "Intégration et consentements à développer ; aucun envoi autorisé."
+        "Quatre templates HTML/texte testés ; aucun envoi ni expéditeur activé."
       ]
     },
     {
       "id": "oauth-social",
-      "name": "OAuth Instagram TikTok YouTube",
-      "status": "planned",
-      "anchor": "docs/01-architecture.md",
-      "test": null,
-      "doc": "docs/01-architecture.md",
+      "name": "Comptes sociaux déclarés et préférences",
+      "status": "implemented_code",
+      "anchor": "lib/social/model.ts",
+      "test": "tests/unit/social-routes.test.ts",
+      "doc": "docs/09-internal-settings.md",
       "aliases": [
         "social",
         "instagram",
@@ -334,10 +334,14 @@
         "youtube",
         "oauth"
       ],
-      "routes": [],
+      "routes": [
+        "app/api/social-accounts/route.ts",
+        "app/api/social-accounts/[id]/route.ts",
+        "app/api/social-accounts/preferences/route.ts"
+      ],
       "migrations": [],
       "next": [
-        "Autorisation fournisseur et implémentation manquantes."
+        "Déclaration manuelle disponible ; OAuth fournisseur non activé."
       ]
     },
     {
@@ -361,11 +365,11 @@
     },
     {
       "id": "production-tests",
-      "name": "Tests E2E authentifiés et accessibilité",
+      "name": "Parcours locaux authentifiés et accessibilité",
       "status": "partial",
-      "anchor": "tests/e2e/authenticated-navigation.spec.ts",
-      "test": "tests/e2e/authenticated-navigation.spec.ts",
-      "doc": "docs/05-zero-credit-workstreams.md",
+      "anchor": "scripts/e2e-server.mjs",
+      "test": "tests/e2e/check-chat-offline.spec.ts",
+      "doc": "docs/12-internal-delivery.md",
       "aliases": [
         "playwright",
         "tests",
@@ -376,7 +380,75 @@
       "routes": [],
       "migrations": [],
       "next": [
-        "CI verte ne prouve pas des parcours authentifiés sur Cloudflare."
+        "Fixtures locales sans fournisseur ; E2E authentifié en production à valider séparément."
+      ]
+    },
+    {
+      "id": "brand-deals",
+      "name": "Collaborations et registre",
+      "status": "implemented_code",
+      "anchor": "lib/brand-deals/server.ts",
+      "test": "tests/unit/brand-deals-routes.test.ts",
+      "doc": "docs/04-mia-archives.md",
+      "aliases": [
+        "collaboration",
+        "marques",
+        "contrats",
+        "registre"
+      ],
+      "routes": [
+        "app/api/brand-deals/route.ts",
+        "app/api/brand-deals/[id]/route.ts",
+        "app/api/brand-deals/[id]/archive/route.ts",
+        "app/api/brand-deals/export/route.ts"
+      ],
+      "migrations": [],
+      "next": [
+        "Archivage et exports informatifs ; téléversement contrat signé tiers non activé."
+      ]
+    },
+    {
+      "id": "studio",
+      "name": "Studio, équipes et API sans IA",
+      "status": "implemented_code",
+      "anchor": "lib/studio/server.ts",
+      "test": "tests/unit/studio-routes.test.ts",
+      "doc": "docs/08-studio.md",
+      "aliases": [
+        "studio",
+        "equipe",
+        "invitation",
+        "cles",
+        "api"
+      ],
+      "routes": [
+        "app/api/studio/route.ts",
+        "app/api/v1/check/route.ts",
+        "app/api/v1/verifications/route.ts"
+      ],
+      "migrations": [],
+      "next": [
+        "Migration à appliquer séparément ; Stripe et IA restent inactifs."
+      ]
+    },
+    {
+      "id": "internal-schema",
+      "name": "Schéma interne consolidé",
+      "status": "implemented_code",
+      "anchor": "supabase/migrations/20261104200500_internal_completion.sql",
+      "test": "scripts/test-sql-offline.test.mjs",
+      "doc": "docs/13-sql-offline.md",
+      "aliases": [
+        "schema",
+        "migration",
+        "sql"
+      ],
+      "routes": [],
+      "migrations": [
+        "supabase/migrations/20261104200500_internal_completion.sql"
+      ],
+      "next": [
+        "Migration testée en PostgreSQL embarqué ; pas appliquée en production."
       ]
     }
   ]

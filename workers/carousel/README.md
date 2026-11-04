@@ -16,4 +16,6 @@ publiées par renommage atomique. Un verrou évite les collisions entre
 processeurs coopérants. Ne pas exposer ces dossiers en accès public.
 
 Ce module ne traite **pas** encore les médias depuis l'interface SaaS :
-un service de traitement isolé et sa file d'attente restent nécessaires.
+un service de traitement isolé reste nécessaire.
+L'exécuteur de jobs local avec reprise vérifiée et annulation est décrit dans
+`../media-jobs/README.md` ; il réutilise ce processeur.

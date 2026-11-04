@@ -1,5 +1,8 @@
+import { readPersonalData } from '@/lib/privacy/personal-data';
+import { prepareErasurePlan } from '@/lib/privacy/erasure-plan';
+import { readPrivacyJson } from '@/lib/privacy/request';
 // Parcours RGPD non destructif : dépôt, statut et annulation d'une demande.
-// Aucun accès aux objets Storage, auth.admin.deleteUser, Stripe ni OpenAI.
+// Inventaire des fichiers uniquement : aucune suppression Storage/Auth ni appel Stripe/OpenAI.
 import { requireUser, publicError, HttpError } from '@/lib/security/auth';
 import { isSameOrigin } from '@/lib/security/origin';
 import { createAdminSupabase } from '@/lib/supabase/admin';
@@ -22,16 +25,16 @@ const safeFields = 'id,status,requested_at,updated_at,cancelled_at';
 
 export async function GET() {
   try {
-    const { client } = await requireUser();
+    const { user, client } = await requireUser();
     const { data, error } = await client.from('privacy_erasure_requests')
-      .select(safeFields).order('requested_at',{ascending:false}).limit(1).maybeSingle();
+      .select(safeFields).eq('user_id',user.id).order('requested_at',{ascending:false}).limit(1).maybeSingle();
     if (error) throw new Error('Erreur de consultation de la demande RGPD.');
     return Response.json({ request: data ?? null }, {
       headers: { 'Cache-Control': 'private, no-store' },
     });
   } catch (error) {
     const { status, message } = publicError(error);
-    return Response.json({ error: message }, { status, headers: { 'Cache-Control':'no-store' } });
+    return Response.json({ error: message }, { status, headers: { 'Cache-Control':'private, no-store' } });
   }
 }
 
@@ -39,9 +42,7 @@ export async function POST(request: Request) {
   try {
     if (!isSameOrigin(request)) throw new HttpError(403,'Origine interdite.');
     const { user } = await requireUser();
-    let body: unknown;
-    try { body = await request.json(); }
-    catch { throw new HttpError(400,'JSON invalide.'); }
+    const body = await readPrivacyJson(request);
     const input = erasureActionSchema.safeParse(body);
     if (!input.success) throw new HttpError(422,'Demande invalide.');
 
@@ -57,6 +58,19 @@ export async function POST(request: Request) {
     const parsedStatus = recent ? erasureStatusSchema.safeParse(recent.status) : null;
     if (recent && !parsedStatus?.success)
       throw new Error('État de la demande incohérent.');
+
+    if (input.data.action === 'preview') {
+      if (!recent || !parsedStatus?.success || !ACTIVE_ERASURE_STATUSES.has(parsedStatus.data))
+        throw new HttpError(409,'Dépose une demande active avant de préparer le plan.');
+      const inventory = await readPersonalData(user);
+      const plan = prepareErasurePlan(user.id,{id:recent.id,status:parsedStatus.data},inventory);
+      const { error: journalError } = await admin.from('privacy_erasure_runs').insert({
+        request_id:recent.id,user_id:user.id,mode:'dry_run',status:'prepared_disabled',
+        summary:{counts:plan.counts,blockers:plan.blockers,deleted:false},
+      });
+      if (journalError) throw new Error('Journal de préparation indisponible.');
+      return Response.json({plan},{headers:{'Cache-Control':'private, no-store'}});
+    }
 
     if (input.data.action === 'request') {
       if (recent && parsedStatus?.success &&
@@ -105,7 +119,7 @@ export async function POST(request: Request) {
   } catch(error) {
     const { status, message } = publicError(error);
     return Response.json({error:message},{
-      status,headers:{'Cache-Control':'no-store'},
+      status,headers:{'Cache-Control':'private, no-store'},
     });
   }
 }

@@ -2,16 +2,26 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { PrivacySettings } from '@/components/PrivacySettings';
 import { ErasureRequest } from '@/components/ErasureRequest';
 import { openaiReadiness } from '@/lib/openai/config';
+import { SocialAccounts } from '@/components/SocialAccounts';
+import { AIPreferences } from '@/components/AIPreferences';
+import { SOCIAL_COLUMNS, SOCIAL_PAGE_SIZE, type SocialAccount } from '@/lib/social/model';
+import { toneSchema } from '@/lib/ai/schemas';
 
 export const dynamic = 'force-dynamic';
 export default async function SettingsPage() {
   const supabase = await createServerSupabase();
   const ai = openaiReadiness(process.env);
   const { data: userData, error } = await supabase.from('users')
-    .select('plan,ai_training_opt_in,created_at').single();
+    .select('id,plan,ai_training_opt_in,created_at').single();
   const { data: usage } = await supabase.from('usage_monthly')
     .select('checks_used,rewrites_used,mia_messages_used,period_start')
     .order('period_start', { ascending:false }).limit(1).maybeSingle();
+  const [social,preferences] = userData ? await Promise.all([
+    supabase.from('social_accounts').select(SOCIAL_COLUMNS,{count:'exact'}).eq('user_id',userData.id)
+      .order('connected_at',{ascending:false}).order('id',{ascending:false}).range(0,SOCIAL_PAGE_SIZE-1),
+    supabase.from('user_preferences').select('rewrite_tone').eq('user_id',userData.id).maybeSingle(),
+  ]) : [null,null];
+  const tone = toneSchema.safeParse(preferences?.data?.rewrite_tone);
   return <div className="mx-auto max-w-3xl space-y-7">
     <header>
       <p className="text-sm font-bold uppercase tracking-wide text-accent">Ton compte</p>
@@ -39,6 +49,9 @@ export default async function SettingsPage() {
         </div>
         <p className="mt-3 text-xs text-slate-500">Dernière période enregistrée. Les contrôles sans IA ne consomment pas de quota de vérifications payantes.</p>
       </section>
+      <SocialAccounts initialItems={(social?.data??[]) as unknown as SocialAccount[]} initialTotal={social?.count??0}
+        initialUnavailable={!social||!!social.error} plan={userData.plan} />
+      <AIPreferences initialTone={tone.success?tone.data:'naturel'} initialUnavailable={!preferences||!!preferences.error} />
       <PrivacySettings initialOptIn={userData.ai_training_opt_in ?? false} />
       <section className="rounded-2xl border border-slate-200 bg-white p-6">
         <h2 className="font-heading text-xl font-bold">Configuration OpenAI</h2>
