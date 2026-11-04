@@ -52,7 +52,7 @@ import {spawnSync} from 'node:child_process';
 import {mkdtemp,readFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {processVideo} from '../src/process.mjs';
+import {processVideo,command} from '../src/process.mjs';
 const ffmpegAvailable=spawnSync('ffmpeg',['-version'],{stdio:'ignore'}).status===0 &&
   spawnSync('ffprobe',['-version'],{stdio:'ignore'}).status===0;
 
@@ -75,4 +75,15 @@ it('extrait localement un MP4 synthétique et inscrit aiCalls=0',
       assert.equal(disk.video.width,320);
       assert.equal(disk.frames.length,3);
     }finally{await rm(root,{recursive:true,force:true})}
+});
+
+it('interrompt un processus FFmpeg trop long sans appel réseau', {skip:!ffmpegAvailable}, async()=>{
+  await assert.rejects(
+    command('ffmpeg',['-nostdin','-v','error','-re','-f','lavfi',
+      '-i','testsrc=size=16x16:rate=1','-f','null','-'],100),
+    error=>error instanceof VideoInputError && error.message==='Délai extraction dépassé'
+  );
+});
+it('refuse un exécutable non autorisé',async()=>{
+  await assert.rejects(command('curl',[]),VideoInputError);
 });
