@@ -95,11 +95,12 @@
       ],
       "migrations": [
         "supabase/migrations/202611032003_pgvector_match.sql",
-        "supabase/migrations/202611042001_mia_quota_and_append.sql"
+        "supabase/migrations/202611042001_mia_quota_and_append.sql",
+        "supabase/migrations/20261104211500_mia_invalidate_changed_content.sql"
       ],
       "next": [
-        "Interface d'administration Mia protégée par allowlist MIA_ADMIN_USER_IDS et confirmation payante ; vérifier CI et déploiement.",
-        "Indexer 5/5 puis valider pertinence du RAG ; contrôle quotidien des modifications à préparer."
+        "Cron quotidien opt-in sur Worker de rétention : MIA_DAILY_INDEX_ENABLED=true et MIA_INDEX_TOKEN (secret séparé).",
+        "Appliquer la migration d'invalidation des embeddings après changement de contenu, valider 5/5 puis activer le cron ; surveiller les logs et pertinence."
       ]
     },
     {
