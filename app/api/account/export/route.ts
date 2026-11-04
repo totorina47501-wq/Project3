@@ -9,7 +9,7 @@ const LIMIT = 1000;
 export async function GET() {
   try {
     const { user, client } = await requireUser();
-    const [profile, verifications, conversations, deals, subscriptions, social, usage, feedback, media, metrics] =
+    const [profile, verifications, conversations, deals, subscriptions, social, usage, feedback, media, metrics, erasureRequests] =
       await Promise.all([
         client.from('users').select('id,email,plan,ai_training_opt_in,created_at,updated_at')
           .eq('id',user.id).single(),
@@ -28,8 +28,11 @@ export async function GET() {
           .range(0,LIMIT - 1),
         client.from('ai_analyses').select('id,verification_id,stage,model_used,prompt_tokens,completion_tokens,latency_ms,cost_usd,created_at', { count: 'exact' })
           .range(0,LIMIT - 1),
+        client.from('privacy_erasure_requests')
+          .select('id,status,requested_at,updated_at,cancelled_at', { count:'exact' })
+          .order('requested_at',{ascending:false}).range(0,LIMIT-1),
       ]);
-    const lists = { verifications, conversations, deals, subscriptions, social, usage, feedback, media, metrics };
+    const lists = { verifications, conversations, deals, subscriptions, social, usage, feedback, media, metrics, erasureRequests };
     if (profile.error || !profile.data ||
       Object.values(lists).some((item) => item.error))
       throw new Error('Impossible de récupérer toutes les données personnelles.');

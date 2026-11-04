@@ -54,3 +54,5 @@ Créer et connecter Supabase, appliquer les migrations, ajouter les variables Cl
 ### Consolidation sans consommation d'IA — novembre 2026
 
 Préparation FFmpeg/FFprobe des vidéos et Sharp des carrousels **hors ligne**, publication atomique des résultats locaux, gestion des téléversements renforcée, modes sans IA explicitement distingués et export JSON des données avec pagination honnête. Voir `docs/05-zero-credit-workstreams.md` pour la limite exacte de ce périmètre. L'analyse vidéo et carrousel de bout en bout n'est **pas encore active sur Cloudflare**.
+
+- Demandes d'effacement RGPD : dépôt, suivi, annulation et export des statuts, **sans suppression automatique** ni activation de services externes. Voir `docs/05-zero-credit-workstreams.md`.

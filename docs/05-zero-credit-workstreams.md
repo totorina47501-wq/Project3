@@ -146,3 +146,13 @@ Contrôle préalable : PR #1 toujours brouillon, branche `feat/mentioncheck-bloc
 ### Contrôles de validation
 
 CI : TypeScript, ESLint strict, Vitest offline, Node tests vidéo offline, Node tests carrousels offline, compilation Next.js. Aucune étape ne lance d'appel IA réel. L'activation de la chaîne de traitement multimédia, Stripe, de l'indexation vectorielle et de la purge destructive demeure interdite sans validation d'exploitation et budget explicite.
+
+
+## Parcours de demandes RGPD — 4 novembre 2026
+
+- `/dashboard/settings` inclut un formulaire pour **déposer, suivre et annuler** une demande d'effacement. Le mot `SUPPRIMER` doit être saisi explicitement, ce qui évite les demandes accidentelles.
+- Nouvelle table `privacy_erasure_requests` avec RLS lecture limitée au propriétaire, aucun `INSERT/UPDATE/DELETE` pour `authenticated` ou `anon`. Seul le serveur peut enregistrer ou annuler une demande, après identification de session et validation `Origin`.
+- Un index unique interdit deux demandes actives concurrentes. Seul l'état `requested` est annulable; `reviewing` nécessite l'intervention d'un opérateur. Une minute de délai est imposée après annulation pour éviter les boucles.
+- Export JSON du compte enrichi avec les demandes. Aucun texte ni contenu utilisateur n'est transmis à OpenAI par ces routes.
+- **Point critique :** ce mécanisme ne supprime PAS `auth.users`, les fichiers Storage, les médias ou les logs fournisseurs. Il ne vaut pas exécution complète du droit à l'effacement. L'opérateur doit disposer d'un processus de vérification, de purge externe, de révocation de sessions et de justification des éventuelles obligations de conservation avant de clore une demande.
+- Une demande peut être déposée sans achat, sans jeton OpenAI et sans lancer de purge. Il reste à définir l'identité légale de l'éditeur, le support de contact et les délais de traitement dans des CGU/politique RGPD validées.

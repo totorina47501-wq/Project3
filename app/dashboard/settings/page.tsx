@@ -1,5 +1,6 @@
 import { createServerSupabase } from '@/lib/supabase/server';
 import { PrivacySettings } from '@/components/PrivacySettings';
+import { ErasureRequest } from '@/components/ErasureRequest';
 
 export const dynamic = 'force-dynamic';
 export default async function SettingsPage() {
@@ -37,6 +38,7 @@ export default async function SettingsPage() {
         <p className="mt-3 text-xs text-slate-500">Dernière période enregistrée. Les contrôles sans IA ne consomment pas de quota de vérifications payantes.</p>
       </section>
       <PrivacySettings initialOptIn={userData.ai_training_opt_in ?? false} />
+      <ErasureRequest />
     </>}
   </div>;
 }

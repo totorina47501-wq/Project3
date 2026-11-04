@@ -98,3 +98,7 @@ Migration 202611042001_mia_quota_and_append.sql exécutée sur Supabase. Quotas 
 ## Migrations du lot sans IA (2026-11-04)
 
 202611042002_media_assets.sql : table RLS pour préparer les médias, propriétaire en lecture, écriture serveur. 202611042003_stripe_event_inbox.sql : événements Stripe test signés, déduplication, accès service_role uniquement. Le stockage porte des expirations logiques ; la purge physique doit encore être automatisée.
+
+### 202611042004 — Demandes d'effacement (non destructif)
+
+Table `public.privacy_erasure_requests` : statut `requested`, `reviewing`, `cancelled`, `completed` ou `rejected`. Index unique partiel par utilisateur pour les demandes actives ; RLS avec lecture du propriétaire uniquement. Les mutations passent exclusivement par le service serveur. Aucun accès direct navigateur, aucune suppression automatique des lignes `auth.users` ou des objets Storage. Les demandes seront effacées par cascade lors de la véritable destruction du compte : prévoir une traçabilité d'audit minimale séparée conforme aux obligations de conservation avant activation de la suppression définitive.

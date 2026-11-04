@@ -51,7 +51,8 @@ export function PrivacySettings({ initialOptIn }: { initialOptIn: boolean }) {
       <p className="mt-2 text-xs text-slate-500">
         L&apos;export contient les données disponibles dans les tables de MentionCheck.
         Les fichiers binaires et données détenues par des prestataires sont exclus.
-        L&apos;effacement automatique complet du compte reste en préparation.
+        Tu peux maintenant déposer et suivre une demande d&apos;effacement ci-dessous.
+        La suppression technique complète n&apos;est pas encore automatisée.
       </p>
     </div>
   </section>;
