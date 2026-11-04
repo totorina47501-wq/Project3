@@ -10,7 +10,12 @@ export function validateProbe(probe,bytes){
   if(!v || !Number.isInteger(v.width)||!Number.isInteger(v.height)||
     Math.min(v.width,v.height)<16||Math.max(v.width,v.height)>4096)
     throw new VideoInputError('Flux vidéo invalide');
-  const duration=Number(probe.format.duration??v.duration);
+  const rawDuration=probe.format.duration ?? v.duration;
+  // Number(null) et Number('') valent zéro ; les métadonnées doivent être explicites.
+  if(typeof rawDuration!=='string' && typeof rawDuration!=='number')
+    throw new VideoInputError('Durée absente');
+  if(String(rawDuration).trim()==='')throw new VideoInputError('Durée absente');
+  const duration=Number(rawDuration);
   if(!Number.isFinite(duration)||duration<=0||duration>60)throw new VideoInputError('60 s maximum');
   return {durationSeconds:duration,width:v.width,height:v.height,
     hasAudio:probe.streams.some(s=>s?.codec_type==='audio'),
