@@ -1,0 +1,78 @@
+name: MentionCheck Cloudflare operator
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Manual operation
+        required: true
+        type: choice
+        options:
+          - deploy
+          - mia-preview
+          - mia-index-five
+      confirmation:
+        description: Type INDEXER-5 for paid indexing
+        required: false
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: mentioncheck-cloudflare-operator
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: inputs.operation == 'deploy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - name: Check credentials without printing them
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo 'Missing GitHub secret CLOUDFLARE_API_TOKEN'; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo 'Missing GitHub secret CLOUDFLARE_ACCOUNT_ID'; exit 1; }
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Deploy preserving Cloudflare variables
+        run: npm run deploy:cloudflare
+      - name: Health probe
+        run: curl --fail --silent --show-error --max-time 20 --retry 0 https://mentioncheck.toto-rina47501.workers.dev/ -o /dev/null
+  mia:
+    if: inputs.operation == 'mia-preview' || inputs.operation == 'mia-index-five'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: production
+    env:
+      MIA_INDEX_TOKEN: ${{ secrets.MIA_INDEX_TOKEN }}
+      MEDIA_RETENTION_TOKEN: ${{ secrets.MEDIA_RETENTION_TOKEN }}
+      CONFIRMATION: ${{ inputs.confirmation }}
+      OPERATION: ${{ inputs.operation }}
+    steps:
+      - name: Require operator token and paid indexing confirmation
+        shell: bash
+        run: |
+          if [ "$OPERATION" = 'mia-index-five' ] && [ "$CONFIRMATION" != 'INDEXER-5' ]; then
+            echo 'Confirmation INDEXER-5 required'; exit 1
+          fi
+          if [ -z "$MIA_INDEX_TOKEN" ] && [ -z "$MEDIA_RETENTION_TOKEN" ]; then
+            echo 'Missing GitHub operator secret'; exit 1
+          fi
+      - name: Call existing Worker securely
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="$MIA_INDEX_TOKEN"
+          if [ -z "$token" ]; then token="$MEDIA_RETENTION_TOKEN"; fi
+          url="https://mentioncheck.toto-rina47501.workers.dev/api/internal/mia-index"
+          if [ "$OPERATION" = 'mia-index-five' ]; then url="$url?execute=true"; fi
+          curl --fail-with-body --silent --show-error --max-time 180 --retry 0 --request POST --header "Authorization: Bearer $token" --header "Cache-Control: no-store" "$url"
