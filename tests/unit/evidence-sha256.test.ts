@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { evidenceManifestV1, sha256Blob, sha256Bytes } from '../../lib/evidence/sha256';
+import { evidenceManifestV1, sha256Blob, sha256Bytes, verifyBlobSha256 } from '../../lib/evidence/sha256';
 
 describe('integrite des preuves binaires', () => {
   it('produit le SHA-256 canonique pour un fichier vide', async () => {
@@ -21,5 +21,14 @@ describe('integrite des preuves binaires', () => {
     expect(manifest).toEqual({
       version: 1, caption: 'Publicite', platform: 'instagram', mediaType: 'image', mediaSha256: 'a'.repeat(64),
     });
+  });
+  it('refuse un blob altere ou une empreinte malformee', async () => {
+    const original = new Blob(['abc']);
+    const altered = new Blob(['abd']);
+    const expected = await sha256Blob(original);
+    expect(await verifyBlobSha256(original, expected)).toBe(true);
+    expect(await verifyBlobSha256(altered, expected)).toBe(false);
+    expect(await verifyBlobSha256(original, 'not-a-hash')).toBe(false);
+    expect(await verifyBlobSha256(original, expected.toUpperCase())).toBe(false);
   });
 });
