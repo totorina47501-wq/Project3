@@ -35,4 +35,21 @@ describe('Protection CSRF des écritures médias', () => {
       headers: { origin: 'https://mentioncheck.test:444' },
     }))).toBe(false);
   });
+  it('rejette une origine avec identifiants ou un fragment', () => {
+    expect(isSameOrigin(new Request(endpoint, {
+      headers: { origin: 'https://user:pass@mentioncheck.test' },
+    }))).toBe(false);
+    expect(isSameOrigin(new Request(endpoint, {
+      headers: { origin: 'https://mentioncheck.test/#fragment' },
+    }))).toBe(false);
+  });
+  it('rejette les origines de sous-domaines proches', () => {
+    expect(isSameOrigin(new Request(endpoint, {
+      headers: { origin: 'https://mentioncheck.test.evil.example' },
+    }))).toBe(false);
+    expect(isSameOrigin(new Request(endpoint, {
+      headers: { origin: 'https://sub.mentioncheck.test' },
+    }))).toBe(false);
+  });
+
 });
