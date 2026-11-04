@@ -70,7 +70,7 @@
       "routes": [],
       "migrations": [],
       "next": [
-        "429 historique suivi de deux vérifications complètes. Audio et embeddings non raccordés, ne pas tester en payant automatiquement."
+        "Générateur embeddings réutilisé en mode opt-in par Mia ; aucune indexation ou dépense automatisée. Audio non raccordé."
       ]
     },
     {
@@ -96,7 +96,8 @@
         "supabase/migrations/202611042001_mia_quota_and_append.sql"
       ],
       "next": [
-        "Recherche lexicale présente ; RAG vectoriel non activé."
+        "Recherche hybride pgvector codée, désactivée par défaut ; 0/5 embeddings Supabase au 4 novembre 2026.",
+        "Indexer seulement après accord sur les appels payants ; valider pertinence, E2E authentifiés et activation Cloudflare."
       ]
     },
     {

@@ -1,6 +1,6 @@
 # Bloc 4 — Mia conversationnelle, archives et PDF
 
-**État :** code préparé sur la branche de développement, migration Supabase appliquée, déploiement Cloudflare et vérifications E2E authentifiées restant à confirmer.
+**État :** Mia lexical intégré à main ; RAG hybride préparé sur branche, désactivé par défaut ; indexation et E2E authentifiés à confirmer.
 
 ## Fonctionnalités
 
@@ -10,8 +10,7 @@ Les réponses ne remplacent jamais un avis juridique.
 
 RAG documentaire v1 : cinq synthèses du seed, classement lexical côté serveur.
 Les références affichées sont filtrées sur Legifrance et economie.gouv.fr.
-**Aucune indexation pgvector n'est encore active : 0/5 embeddings.** Ne pas
-présenter la recherche lexicale comme une recherche vectorielle déjà opérationnelle.
+**Vérification Supabase du 4 novembre 2026 : 0/5 embeddings.** Colonne vector(1536), index HNSW et fonction match_law_documents déjà présents et réutilisés. Le mode hybride ne sera actif qu'après indexation complète et autorisation explicite.
 
 Quotas : Solo 20 messages/mois, Pro 300, Studio 1500, contrôlés
 transactionnellement dans PostgreSQL. Quota remboursé si l'appel ou
@@ -43,7 +42,7 @@ Supabase administrative et la clé OpenAI uniquement comme secrets serveur.
 ## Sujets ultérieurs
 
 Indexer les cinq documents avec text-embedding-3-small et contrôler la
-pertinence avant de passer à la recherche pgvector/hybride. Compléter les
+pertinence avant d'activer la recherche vectorielle/hybride. Compléter les
 tests de médias, la vidéo isolée, Stripe (mode test), Resend, l'effacement
 RGPD et la conformité avant commercialisation.
 
@@ -114,3 +113,46 @@ La sélection lexicale exclut désormais les articles sans aucun recoupement de 
 - Quand aucune synthèse pertinente n'est disponible, Mia renvoie une réponse prudente **sans appeler OpenAI**, sans citer d'article et avec consommation IA estimée à zéro. Les quotas applicatifs existants restent gérés par la route.
 - Tests de validation documentaire et de question hors corpus ajoutés. Aucune indexation vectorielle ni changement de schéma SQL dans ce lot.
 - L'indexation pgvector, les tests authentifiés sur Cloudflare et l'évaluation juridique restent à valider séparément.
+
+
+## RAG hybride pgvector — raccordement sans doublons
+
+La colonne `law_documents.embedding` (1536 dimensions), l'index HNSW, la RPC
+`public.match_law_documents` (service_role uniquement) et le client existant
+`generateLegalEmbedding` sont réutilisés. Aucune nouvelle table ou migration.
+
+**Garde-fous et activation :**
+
+- Lexical par défaut, aucune facturation nouvelle.
+- Vectoriel seulement avec `MIA_VECTOR_SEARCH_ENABLED=true`,
+  `OPENAI_EMBEDDINGS_ENABLED=true`, une clé OpenAI côté serveur et sans pause.
+- Vérification systématique de l'indexation intégrale avec le bon modèle ;
+  si index partiel, modèle divergent, lecture tronquée ou document non valide :
+  retour lexical **avant tout appel d'embedding**.
+- Pour le corpus intégral, appel d'embedding de la question, RPC pgvector
+  avec seuil de similarité cosinus 0,78, classement hybride lexical/vectoriel,
+  au plus quatre références officielles. Les références et URL sont
+  recoupées avec les entrées validées, jamais acceptées aveuglément du RPC.
+- En cas d'erreur vectorielle, retour lexical ; aucun contenu personnel
+  n'est enregistré dans les logs.
+
+**Indexation opérateur, hors Worker :**
+
+1. Aperçu sans aucune requête payante :
+   `node scripts/mia/index-law-vectors.mjs`
+2. Après approbation explicite d'appels OpenAI facturés, fournir les secrets
+   serveur `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_KEY` et
+   `OPENAI_API_KEY`, puis exécuter :
+   `MIA_INDEX_APPROVED=true OPENAI_EMBEDDINGS_ENABLED=true node scripts/mia/index-law-vectors.mjs --execute`
+3. L'indexeur est idempotent, vérifie les URL officielles, traite au plus
+   30 documents et refuse une lecture tronquée. Aucun secret n'est journalisé.
+4. Vérifier la couverture réelle dans Supabase :
+   `select count(*) as total, count(embedding) as indexed from public.law_documents;`
+   Vérifier aussi le modèle et les réponses de `match_law_documents`, puis
+   seulement activer les deux drapeaux côté Worker.
+
+Chaque question vectorielle activée consomme des tokens embeddings, en plus
+des tokens du chat ; aucun appel payant n'est effectué en CI. Les tests ajoutés
+couvrent le classement, les faux positifs, la sécurité des URL, les sources
+inconnues, la couverture partielle et l'aide CLI sans secrets. Les E2E authentifiés
+et la validation de qualité métier en production restent à réaliser.
