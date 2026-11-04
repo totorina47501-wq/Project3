@@ -24,6 +24,24 @@ describe('Règles déterministes MentionCheck', () => {
     expect(applyRules('Merci @marque pour cette collab !', 'instagram')
       .some((r) => r.code === 'R6')).toBe(true);
   });
+  it('reconnaît une communication commerciale explicite', () => {
+    const violations = applyRules('COMMUNICATION COMMERCIALE — découverte du produit.', 'instagram');
+    expect(violations.some((v) => v.code === 'R1')).toBe(false);
+  });
+  it('ne confond pas un mot contenant publicité avec une mention', () => {
+    const violations = applyRules('Cette publicitéXYZ est fictive.', 'instagram');
+    expect(violations.some((v) => v.code === 'R1')).toBe(true);
+  });
+  it('ne déduit pas une obligation de gras pour un code promotionnel visible', () => {
+    const violations = applyRules('Publicité — code promo MIA10', 'tiktok');
+    expect(violations.some((v) => v.code === 'R7')).toBe(false);
+  });
+  it('ignore les confiances IA non finies et borne les valeurs extrêmes', () => {
+    expect(riskFrom([], Number.NaN)).toBe(0);
+    expect(riskFrom([], Number.POSITIVE_INFINITY)).toBe(0);
+    expect(riskFrom([], -1)).toBe(0);
+    expect(riskFrom([], 2)).toBe(5);
+  });
   it('ne crée jamais de violation R8 : le hash est technique', () => {
     expect(applyRules('PUBLICITÉ — test du jour.', 'linkedin')
       .some((r) => r.code === 'R8')).toBe(false);
