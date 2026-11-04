@@ -93,3 +93,11 @@ médias expirés sont toujours refusées même si un jeton Storage subsiste.
 aucun contrat d'effacement RGPD complet ; le planificateur n'est pas activé.
 Les contrôles vidéos du navigateur ne remplacent pas la validation
 FFprobe serveur avant une éventuelle analyse IA.
+
+## Suivi sécurité — 4 novembre 2026, 02:18 Europe/Paris
+
+Les POST de gestion des médias authentifiés par cookies exigent désormais un en-tête `Origin` explicite et strictement identique à l'origine de l'URL demandée. Les origines absentes, opaques (`null`), malformées, avec chemin, schéma ou port différent sont rejetées. Tests Vitest de non-régression ajoutés dans `tests/unit/media-origin.test.ts`.
+
+Cette mesure renforce uniquement les routes utilisant déjà `isSameOrigin`. Elle ne constitue **pas** une couverture CSRF globale : auditer et harmoniser séparément les autres routes de mutation (notamment `/api/check` et `/api/account/consent`) avant commercialisation. Vérifier les appels depuis navigateur et les proxys Cloudflare : les requêtes légitimes de POST doivent fournir `Origin`. Aucun appel OpenAI, Stripe ni purge n'est requis pour ce lot.
+
+SHA de référence avant travaux : `479dcdb702a9824846bc24780f417206ddb15877`. Correctif : `daab7ed71f2607ca81993e8c604d758783b4d4a0` ; tests : `fc5d1245b28afb75ca8dfb895bbfc6092e951890`. Statut CI de ces commits : **à vérifier**, ne pas conclure que la CI est verte sans exécution confirmée.
