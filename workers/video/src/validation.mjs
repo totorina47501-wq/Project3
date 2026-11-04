@@ -10,7 +10,7 @@ export function validateProbe(probe,bytes){
   if(!v || !Number.isInteger(v.width)||!Number.isInteger(v.height)||
     Math.min(v.width,v.height)<16||Math.max(v.width,v.height)>4096)
     throw new VideoInputError('Flux vidéo invalide');
-  const rawDuration=probe.format.duration ?? v.duration;
+  const rawDuration=probe?.format?.duration ?? v.duration;
   // Number(null) et Number('') valent zéro ; les métadonnées doivent être explicites.
   if(typeof rawDuration!=='string' && typeof rawDuration!=='number')
     throw new VideoInputError('Durée absente');
