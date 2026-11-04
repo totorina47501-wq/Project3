@@ -25,3 +25,6 @@ L'erreur 429 category=credit du 3 novembre à 23:22 UTC était suivie de deux v�
 
 ## Définition de terminé
 Une fonction peut être terminée côté code et rester non vérifiée en production. Documenter séparément l'application des migrations, le build Cloudflare, l'E2E authentifié et les services externes. Le registre ne remplace ni les tests ni la preuve opérationnelle.
+
+## Éviter les doubles exécutions CI
+Le workflow GitHub Actions réagit aux PR pour les branches de travail et aux push de main uniquement, et non aux deux pour la même branche. Un groupe de concurrence annule les anciens jobs devenus obsolètes sur la même PR. Cela économise des minutes CI et évite de qualifier un commit à partir de résultats mélangés ; la livraison se vérifie toujours au SHA final.

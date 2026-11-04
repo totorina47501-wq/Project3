@@ -4,7 +4,12 @@ name: MentionCheck CI
 on:
   pull_request:
   push:
-    branches: [main, feat/mentioncheck-bloc-1-fondations]
+    branches: [main]
+
+# Une seule CI par commit de branche avec PR, et une CI par push sur main.
+concurrency:
+  group: mentioncheck-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quality:
