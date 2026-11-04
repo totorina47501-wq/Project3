@@ -2,7 +2,9 @@
 export class VideoInputError extends Error {}
 export function validateProbe(probe,bytes){
   if(!Number.isSafeInteger(bytes)||bytes<1||bytes>50*1024*1024)throw new VideoInputError('50 Mio maximum');
-  if(!/mov|mp4/.test(String(probe?.format?.format_name)))throw new VideoInputError('MP4/MOV uniquement');
+  const formats=String(probe?.format?.format_name??'').split(',');
+  if(!formats.some(format=>['mov','mp4'].includes(format.trim())))
+    throw new VideoInputError('MP4/MOV uniquement');
   const v=probe?.streams?.find(s=>s.codec_type==='video');
   if(!v || !Number.isInteger(v.width)||!Number.isInteger(v.height)||
     Math.min(v.width,v.height)<16||Math.max(v.width,v.height)>4096)
