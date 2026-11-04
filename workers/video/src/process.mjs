@@ -39,7 +39,10 @@ export async function command(binary,args,timeout=15000){
 }
 async function digest(path){
   const hash=createHash('sha256');
-  for await(const chunk of cr// Publication dans un répertoire temporaire du même système de fichiers,
+  for await(const chunk of createReadStream(path)) hash.update(chunk);
+  return hash.digest('hex');
+}
+// Publication dans un répertoire temporaire du même système de fichiers,
 // puis rename unique : pas d'archive partielle visible en cas d'arrêt brusque.
 // Verrou exclusif pour les processus coopérants. Ne jamais effacer un dossier
 // préexistant ni tenter d'activer cette CLI comme service HTTP sur Cloudflare.
@@ -121,10 +124,6 @@ export async function processVideo(source,destination){
         if(error?.code!=='ENOENT') throw error;
       });
     }
-  }
-}
-e,force:true});
-    await rm(scratch,{recursive:true,force:true});
   }
 }
 if(process.argv[1]&&basename(process.argv[1])==='process.mjs'){
