@@ -23,6 +23,11 @@ describe('FFprobe local sans crédits IA',()=>{
   it('ignore les entrées nulles parmi les flux valides',()=>{
     assert.equal(validateProbe({...sample,streams:[null,...sample.streams]},10).hasAudio,true);
   });
+  it('rejette les durées absentes, vides ou non numériques',()=>{
+    for(const duration of [undefined,null,'','   ','NaN','Infinity',-1,0]){
+      assert.throws(()=>validateProbe({...sample,format:{...sample.format,duration}},10),VideoInputError);
+    }
+  });
   it('rejette 61s',()=>assert.throws(()=>validateProbe({...sample,
     format:{format_name:'mp4',duration:'61'}},10),VideoInputError));
   it('rejette 50 Mo dépassés',()=>assert.throws(()=>validateProbe(sample,52428801),VideoInputError));
