@@ -105,7 +105,7 @@
       "status": "implemented_code",
       "anchor": "lib/media/browser-upload.ts",
       "test": "tests/unit/media-validation.test.ts",
-      "doc": "docs/05-zero-credit-workstreams.md",
+      "doc": "docs/22-media-integrity-integration.md",
       "aliases": [
         "media",
         "stockage",
@@ -123,7 +123,8 @@
         "supabase/migrations/202611042002_media_assets.sql"
       ],
       "next": [
-        "La bibliothèque prépare les fichiers ; elle ne réalise pas une analyse vidéo."
+        "Le hash SHA-256 des octets est calculé avant confirmation et renvoyé pour les nouveaux uploads ; persistance probatoire en base encore absente.",
+        "Tester les téléchargements de 50 Mio sur Cloudflare et les E2E authentifiés."
       ]
     },
     {

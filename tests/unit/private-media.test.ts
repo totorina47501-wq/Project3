@@ -17,6 +17,24 @@ describe('private Storage evidence hashing', () => {
     }
     expect(download).not.toHaveBeenCalled();
   });
+  it('rejects truncated and oversized Storage objects even when metadata looks valid', async () => {
+    const truncated = new Blob([new Uint8Array([1, 2, 3])]);
+    const expanded = new Blob([new Uint8Array([1, 2, 3, 4, 5])]);
+    for (const data of [truncated, expanded]) {
+      const download = vi.fn(async () => ({ data, error: null }));
+      await expect(hashPrivateMedia({ download }, 'user/asset.png', 4))
+        .rejects.toThrow('mismatched');
+      expect(download).toHaveBeenCalledOnce();
+    }
+  });
+  it('rejects invalid declared sizes before any Storage access', async () => {
+    const download = vi.fn(async () => ({ data: bytes, error: null }));
+    for (const size of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      await expect(hashPrivateMedia({ download }, 'user/asset.png', size))
+        .rejects.toThrow('Invalid');
+    }
+    expect(download).not.toHaveBeenCalled();
+  });
   it('rejects mismatched size, over-limit input and download failures', async () => {
     const download = vi.fn(async () => ({ data: bytes, error: null }));
     await expect(hashPrivateMedia({ download }, 'user/asset.png', 3)).rejects.toThrow();

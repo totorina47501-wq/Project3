@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireUser, publicError, HttpError } from '@/lib/security/auth';
 import { isSameOrigin } from '@/lib/security/origin';
 import { createAdminSupabase } from '@/lib/supabase/admin';
+import { hashPrivateMedia } from '@/lib/evidence/private-media';
 
 export const runtime = 'nodejs';
 const schema = z.object({ assetId: z.string().uuid() }).strict();
@@ -31,6 +32,19 @@ export async function POST(request: Request) {
       size !== item.declared_bytes || mime !== item.mime_type) {
       throw new HttpError(422, 'Fichier absent ou incohérent avec la déclaration.');
     }
+    // The digest is derived from the actual private object, not from a URL or
+    // client-provided value. Keep the historical verification hash unchanged.
+    // Do not mark an upload ready if its bytes cannot be verified.
+    let mediaSha256: string;
+    try {
+      mediaSha256 = await hashPrivateMedia(
+        admin.storage.from('verification-media'),
+        item.storage_path,
+        size,
+      );
+    } catch {
+      throw new HttpError(422, 'Impossible de vérifier les octets du média.');
+    }
     const { data: updated, error: updateError } = await admin.from('media_assets')
       .update({
         status: 'ready', actual_bytes: size,
@@ -41,7 +55,7 @@ export async function POST(request: Request) {
       .gt('expires_at', new Date().toISOString()).select('id').maybeSingle();
     if (!updated && !updateError) throw new HttpError(409, 'Média expiré ou déjà modifié.');
     if (updateError) throw new Error('Confirmation du média impossible.');
-    return Response.json({ ready: true }, { headers: { 'Cache-Control': 'no-store' } });
+    return Response.json({ ready: true, mediaSha256 }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     const { status, message } = publicError(error);
     return Response.json({ error: message }, {
