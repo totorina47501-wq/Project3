@@ -23,3 +23,6 @@ Choisir l'exécuteur Linux isolé, limiter CPU/RAM/temps et sortie réseau, ajou
 
 ## Diagnostic du build Cloudflare en CI
 La CI GitHub exécute maintenant le packaging local OpenNext **après** `next build` avec `bun run test:cloudflare:bundle` (`opennextjs-cloudflare build --skipNextBuild`). Cette commande prépare uniquement les artefacts Worker locaux ; **elle ne les publie pas** et n'appelle aucune API IA. Si le packaging est vert mais Cloudflare Workers Builds reste rouge, comparer les logs Cloudflare et les paramètres de build/déploiement plutôt que supposer un défaut du contrat vidéo. Cette simulation n'est pas une preuve de déploiement réel ni de compatibilité des secrets Cloudflare.
+
+## Correctif du packaging OpenNext
+Le nouveau test CI reproduit l'échec `ENOENT .next/standalone/.next/server/pages-manifest.json` après un `next build` réussi. La configuration `next.config.mjs` ne déclarait pas `output: 'standalone'`; ce mode est désormais explicite. La CI assure que le **bundle OpenNext** est réellement généré avant merge. Le build Cloudflare doit encore passer sur le SHA corrigé avant fusion ; ne pas considérer un build local comme un déploiement vérifié.

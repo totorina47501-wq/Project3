@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // OpenNext doit disposer de .next/standalone pour construire le Worker.
+  output: 'standalone',
   poweredByHeader: false,
   // Les fichiers SVG utilisateurs ne passent jamais par l'optimiseur d'images.
   images: { dangerouslyAllowSVG: false, remotePatterns: [] },
