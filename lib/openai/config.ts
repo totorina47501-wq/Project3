@@ -2,6 +2,7 @@
 // Aucun drapeau d'environnement ne doit contenir une clé côté navigateur.
 export type OpenAICapability = 'text' | 'vision' | 'audio' | 'embeddings';
 export type OpenAIEnv = {
+  [name: string]: string | undefined;
   OPENAI_API_KEY?: string | undefined;
   OPENAI_PAUSED?: string | undefined;
   OPENAI_TEXT_ENABLED?: string | undefined;
