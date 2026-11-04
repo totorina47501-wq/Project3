@@ -106,3 +106,32 @@ it('préserve un répertoire de sortie préexistant sans écraser de preuve', {s
     assert.equal(await readFile(join(out,'proof.txt'),'utf8'),'existing');
   }finally{await rm(root,{recursive:true,force:true})}
 });
+
+it('verifie les empreintes SHA-256 du fichier et des trois images extraites', {skip:!ffmpegAvailable}, async()=>{
+  const {createHash}=await import('node:crypto');
+  const {createReadStream}=await import('node:fs');
+  const root=await mkdtemp(join(tmpdir(),'mc-video-digest-'));
+  const input=join(root,'source.mp4'),out=join(root,'result');
+  const digest=async(path)=>{
+    const hash=createHash('sha256');
+    for await(const chunk of createReadStream(path))hash.update(chunk);
+    return hash.digest('hex');
+  };
+  try{
+    const generated=spawnSync('ffmpeg',[
+      '-hide_banner','-loglevel','error','-f','lavfi',
+      '-i','testsrc=size=160x120:rate=6','-t','1',
+      '-c:v','mpeg4','-pix_fmt','yuv420p','-y',input,
+    ],{timeout:15000,stdio:'pipe'});
+    assert.equal(generated.status,0);
+    const manifest=await processVideo(input,out);
+    assert.equal(manifest.video.sha256,await digest(input));
+    assert.match(manifest.video.sha256,/^[a-f0-9]{64}$/);
+    for(const frame of manifest.frames){
+      assert.equal(frame.sha256,await digest(join(out,frame.name)));
+      assert.match(frame.sha256,/^[a-f0-9]{64}$/);
+    }
+    assert.equal(manifest.aiCalls,0);
+    assert.equal(manifest.frames.length,3);
+  }finally{await rm(root,{recursive:true,force:true});}
+});
