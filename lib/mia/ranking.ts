@@ -41,6 +41,7 @@ export function chooseLawSources(question: string, sources: LawSource[], max = 4
       sum + (terms.has(word) ? (input.has(word) ? 2 : 0.25) : 0), 0);
     return { source, overlap };
   }).sort((a, b) => b.overlap - a.overlap || a.source.articleRef.localeCompare(b.source.articleRef))
+    .filter((entry) => entry.overlap > 0)
     .slice(0, Math.min(5, Math.max(1, max))).map((entry) => entry.source);
 }
 
