@@ -24,3 +24,15 @@ export function evidenceManifestV1(input: {
     mediaSha256: input.mediaSha256,
   });
 }
+
+/** Validate a downloaded blob against a trusted digest stored by the server. */
+export async function verifyBlobSha256(blob: Blob, expectedSha256: string): Promise<boolean> {
+  if (!/^[a-f0-9]{64}$/.test(expectedSha256)) return false;
+  const actual = await sha256Blob(blob);
+  // Compare every byte of the two fixed-size hexadecimal digests.
+  let difference = 0;
+  for (let i = 0; i < 64; i++) {
+    difference |= actual.charCodeAt(i) ^ expectedSha256.charCodeAt(i);
+  }
+  return difference === 0;
+}
