@@ -94,3 +94,7 @@ Après avoir appliqué les migrations + le seed, exécuter `tests/sql/security_s
 ## Actualisation 2026-11-04
 
 Migration 202611042001_mia_quota_and_append.sql exécutée sur Supabase. Quotas Mia mensuels : Solo 20 / Pro 300 / Studio 1500, consommation atomique et remboursement. La fonction append_mia_exchange ajoute deux messages de façon transactionnelle, propriété contrôlée par user_id. Les fonctions sont strictement réservées au service_role et interdites au rôle authenticated. Le corpus juridique contient 5 synthèses et 0 embeddings : la recherche est donc lexicale, pas encore pgvector.
+
+## Migrations du lot sans IA (2026-11-04)
+
+202611042002_media_assets.sql : table RLS pour préparer les médias, propriétaire en lecture, écriture serveur. 202611042003_stripe_event_inbox.sql : événements Stripe test signés, déduplication, accès service_role uniquement. Le stockage porte des expirations logiques ; la purge physique doit encore être automatisée.

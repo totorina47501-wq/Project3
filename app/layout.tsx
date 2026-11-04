@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import { BRAND } from '@/lib/branding';
+import { publicSiteUrl } from '@/lib/site-url';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
@@ -13,7 +14,13 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   title: `${BRAND.publicName} — Vérifiez vos partenariats avec Mia`,
   description: BRAND.tagline,
-  metadataBase: new URL(`https://${BRAND.domain}`),
+  metadataBase: new URL(publicSiteUrl()),
+  openGraph: {
+    type:'website',locale:'fr_FR',siteName:BRAND.publicName,
+    title:'MentionCheck — vérifier les mentions commerciales',
+    description:BRAND.tagline,
+  },
+  twitter: { card:'summary', title:BRAND.publicName, description:BRAND.tagline },
   robots: { index: true, follow: true },
 };
 

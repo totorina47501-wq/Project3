@@ -52,8 +52,14 @@ export default function Home() {
             </article>
           ))}
         </section>
-        <footer className="border-t border-slate-200 py-6 text-center text-sm text-slate-500">
-          © 2026 {BRAND.legalName} — {BRAND.tagline}
+        <footer className="border-t border-slate-200 py-7 text-center text-sm text-slate-500">
+          <nav aria-label="Informations publiques" className="mb-4 flex flex-wrap justify-center gap-5">
+            <Link href="/tarifs" className="underline hover:text-accent">Tarifs indicatifs</Link>
+            <Link href="/legal/confidentialite" className="underline hover:text-accent">Confidentialité</Link>
+            <Link href="/legal/mentions-legales" className="underline hover:text-accent">Mentions légales</Link>
+          </nav>
+          © 2026 {BRAND.publicName} — {BRAND.tagline}
+          <p className="mt-2 text-xs">Plateforme en préparation commerciale. Pas un service de certification juridique.</p>
         </footer>
       </div>
     </main>

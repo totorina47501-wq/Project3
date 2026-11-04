@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 test('Mia et les archives restent privées', async ({ page }) => {
-  for (const path of ['/dashboard/mia', '/dashboard/archive']) {
+  for (const path of ['/dashboard/mia', '/dashboard/archive', '/dashboard/media', '/dashboard/settings']) {
     await page.goto(path);
     await expect(page).toHaveURL(/\/login(?:\?|$)/);
     await expect(page.getByRole('heading', { name: 'Content de te retrouver !' })).toBeVisible();

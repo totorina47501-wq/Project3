@@ -19,14 +19,18 @@ Le dépôt ne dispose pas encore de lockfile enregistré. La CI utilise Bun avec
 
 - Landing responsive, inscription et connexion Supabase Auth.
 - Tableau de bord et historique des vérifications.
+- Mode sans IA par défaut, sans appel OpenAI ni consommation du quota de checks IA.
+- Préparation privée de vidéos courtes et de carrousels (sans analyse ni transcription).
 - Analyse texte et image, scores et détection des mentions ambiguës.
 - SSE, réécriture sous quota et confirmation explicite.
 - Mia conversationnelle avec sources juridiques référencées, historique privé et quotas.
 - Archives paginées, détail des vérifications et export PDF informatif privé.
+- Paramètres de confidentialité et export JSON, navigation mobile, SEO.
+- Facturation Stripe test préparée, désactivée par défaut.
 - Journalisation des analyses et de leurs coûts estimés.
 - Limitation de débit Cloudflare et quotas transactionnels Supabase.
 
-**Le SaaS n'est pas encore intégralement prêt à commercialiser.** Vidéo, carrousel, Stripe, Resend, documents RGPD, signature probante, tests E2E authentifiés de production et intégrations sociales restent à développer. Le chat Mia utilise cinq synthèses juridiques via recherche documentaire; l'indexation vectorielle est toujours à initialiser.
+**Le SaaS n'est pas encore prêt à commercialiser.** Vidéo et carrousel : préparation et stockage uniquement, aucune analyse ni transcription. Stripe reste inactif par défaut et limité aux tests. La purge physique des médias, l'effacement RGPD complet, les mentions légales définitives, les E2E en production, Resend, les intégrations sociales et les embeddings pgvector restent à terminer.
 
 ## Documentation
 
@@ -34,6 +38,7 @@ Le dépôt ne dispose pas encore de lockfile enregistré. La CI utilise Bun avec
 - Base SQL : docs/02-database.md
 - IA : docs/03-ai.md
 - Mia, archives, PDF et tests : docs/04-mia-archives.md
+- Lot sans crédit IA : docs/05-zero-credit-workstreams.md
 - Déploiement : docs/10-cloudflare-deployment.md
 - Connexion Supabase + Cloudflare : docs/11-supabase-cloudflare-setup.md
 

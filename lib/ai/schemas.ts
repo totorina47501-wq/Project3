@@ -8,6 +8,7 @@ export const toneSchema = z.enum(['naturel', 'créatif', 'institutionnel']);
 export const checkInputSchema = z.object({
   caption: z.string().trim().min(1, 'Écris une légende.').max(10000),
   platform: platformSchema,
+  execution: z.enum(['rules_only', 'ai']).default('rules_only'),
   mediaUrl: z.string().min(5).max(500).optional(),
   mediaType: mediaTypeSchema.default('none'),
 }).strict().refine(

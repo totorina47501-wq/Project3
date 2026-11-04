@@ -58,6 +58,7 @@ async function uploadImage(file: File) {
 export default function CheckPage() {
   const [caption, setCaption] = useState('');
   const [platform, setPlatform] = useState<Platform>('instagram');
+  const [execution, setExecution] = useState<'rules_only' | 'ai'>('rules_only');
   const [image, setImage] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [stages, setStages] = useState<Partial<Record<Stage, StageStatus>>>({});
@@ -71,12 +72,12 @@ export default function CheckPage() {
     setResult(null);
     setError('');
     try {
-      const path = image ? await uploadImage(image) : undefined;
+      const path = execution === 'ai' && image ? await uploadImage(image) : undefined;
       const response = await fetch('/api/check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          caption, platform, mediaUrl: path, mediaType: path ? 'image' : 'none',
+          caption, platform, execution, mediaUrl: path, mediaType: path ? 'image' : 'none',
         }),
       });
       if (!response.ok) {
@@ -135,6 +136,23 @@ export default function CheckPage() {
             {platformNames.map((item) => <option key={item.value} value={item.value}>{item.name}</option>)}
           </select>
         </label>
+        <fieldset className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+          <legend className="px-2 font-semibold">Mode de vérification</legend>
+          <label className="flex items-start gap-3 text-sm">
+            <input type="radio" name="execution" value="rules_only" checked={execution === 'rules_only'}
+              onChange={() => setExecution('rules_only')} className="mt-1" />
+            <span><strong>Sans IA, sans crédit OpenAI (par défaut)</strong>
+              <span className="mt-1 block text-slate-600">Règles déterministes uniquement. Score provisoire, pas de réécriture.</span>
+            </span>
+          </label>
+          <label className="mt-4 flex items-start gap-3 text-sm">
+            <input type="radio" name="execution" value="ai" checked={execution === 'ai'}
+              onChange={() => setExecution('ai')} className="mt-1" />
+            <span><strong>Analyse complète avec Mia (utilise des crédits OpenAI)</strong>
+              <span className="mt-1 block text-slate-600">N&apos;active pas cette option pendant les tests sans budget IA.</span>
+            </span>
+          </label>
+        </fieldset>
         <label className="block font-semibold">
           Légende sponsorisée
           <textarea required minLength={1} maxLength={10000} value={caption}
@@ -142,7 +160,7 @@ export default function CheckPage() {
             placeholder="Voici mon dernier produit préféré…"
             className="mt-2 block min-h-48 w-full rounded-xl border border-slate-300 p-4 font-normal outline-none focus:border-accent" />
         </label>
-        <label className="block font-semibold">
+        {execution === 'ai' && <label className="block font-semibold">
           Visuel (facultatif)
           <input type="file" accept="image/jpeg,image/png,image/webp"
             onChange={(event) => setImage(event.target.files?.[0] ?? null)}
@@ -150,10 +168,14 @@ export default function CheckPage() {
           <span className="mt-2 block text-xs font-normal text-slate-500">
             JPEG, PNG ou WebP, 8 Mo max. Les vidéos et carrousels arrivent prochainement.
           </span>
-        </label>
+        </label>}
+        {execution === 'rules_only' && <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900">
+          Aucun appel GPT-4o / Whisper ne sera effectué dans ce mode. Tu peux vérifier la légende
+          sans consommer de crédit OpenAI.
+        </p>}
         <button disabled={loading || !caption.trim()} type="submit"
           className="w-full rounded-xl bg-accent px-6 py-3.5 font-bold text-white shadow-md hover:bg-indigo-700 disabled:opacity-50">
-          {loading ? 'Mia analyse…' : 'Check ma publication'}
+          {loading ? 'Vérification…' : execution === 'ai' ? 'Analyser avec Mia (crédits IA)' : 'Vérifier sans IA'}
         </button>
       </form>
       <AIStreamProgress stages={stages} />
@@ -161,8 +183,10 @@ export default function CheckPage() {
       {result && (
         <div className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6">
           <h2 className="font-heading text-2xl font-bold">
-            {result.score >= 80 ? "✅ C'est carré. Mia valide." :
-              '⚠️ Aïe. Mia a repéré des problèmes. On les corrige ?'}
+            {result.analysisMode === 'rules_only'
+              ? 'Contrôle automatique des mentions terminé'
+              : result.score >= 80 ? 'Aucun signal majeur détecté'
+                : 'Mia a repéré des points à vérifier'}
           </h2>
           {result.analysisMode !== 'full' && (
             <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900">

@@ -6,6 +6,7 @@ import { createAdminSupabase } from '@/lib/supabase/admin';
 import { requireUser, HttpError, publicError } from '@/lib/security/auth';
 import { consumeQuota, refundQuota } from '@/lib/security/quota';
 import { checkRateLimit } from '@/lib/security/rate-limit';
+import { runRulesOnlyCheck } from '@/lib/ai/rules-only-engine';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,6 +17,9 @@ export async function POST(request: Request) {
     const payload = checkInputSchema.safeParse(await request.json());
     if (!payload.success) {
       return Response.json({ error: 'Publication ou plateforme invalide.' }, { status: 400 });
+    }
+    if (payload.data.execution === 'rules_only' && payload.data.mediaType !== 'none') {
+      throw new HttpError(422, 'Le contrôle sans IA utilise uniquement la légende.');
     }
     if (payload.data.mediaType !== 'none' && payload.data.mediaType !== 'image') {
       throw new HttpError(422, 'Les vidéos et carrousels seront disponibles prochainement.');
@@ -28,14 +32,17 @@ export async function POST(request: Request) {
       .select('plan').eq('id', user.id).single();
     if (error || !profile) throw new HttpError(503, 'Profil Supabase indisponible.');
     await checkRateLimit(user.id, profile.plan);
-    await consumeQuota(user.id, 'check');
+    if (payload.data.execution === 'ai') await consumeQuota(user.id, 'check');
 
     const stream = createEventStream(async (emit) => {
       try {
-        const result = await runCheck({ ...payload.data, userId: user.id }, emit);
+        const result = payload.data.execution === 'ai'
+          ? await runCheck({ ...payload.data, userId: user.id }, emit)
+          : await runRulesOnlyCheck({ caption: payload.data.caption, platform: payload.data.platform,
+              userId: user.id }, emit);
         emit('done', result);
       } catch {
-        await refundQuota(user.id, 'check');
+        if (payload.data.execution === 'ai') await refundQuota(user.id, 'check');
         emit('error', { message: 'La vérification a échoué. Le quota a été restitué.' });
       }
     });

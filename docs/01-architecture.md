@@ -315,3 +315,7 @@ Cloudflare est l'hébergeur réel visé : **aucun compte Vercel ou Upstash n'est
 ## Actualisation 2026-11-04
 
 L'architecture ancienne dans ce document est une cible et ne prouve pas les fonctionnalités développées. Limiteur opérationnel : Cloudflare Workers, pas Upstash. Nouveaux parcours /dashboard/mia et /dashboard/archive décrits dans docs/04-mia-archives.md. La recherche pgvector active, la vidéo et la signature probante ne sont pas encore disponibles.
+
+## Actualisation du mode zéro crédit (2026-11-04)
+
+Le moteur règles seules est sélectionné par défaut sur la page Check et dans l'API ; seule la sélection explicite du mode IA peut lancer GPT-4o. Les vidéos et carrousels sont préparés via Storage privé (upload direct, TUS au-delà de 6 Mo), sans analyse. Stripe est préparé en mode test mais désactivé. Se référer à docs/05-zero-credit-workstreams.md pour l'état réel, distinct de l'architecture cible ci-dessus.
