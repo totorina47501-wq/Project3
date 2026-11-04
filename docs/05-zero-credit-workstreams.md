@@ -124,3 +124,12 @@ Le validateur refuse explicitement les durées absentes, nulles, vides, blanches
 ### Contrôle du 4 novembre 2026 — durée vidéo ultra-courte
 
 Le processeur FFmpeg hors ligne rejette maintenant les durées inférieures à 50 ms lors du calcul des trois instants d'échantillonnage : l'ancienne borne `s-.01` pouvait produire un seek négatif pour les vidéos de moins de 10 ms. Un test Node natif couvre les valeurs 1, 9, 10, 49 et 50 ms. Le contrôle de durée de FFprobe tolère toujours les valeurs positives jusqu'à 60 s, mais le traitement refuse les vidéos trop courtes pour l'échantillonnage. Le parseur de durée utilise un accès optionnel à `format` pour éviter une exception native si cette section manque. Aucun média distant ni API IA n'est sollicité. CI du SHA précédent `613d0e3` : succès GitHub Actions #65 (run 41778621749). Les nouveaux SHA nécessitent confirmation CI ; ce processeur reste non déployé.
+
+
+## Intervention — 4 novembre 2026, 10:16 Europe/Paris
+
+Contrôle préalable : PR #1 toujours brouillon, branche `feat/mentioncheck-bloc-1-fondations`, SHA initial `e8b05f99bf19ab9ee01103999f310213f5842f52`. Les exécutions CI #77 (41797734266) et sa paire sont à vérifier par SHA ; #77 était en succès au début de cette intervention.
+
+**Correctif publication partielle** : `workers/video/src/process.mjs` suit désormais explicitement si le répertoire de destination a été créé et si le manifeste final a été publié. En cas d'échec entre la création du répertoire et la fin de la publication, seul le répertoire neuf créé par cette exécution est retiré. Un répertoire préexistant n'est jamais supprimé. Le répertoire de travail temporaire est toujours purgé. Test hors ligne ajouté pour vérifier qu'une preuve préexistante n'est pas écrasée.
+
+**Limites** : ce nettoyage n'est pas une transaction atomique ; un arrêt brutal du processus peut laisser des sorties partielles. Une publication atomique sur le même système de fichiers et une isolation de l'exécuteur restent nécessaires avant intégration en production. Aucun appel IA, Stripe, purge Storage ni déploiement n'a été déclenché. Commits : `6d9b33d` (correctif), `e65bb6b` (test). Validation CI du SHA final à confirmer séparément.
