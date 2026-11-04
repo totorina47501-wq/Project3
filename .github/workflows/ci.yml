@@ -36,3 +36,5 @@ jobs:
         run: bun run test:carousel:offline
       - name: Compilation Next.js
         run: bun run build
+      - name: Packager OpenNext pour Cloudflare (offline, sans déploiement)
+        run: bun run test:cloudflare:bundle

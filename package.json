@@ -19,7 +19,8 @@
     "test:carousel:offline": "node --test workers/carousel/tests/carousel.test.mjs",
     "work:check": "node scripts/work-inventory.mjs check",
     "work:find": "node scripts/work-inventory.mjs find",
-    "work:test": "node --test scripts/work-inventory.test.mjs"
+    "work:test": "node --test scripts/work-inventory.test.mjs",
+    "test:cloudflare:bundle": "opennextjs-cloudflare build --skipNextBuild"
   },
   "engines": {
     "node": ">=22.12.0 <27"

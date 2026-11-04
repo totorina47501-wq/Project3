@@ -20,3 +20,6 @@ Ce lot de la PR #14 implémente un contrat **purement local** et testé. Aucun b
 
 ## Avant mise en service
 Choisir l'exécuteur Linux isolé, limiter CPU/RAM/temps et sortie réseau, ajouter migration RLS des jobs, claim atomique en base, permissions des fichiers privés, publication atomique des JPEG/WAV/manifeste et tests de concurrence, expiration et crash. Chiffrer les coûts et obtenir une autorisation avant toute activation. Aucun média client n'est traité par ce contrat.
+
+## Diagnostic du build Cloudflare en CI
+La CI GitHub exécute maintenant le packaging local OpenNext **après** `next build` avec `bun run test:cloudflare:bundle` (`opennextjs-cloudflare build --skipNextBuild`). Cette commande prépare uniquement les artefacts Worker locaux ; **elle ne les publie pas** et n'appelle aucune API IA. Si le packaging est vert mais Cloudflare Workers Builds reste rouge, comparer les logs Cloudflare et les paramètres de build/déploiement plutôt que supposer un défaut du contrat vidéo. Cette simulation n'est pas une preuve de déploiement réel ni de compatibilité des secrets Cloudflare.
