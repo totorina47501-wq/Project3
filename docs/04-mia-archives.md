@@ -156,3 +156,28 @@ des tokens du chat ; aucun appel payant n'est effectué en CI. Les tests ajouté
 couvrent le classement, les faux positifs, la sécurité des URL, les sources
 inconnues, la couverture partielle et l'aide CLI sans secrets. Les E2E authentifiés
 et la validation de qualité métier en production restent à réaliser.
+
+
+## Indexation one-shot depuis le Worker existant
+
+La route `POST /api/internal/mia-index` réutilise les secrets serveur du Worker
+et ne crée aucun doublon SQL. Elle exige un jeton Bearer d'au moins 32 caractères :
+`MIA_INDEX_TOKEN` si configuré, sinon `MEDIA_RETENTION_TOKEN` déjà présent.
+Le jeton n'est jamais retourné ni journalisé.
+
+- `POST /api/internal/mia-index` : aperçu (dry-run) du nombre de vecteurs manquants.
+- `POST /api/internal/mia-index?execute=true` : au plus cinq embeddings sur le
+  corpus validé, uniquement avec `OPENAI_EMBEDDINGS_ENABLED=true` et une clé OpenAI
+  valide ; aucune opération si `OPENAI_PAUSED=true`.
+- Chaque ligne est écrite avec vérification du contenu initial ; l'indexation
+  saute les documents déjà indexés. Le résultat indique la couverture 5/5,
+  mais n'active jamais `MIA_VECTOR_SEARCH_ENABLED` automatiquement.
+- Si les drapeaux d'embeddings sont désactivés côté Worker, l'exécution
+  est refusée sans facturation. Le jeton ne doit jamais être mis dans une URL,
+  une commande GitHub Actions ou un log. Utiliser une requête HTTPS
+  authentifiée depuis un terminal privé.
+- Une fois la couverture confirmée et les tests de pertinence validés,
+  désactiver `OPENAI_EMBEDDINGS_ENABLED` si le vectoriel ne doit pas servir
+  les requêtes utilisateurs, et retirer le jeton d'indexation dédié s'il a été créé.
+
+La CI n'appelle pas cette route et n'exécute aucune requête OpenAI payante.

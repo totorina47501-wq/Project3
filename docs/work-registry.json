@@ -89,15 +89,16 @@
       "routes": [
         "app/api/mia/chat/route.ts",
         "app/api/mia/conversations/route.ts",
-        "app/api/mia/conversations/delete/route.ts"
+        "app/api/mia/conversations/delete/route.ts",
+        "app/api/internal/mia-index/route.ts"
       ],
       "migrations": [
         "supabase/migrations/202611032003_pgvector_match.sql",
         "supabase/migrations/202611042001_mia_quota_and_append.sql"
       ],
       "next": [
-        "Recherche hybride pgvector codée, désactivée par défaut ; 0/5 embeddings Supabase au 4 novembre 2026.",
-        "Indexer seulement après accord sur les appels payants ; valider pertinence, E2E authentifiés et activation Cloudflare."
+        "Indexation Worker one-shot, authentifiée par jeton opérateur, dry-run par défaut, maximum cinq documents et sans activation automatique du RAG.",
+        "Appeler le Worker avec les secrets existants et OPENAI_EMBEDDINGS_ENABLED=true pour valider 5/5 ; contrôler la pertinence et les E2E authentifiés."
       ]
     },
     {
