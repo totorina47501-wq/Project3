@@ -1,10 +1,18 @@
 // Chemin : app/dashboard/mia/page.tsx
+import { createServerSupabase } from '@/lib/supabase/server';
 import { MiaChat } from '@/components/MiaChat';
 
 export const dynamic = 'force-dynamic';
 export default async function MiaPage({
   searchParams,
 }: { searchParams: Promise<{ verificationId?: string }> }) {
+  const supabase = await createServerSupabase();
+  const { data: { user } } = await supabase.auth.getUser();
+  const metadataName = user?.user_metadata?.display_name ?? user?.user_metadata?.full_name ?? user?.user_metadata?.name;
+  const candidate = typeof metadataName === 'string' && metadataName.trim()
+    ? metadataName.trim().split(/\s+/)[0]
+    : user?.email?.split('@')[0];
+  const displayName = candidate && /^[\p{L}\p{N} _.'-]{1,32}$/u.test(candidate) ? candidate : undefined;
   const params = await searchParams;
   const id = params.verificationId;
   const safeId = id && /^[0-9a-f-]{36}$/i.test(id) ? id : undefined;
@@ -17,7 +25,7 @@ export default async function MiaPage({
           Pose une question sur la transparence commerciale. Tes conversations restent privées.
         </p>
       </div>
-      <MiaChat initialVerificationId={safeId} />
+      <MiaChat initialVerificationId={safeId} displayName={displayName} />
     </div>
   );
 }

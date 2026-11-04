@@ -243,3 +243,7 @@ fonctionnalité distincte.
 
 Ne pas activer le cron avant déploiement du Worker planifié et application
 de la migration. Vérifier la CI, l'état 5/5 et les logs Cloudflare.
+
+## Interface de conversation Mia
+
+L'interface présente désormais les messages sous forme de bulles différenciées, un avatar Mia, une saisie compacte, des suggestions de questions et un historique accessible. Sur mobile, les bulles s'adaptent à la largeur et les liens juridiques longs ne provoquent pas de débordement. L'accueil utilise le prénom public Supabase si disponible, sinon le préfixe de l'email, après validation stricte de la longueur et des caractères. Cette personnalisation est purement visuelle : ni le prompt, ni les sources, ni les quotas ne sont modifiés. Ne jamais exposer d'email complet dans le message de bienvenue.
