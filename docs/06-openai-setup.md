@@ -104,3 +104,25 @@ créateur, isolation du fichier et nettoyage, suivi des coûts par vérification
 transcription volontaire, analyse Vision des frames et fusion des anomalies.
 Aucun traitement autonome coûteux ni import automatique des embeddings
 n'est autorisé à ce stade.
+
+
+## Vérification rétrospective de l'incident 429 — 4 novembre 2026
+
+**Preuves observées, sans nouvel appel OpenAI :** le 3 novembre 2026 à 23:22 UTC (4 novembre à 00:22 à Paris), le Worker a journalisé `stage=text`, `category=credit`, HTTP `429`. Un crédit API de 10 USD et une recharge automatique désactivée avaient été contrôlés lors du diagnostic, mais le solde actuel et l'association précise entre clé Cloudflare et projet OpenAI ne peuvent pas être vérifiés par lecture des fichiers GitHub.
+
+Une consultation **en lecture seule** de Supabase le 4 novembre révèle toutefois deux vérifications avec `analysisMode=full` et quatre enregistrements réussis `ai_analyses` :
+- 3 novembre 23:23:46 UTC : vérification complète avec **analyse texte GPT-4o et réécriture GPT-4o** ;
+- 3 novembre 23:26:50 UTC : deuxième vérification complète avec **analyse texte GPT-4o et réécriture GPT-4o**.
+
+**Conclusion :** l'erreur 429 initiale n'était plus bloquante quelques minutes plus tard. Ces succès ne prouvent pas la validité future du crédit ni la disparition définitive des erreurs 429 ; ils suffisent à réfuter le diagnostic d'une panne persistante au moment des dernières vérifications enregistrées. **Ne pas recréer de clé, recharger le compte ni modifier un secret Cloudflare pour cette seule erreur historique.** Aucun appel IA réel n'a été lancé pour ce diagnostic.
+
+Le connecteur OpenAI Platform accessible depuis cette conversation liste une organisation « Personal » et un « Default project » uniquement. Ce résultat **ne permet pas** de déterminer à quel projet appartient la clé actuellement stockée dans Cloudflare. La clé n'est pas lisible via GitHub, et les droits de facturation, les limites du projet et le solde instantané ne sont pas exposés par ce connecteur.
+
+### Si une nouvelle erreur 429 se produit
+
+1. Examiner `[mentioncheck][ai_failure]` dans l'observabilité Cloudflare en comparant `category`, `stage` et heure UTC. `credit` et `rate_limit` sont déjà distingués dans le code ; ne pas assimiler tout HTTP 429 à un défaut de crédits.
+2. Dans OpenAI Platform, vérifier **l'organisation API** qui possède le solde, le projet associé à la clé déjà déployée, ses permissions d'accès à `gpt-4o`, les limites d'utilisation et les éventuels plafonds de dépenses, sans exposer la valeur de la clé.
+3. Vérifier les paramètres de facturation sans déclencher d'achat ou de recharge : un solde positif ne garantit pas l'absence de restriction d'organisation/projet. La coupure applicative `OPENAI_PAUSED=true` reste disponible si besoin.
+4. Ne lancer aucun essai réel GPT-4o sans autorisation explicite. Un test de compilation, de lecture de base ou de contrôle d'environnement ne constitue **pas** une preuve que l'inférence fonctionne à cet instant.
+
+Références fournisseurs : https://help.openai.com/en/articles/6614457-troubleshooting-api-usage-and-spend-limits et https://help.openai.com/en/articles/9186755-managing-projects-in-the-api-platform .
