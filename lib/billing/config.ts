@@ -7,6 +7,7 @@ export type StripeGate = {
   priceStudio?: string | undefined;
 };
 type BillingEnv = {
+  [name: string]: string | undefined;
   BILLING_ENABLED?: string | undefined;
   STRIPE_MODE?: string | undefined;
   STRIPE_SECRET_KEY?: string | undefined;
