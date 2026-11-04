@@ -5,6 +5,16 @@ const sample={format:{format_name:'mov,mp4',duration:'30'},
   streams:[{codec_type:'video',width:1080,height:1920},{codec_type:'audio'}]};
 describe('FFprobe local sans crédits IA',()=>{
   it('accepte Reel 30s',()=>assert.equal(validateProbe(sample,10).hasAudio,true));
+  it('rejette les noms de conteneurs trompeurs et inconnus',()=>{
+    for(const format_name of ['notmp4','movicious','unknown','', 'avi,movicious']){
+      assert.throws(()=>validateProbe({...sample,format:{...sample.format,format_name}},10),VideoInputError);
+    }
+  });
+  it('accepte les formats MP4/MOV FFprobe séparés par virgules',()=>{
+    for(const format_name of ['mov,mp4,m4a,3gp,3g2,mj2','mp4','mov']){
+      assert.equal(validateProbe({...sample,format:{...sample.format,format_name}},10).width,1080);
+    }
+  });
   it('rejette 61s',()=>assert.throws(()=>validateProbe({...sample,
     format:{format_name:'mp4',duration:'61'}},10),VideoInputError));
   it('rejette 50 Mo dépassés',()=>assert.throws(()=>validateProbe(sample,52428801),VideoInputError));
