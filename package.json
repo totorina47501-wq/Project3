@@ -24,7 +24,9 @@
     "work:check": "node scripts/work-inventory.mjs check",
     "work:find": "node scripts/work-inventory.mjs find",
     "work:test": "node --test scripts/work-inventory.test.mjs",
-    "test:cloudflare:bundle": "opennextjs-cloudflare build --skipNextBuild"
+    "test:cloudflare:bundle": "opennextjs-cloudflare build --skipNextBuild",
+    "training:prepare": "node scripts/training/export.mjs",
+    "test:training:offline": "node --test --experimental-test-isolation=none scripts/training/*.test.mjs"
   },
   "engines": {
     "node": ">=22.12.0 <27"

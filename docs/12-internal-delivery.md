@@ -20,8 +20,8 @@ et migrations ; les traitements existants sont prolongés dans leurs modules.
 
 ## Contraintes de livraison
 
-Aucun appel OpenAI, aucune activation Stripe ou autre fournisseur, aucune
-migration appliquée à une base distante, aucune suppression en production.
+Aucun appel OpenAI, aucune activation Stripe ou autre fournisseur, aucune suppression en production. La migration interne a ensuite été
+appliquée avec autorisation explicite ; voir le relevé de livraison ci-dessous.
 Les services applicatifs des tests utilisent des fixtures locales sans secrets.
 Un seul commit final sur la branche existante, aucune nouvelle PR ni fusion.
 
@@ -34,7 +34,7 @@ Un seul commit final sur la branche existante, aucune nouvelle PR ni fusion.
 - [x] Tester les vraies interfaces avec une frontière Supabase HTTP locale.
 - [x] Intégrer les migrations à inspecter/appliquer séparément du code.
 - [x] Mettre à jour le registre et exécuter tous les contrôles demandés.
-- [ ] Relire la différence complète, créer et publier le commit unique.
+- [x] Relire, publier le commit initial puis intégrer les évolutions de main.
 
 Les nouvelles tables Studio et collaborations sont communiquées au module
 RGPD. Les mutations SQL requièrent soit l'identité Supabase vérifiée, soit
@@ -46,9 +46,9 @@ jamais importé par les routes de production.
 
 La PR #1 a été fusionnée par une action extérieure le 4 novembre 2026 à
 14:44:25 UTC, commit de fusion `3e679abe39a29d6a4201a99262259231d0954f16`.
-Le présent travail ne fusionne pas main et ne crée ni branche ni PR. La branche
-existante reste la destination du commit. La CI accepte également son push
-car une PR déjà fusionnée ne peut plus déclencher la validation du nouveau SHA.
+Après autorisation explicite de l’utilisateur, les développements ont été
+intégrés à main en préservant les évolutions distantes. Aucun nouveau dépôt
+ni nouvelle PR n’a été créé.
 
 ## Revue et vérifications
 
@@ -75,3 +75,38 @@ Compatibilité CI : les scripts Node:test emploient le nom expérimental
 Audit npm des dépendances de production : zéro vulnérabilité après
 unification de PostCSS sur la version exacte du manifeste. Cet audit est
 également exécuté en CI et ne prétend pas couvrir les binaires système.
+
+## Relevé de livraison après intégration
+
+Main de référence : `b8d1a14a96ff9c5cc5f9065b1624b5d4a285a7ea`.
+CI GitHub Actions `41889338060` et contrôle Cloudflare réussis sur ce SHA.
+La migration `internal_completion` a été appliquée au projet Supabase
+`zcztvberuihphqklhjsr`, version distante `20261104184723`, à partir du fichier
+`20261104200500_internal_completion.sql`. Ne pas la réappliquer par comparaison
+naïve des noms de versions : les migrations historiques MCP portent des
+horodatages distants distincts. Vérification distante en lecture seule :
+23 tables publiques avec RLS, 8 règles et 5 documents, aucun embedding.
+
+La validation de cette intégration comptait 194 tests unitaires, 46 tests médias,
+4 suites SQL et 19 parcours Playwright réussis ; le test Storage réel restait
+désactivé car il écrit et supprime des objets distants. Ces chiffres décrivent
+ce SHA et ne remplacent pas la validation des commits suivants.
+
+Complément courant : préparation de lots de réécritures hors ligne, documentée
+dans [28-training-offline.md](28-training-offline.md), sans entraînement ni
+transmission au fournisseur. Consentement, demandes d’effacement, relecture,
+coordonnées, secrets et partition par créateur font l’objet de tests dédiés.
+
+Restent à valider/implémenter avant ouverture commerciale : parcours réel
+Auth/Storage, facturation des trois offres, transport des emails et OAuth,
+exécution média distante, indexation vectorielle du corpus, entraînement et
+évaluations des modèles, identité de l’éditeur et textes légaux définitifs,
+exécution autorisée des politiques de conservation/effacement. Le réglage
+Supabase de protection contre les mots de passe compromis reste désactivé.
+Aucun de ces services n’est activé par la préparation locale des données.
+
+Validation du complément hors ligne : TypeScript et lint réussis, 194 tests
+unitaires et 15 tests de préparation IA réussis, 46 tests médias, 4 suites SQL,
+4 tests de harnais et 2 tests de fixture réussis. Playwright : 19 réussites,
+1 test Storage réel volontairement désactivé. Compilation Next.js et bundle
+OpenNext réussis. Aucun nouveau schéma distant ni service activé.

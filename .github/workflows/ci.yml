@@ -52,6 +52,8 @@ jobs:
         run: npm run test:media-jobs:offline
       - name: SQL et RLS sur PostgreSQL embarqué isolé
         run: npm run test:sql-harness && npm run test:sql:offline
+      - name: Préparation des données IA sans réseau
+        run: npm run test:training:offline
       - name: Fixture HTTP locale
         run: npm run test:fixtures
       - name: Installer Chromium

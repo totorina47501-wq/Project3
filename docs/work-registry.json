@@ -279,7 +279,8 @@
       ],
       "migrations": [],
       "next": [
-        "Maintenir la vérification des mentions sponsorisées en début de texte."
+        "Maintenir la vérification des mentions sponsorisées en début de texte.",
+        "Préparation trimestrielle hors ligne : scripts/training/export.mjs et docs/28-training-offline.md ; aucun entraînement déclenché."
       ]
     },
     {
@@ -428,7 +429,7 @@
       ],
       "migrations": [],
       "next": [
-        "Migration à appliquer séparément ; Stripe et IA restent inactifs."
+        "Migration appliquée : internal_completion, version distante 20261104184723 ; Stripe et IA restent inactifs."
       ]
     },
     {
@@ -448,7 +449,7 @@
         "supabase/migrations/20261104200500_internal_completion.sql"
       ],
       "next": [
-        "Migration testée en PostgreSQL embarqué ; pas appliquée en production."
+        "Migration testée hors ligne et appliquée avec autorisation ; version distante 20261104184723. Ne pas la réappliquer."
       ]
     }
   ]
