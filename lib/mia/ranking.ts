@@ -46,3 +46,24 @@ export function chooseLawSources(question: string, sources: LawSource[], max = 4
     .slice(0, Math.min(5, Math.max(1, max))).map((entry) => entry.source);
 }
 
+
+export function validatedLawSource(item: {
+  article_ref: unknown; content: unknown; source_url: unknown;
+  effective_on?: unknown; checked_at?: unknown;
+}): LawSource | null {
+  if (typeof item.article_ref !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,79}$/.test(item.article_ref)) return null;
+  if (typeof item.content !== 'string' || !item.content.trim()) return null;
+  if (typeof item.source_url !== 'string') return null;
+  try {
+    const url = new URL(item.source_url);
+    if (url.protocol !== 'https:' || url.username || url.password ||
+      url.port || !['www.legifrance.gouv.fr', 'www.economie.gouv.fr'].includes(url.hostname)) return null;
+    return {
+      articleRef: item.article_ref, content: item.content.slice(0, 2000),
+      sourceUrl: url.toString(),
+      effectiveOn: item.effective_on ? String(item.effective_on) : null,
+      checkedAt: item.checked_at ? String(item.checked_at) : null,
+    };
+  } catch { return null; }
+}
+

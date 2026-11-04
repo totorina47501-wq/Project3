@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { chooseLawSources, type LawSource } from '../../lib/mia/ranking';
+import { chooseLawSources, validatedLawSource, type LawSource } from '../../lib/mia/ranking';
 import { miaQuestionSchema, miaModelSchema } from '../../lib/mia/schemas';
-import { validatedLawSource } from '../../lib/mia/retrieval';
 
 const base = { sourceUrl: 'https://www.legifrance.gouv.fr/loda/id/TEST',
   effectiveOn: null, checkedAt: null };
