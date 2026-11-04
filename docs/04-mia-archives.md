@@ -222,3 +222,24 @@ Supabase et le jeton opérateur côté Worker. Sans configuration admin,
 aucun utilisateur ne peut lancer l'indexation. L'opération reste
 idempotente et limitée au corpus de cinq documents. Vérifier le résultat
 dans Supabase et tester la pertinence avant d'activer la recherche vectorielle.
+
+## Indexation automatique quotidienne (opt-in)
+
+Le Worker indépendant `workers/media-retention` possède déjà un cron
+`15 3 * * *` (03:15 UTC). Il peut également appeler
+`POST /api/internal/mia-index?execute=true` chaque jour, **uniquement**
+si `MIA_DAILY_INDEX_ENABLED=true` est configuré sur ce Worker.
+Le secret `MIA_INDEX_TOKEN` doit être identique au jeton opérateur du
+Worker principal. Ne pas mettre de jeton dans GitHub ni dans les logs.
+L'activation requiert également `OPENAI_EMBEDDINGS_ENABLED=true` sur
+le Worker principal et la validation préalable des cinq vecteurs.
+
+La migration `20261104211500_mia_invalidate_changed_content.sql`
+invalide un embedding si et seulement si `law_documents.content` change.
+L'indexeur existant ignore les documents ayant déjà un vecteur valide :
+pas de recalcul inutile pour un document inchangé. Le cron ne surveille
+pas les publications externes de nouvelles lois ; cette veille est une
+fonctionnalité distincte.
+
+Ne pas activer le cron avant déploiement du Worker planifié et application
+de la migration. Vérifier la CI, l'état 5/5 et les logs Cloudflare.
