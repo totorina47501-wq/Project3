@@ -1,5 +1,5 @@
 // Export RGPD personnel : données lisibles par le propriétaire, jamais par service_role.
-import { requireUser, publicError, HttpError } from '@/lib/security/auth';
+import { requireUser, publicError } from '@/lib/security/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
