@@ -56,3 +56,8 @@ Créer et connecter Supabase, appliquer les migrations, ajouter les variables Cl
 Préparation FFmpeg/FFprobe des vidéos et Sharp des carrousels **hors ligne**, publication atomique des résultats locaux, gestion des téléversements renforcée, modes sans IA explicitement distingués et export JSON des données avec pagination honnête. Voir `docs/05-zero-credit-workstreams.md` pour la limite exacte de ce périmètre. L'analyse vidéo et carrousel de bout en bout n'est **pas encore active sur Cloudflare**.
 
 - Demandes d'effacement RGPD : dépôt, suivi, annulation et export des statuts, **sans suppression automatique** ni activation de services externes. Voir `docs/05-zero-credit-workstreams.md`.
+
+
+### OpenAI : configuration et budget
+
+Les modèles OpenAI texte/image historiques sont déjà câblés. Transcription `gpt-transcribe` et embeddings `text-embedding-3-small` sont préparés côté serveur mais **non activés**. Pas de nouvelles requêtes API pour la préparation ; une mise en pause générale est disponible via `OPENAI_PAUSED=true`. Voir `docs/06-openai-setup.md`.

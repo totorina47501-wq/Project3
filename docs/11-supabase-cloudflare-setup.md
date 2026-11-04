@@ -57,3 +57,8 @@ Changer de build après ces modifications : les valeurs publiques sont insérée
 - Build Next.js réussi mais erreur 500 sur /dashboard : revérifier NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY.
 
 Cloudflare reste l'unique hébergeur de l'application. Supabase et OpenAI sont des services managés nécessaires au traitement.
+
+
+## Préparation OpenAI — sans test payant
+
+La clé API reste un secret `OPENAI_API_KEY` côté Worker et ne doit jamais être copiée dans une variable `NEXT_PUBLIC_` ou dans les logs. Pour mettre immédiatement l'IA en pause, utiliser `OPENAI_PAUSED=true` côté Worker ; les analyses IA et le chat Mia échoueront alors de façon contrôlée, tandis que le mode `rules_only` reste disponible. `OPENAI_AUDIO_ENABLED=false` et `OPENAI_EMBEDDINGS_ENABLED=false` sont les valeurs par défaut et empêchent les nouveaux modules de passer un appel payant. Voir `docs/06-openai-setup.md` pour les contrôles de coût, la clé de projet dédiée et le futur raccordement vidéo.

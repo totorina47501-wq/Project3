@@ -1,29 +1,12 @@
 // Chemin : lib/openai.ts
 import 'server-only';
-import OpenAI from 'openai';
+import type OpenAI from 'openai';
+import { openaiClient } from '@/lib/openai/client';
+import { estimateChatCostUsd, MAX_CHAT_COMPLETION_TOKENS, OPENAI_MODELS, type OpenAICapability } from '@/lib/openai/config';
 import { z } from 'zod';
 import type { ModelTelemetry } from '@/lib/ai/schemas';
 
-const MODEL = 'gpt-4o';
-
-// Erreur typée : diagnostic fiable sans lire ni journaliser la valeur de la clé.
-class MissingOpenAIKeyError extends Error {
-  constructor() {
-    super('OPENAI_API_KEY manquante.');
-    this.name = 'MissingOpenAIKeyError';
-  }
-}
-
-function client() {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new MissingOpenAIKeyError();
-  }
-  return new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-    timeout: 30000,
-    maxRetries: 2,
-  });
-}
+const MODEL = OPENAI_MODELS.text;
 
 function telemetry(
   usage: { prompt_tokens?: number; completion_tokens?: number } | null | undefined,
@@ -37,9 +20,7 @@ function telemetry(
     completionTokens,
     latencyMs: Date.now() - started,
     // Estimation tarifaire pour le reporting, à actualiser avec les prix contractuels.
-    estimatedCostUsd: Number(
-      ((promptTokens * 5 + completionTokens * 15) / 1000000).toFixed(8),
-    ),
+    estimatedCostUsd: estimateChatCostUsd(promptTokens, completionTokens),
   };
 }
 
@@ -47,12 +28,14 @@ async function complete<T>(
   system: string,
   user: string | OpenAI.Chat.Completions.ChatCompletionContentPart[],
   schema: z.ZodType<T>,
+  capability: Extract<OpenAICapability, 'text' | 'vision'>,
 ): Promise<{ value: T; usage: ModelTelemetry }> {
   const started = Date.now();
-  const completion = await client().chat.completions.create({
+  const completion = await openaiClient(capability).chat.completions.create({
     model: MODEL,
     store: false,
     temperature: 0.1,
+    max_completion_tokens: MAX_CHAT_COMPLETION_TOKENS,
     response_format: { type: 'json_object' },
     messages: [
       { role: 'system', content: system },
@@ -68,7 +51,7 @@ async function complete<T>(
 }
 
 export function chatText<T>(system: string, content: string, schema: z.ZodType<T>) {
-  return complete(system, content, schema);
+  return complete(system, content, schema, 'text');
 }
 
 export function chatVision<T>(
@@ -79,5 +62,5 @@ export function chatVision<T>(
   return complete(system, [
     { type: 'text', text: 'Analyse ce visuel conformément au format JSON demandé.' },
     { type: 'image_url', image_url: { url: signedImageUrl, detail: 'low' } },
-  ], schema);
+  ], schema, 'vision');
 }

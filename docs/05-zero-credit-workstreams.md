@@ -156,3 +156,8 @@ CI : TypeScript, ESLint strict, Vitest offline, Node tests vidéo offline, Node 
 - Export JSON du compte enrichi avec les demandes. Aucun texte ni contenu utilisateur n'est transmis à OpenAI par ces routes.
 - **Point critique :** ce mécanisme ne supprime PAS `auth.users`, les fichiers Storage, les médias ou les logs fournisseurs. Il ne vaut pas exécution complète du droit à l'effacement. L'opérateur doit disposer d'un processus de vérification, de purge externe, de révocation de sessions et de justification des éventuelles obligations de conservation avant de clore une demande.
 - Une demande peut être déposée sans achat, sans jeton OpenAI et sans lancer de purge. Il reste à définir l'identité légale de l'éditeur, le support de contact et les délais de traitement dans des CGU/politique RGPD validées.
+
+
+## Préparation des capacités OpenAI (sans exécution d'API)
+
+Les adaptateurs `lib/openai/audio.ts` et `lib/openai/embeddings.ts` sont ajoutés mais restent inactifs : flags de sécurité fermés par défaut, aucune route ni tâche automatique ne les invoque. L'intégration GPT-4o texte/image existante est conservée pour éviter une migration sans tests. Un kill-switch global `OPENAI_PAUSED=true` permet de stopper immédiatement toute requête OpenAI côté serveur en cas de besoin. Les suites unitaires ne doivent jamais appeler un modèle réel. Documentation : `docs/06-openai-setup.md`.

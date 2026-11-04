@@ -4,6 +4,9 @@ describe('Classification des erreurs IA sans divulgation', () => {
   it('identifie une clé absente sans en afficher la valeur', () => {
     expect(classifyAiFailure({name: 'MissingOpenAIKeyError'})).toBe('missing_key');
   });
+  it('classe un appel désactivé, sans confusion avec une panne fournisseur', () => {
+    expect(classifyAiFailure({name:'OpenAICapabilityDisabledError'})).toBe('disabled');
+  });
   it('classe une clé invalide', () => {
     expect(classifyAiFailure({ status: 401, message: 'clé secrète' }))
       .toBe('authentication');
