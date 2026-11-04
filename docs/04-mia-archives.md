@@ -204,3 +204,21 @@ l'URL. Vérifier ensuite dans Supabase :
 Résultat attendu : 5 / 5. Ne pas activer
 `MIA_VECTOR_SEARCH_ENABLED` avant validation des cinq vecteurs et
 un test de pertinence du RAG.
+
+## Administration Mia dans l'application
+
+Dans Paramètres, la section « Administration Mia » n'est visible que si
+l'utilisateur connecté figure dans la variable serveur `MIA_ADMIN_USER_IDS`
+(liste d'UUID Supabase Auth séparés par des virgules). L'API
+`/api/admin/mia-index` revalide l'identité via Supabase Auth côté serveur,
+contrôle l'origine de la requête et exige une confirmation explicite avant
+toute génération payante. Aucun rôle n'est déduit du plan d'abonnement.
+L'API réutilise l'indexeur existant sans exposer le jeton interne au client.
+
+À configurer une seule fois dans les variables du Worker Cloudflare :
+`MIA_ADMIN_USER_IDS=<UUID Supabase Auth du propriétaire>` et
+`OPENAI_EMBEDDINGS_ENABLED=true`. Conserver les secrets OpenAI,
+Supabase et le jeton opérateur côté Worker. Sans configuration admin,
+aucun utilisateur ne peut lancer l'indexation. L'opération reste
+idempotente et limitée au corpus de cinq documents. Vérifier le résultat
+dans Supabase et tester la pertinence avant d'activer la recherche vectorielle.

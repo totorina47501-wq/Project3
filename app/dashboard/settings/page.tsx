@@ -1,3 +1,4 @@
+import { MiaIndexAdmin } from '@/components/MiaIndexAdmin';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { PrivacySettings } from '@/components/PrivacySettings';
 import { ErasureRequest } from '@/components/ErasureRequest';
@@ -11,6 +12,8 @@ export const dynamic = 'force-dynamic';
 export default async function SettingsPage() {
   const supabase = await createServerSupabase();
   const ai = openaiReadiness(process.env);
+  const { data: authData } = await supabase.auth.getUser();
+  const isMiaAdmin = Boolean(authData.user && (process.env.MIA_ADMIN_USER_IDS ?? '').split(',').map(v => v.trim()).includes(authData.user.id));
   const { data: userData, error } = await supabase.from('users')
     .select('id,plan,ai_training_opt_in,created_at').single();
   const { data: usage } = await supabase.from('usage_monthly')
@@ -86,6 +89,7 @@ export default async function SettingsPage() {
           Aucune dépense IA n’est effectuée pour afficher cet état.
         </p>
       </section>
+      {isMiaAdmin && <MiaIndexAdmin />}
       <ErasureRequest />
     </>}
   </div>;
