@@ -107,3 +107,10 @@ personnelles (`user_id`) ; aucun partage Studio implicite n'est accordé.
 ## Garde-fou de pertinence documentaire
 
 La sélection lexicale exclut désormais les articles sans aucun recoupement de mots-clés avec la question. Une question hors corpus produit une liste vide plutôt que des références arbitraires ; le prompt de Mia demande explicitement de reconnaître l'absence de sources. Test de non-pertinence ajouté. Cette protection ne remplace pas la validation E2E authentifiée ni l'indexation vectorielle, qui restent à faire avant de qualifier Mia de RAG hybride opérationnel.
+
+## Lot de fiabilisation Mia hors ligne
+
+- La récupération documentaire rejette les sources vides, les références malformées, les URL non HTTPS, les domaines non autorisés et les URL avec identifiants.
+- Quand aucune synthèse pertinente n'est disponible, Mia renvoie une réponse prudente **sans appeler OpenAI**, sans citer d'article et avec consommation IA estimée à zéro. Les quotas applicatifs existants restent gérés par la route.
+- Tests de validation documentaire et de question hors corpus ajoutés. Aucune indexation vectorielle ni changement de schéma SQL dans ce lot.
+- L'indexation pgvector, les tests authentifiés sur Cloudflare et l'évaluation juridique restent à valider séparément.

@@ -24,6 +24,14 @@ export async function answerMia(
   context: { caption?: string | undefined; status?: string | undefined } = {},
 ) {
   const sources = await retrieveLawSources(question);
+  // Sans document pertinent, ne pas facturer d'appel IA et ne pas inventer de base légale.
+  if (sources.length === 0) {
+    return {
+      answer: 'Je ne dispose pas de source juridique pertinente dans mon corpus pour répondre à cette question. Consulte les textes officiels sur Légifrance ou demande un avis juridique adapté.',
+      sources: [],
+      usage: { promptTokens: 0, completionTokens: 0, estimatedCostUsd: 0 },
+    };
+  }
   const input = JSON.stringify({
     QUESTION: question,
     HISTORIQUE: history.slice(-6).map((item) => ({
