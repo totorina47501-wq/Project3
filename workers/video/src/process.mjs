@@ -50,6 +50,8 @@ export async function processVideo(source,destination){
   const video=validateProbe(JSON.parse(raw),metadata.size);
   const scratch=await mkdtemp(join(tmpdir(),'mc-video-'));
   const frames=[];let audio=null;
+  let destinationCreated=false;
+  let published=false;
   try{
     for(const [i,time] of sampleTimes(video.durationSeconds).entries()){
       const name='frame-'+String(i+1).padStart(2,'0')+'.jpg';
@@ -72,12 +74,18 @@ export async function processVideo(source,destination){
     const report={schemaVersion:1,aiCalls:0,video:{...video,sha256:await digest(input)},
       frames,audio,notice:'Extraction technique, ni transcription ni certification'};
     await mkdir(out,{recursive:false,mode:0o700}); // Répertoire neuf obligatoire : ne pas écraser une preuve.
+    destinationCreated=true;
     for(const item of [...frames,...(audio?[audio]:[])])
       await rename(join(scratch,item.name),join(out,item.name));
     await writeFile(join(out,'manifest.json'),JSON.stringify(report,null,2),
       {flag:'wx',mode:0o600});
+    published=true;
     return report;
-  }finally{await rm(scratch,{recursive:true,force:true})}
+  }finally{
+    // Ne nettoyer que le répertoire créé par cette exécution, jamais une preuve préexistante.
+    if(destinationCreated&&!published)await rm(out,{recursive:true,force:true});
+    await rm(scratch,{recursive:true,force:true});
+  }
 }
 if(process.argv[1]&&basename(process.argv[1])==='process.mjs'){
   const [source,out]=process.argv.slice(2);
