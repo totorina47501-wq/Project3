@@ -5,7 +5,7 @@ type Env = {
   MEDIA_RETENTION_TOKEN?: string;
   MEDIA_RETENTION_URL?: string;
 };
-export default {
+const retentionWorker = {
   async scheduled(_event: unknown, env: Env) {
     if (env.MEDIA_RETENTION_ENABLED !== 'true' ||
         !env.MEDIA_RETENTION_TOKEN || !env.MEDIA_RETENTION_URL) return;
@@ -22,3 +22,5 @@ export default {
     if (!response.ok) throw new Error('Purge média incomplète : consulter les logs.');
   },
 };
+
+export default retentionWorker;
