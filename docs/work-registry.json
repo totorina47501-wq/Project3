@@ -90,15 +90,16 @@
         "app/api/mia/chat/route.ts",
         "app/api/mia/conversations/route.ts",
         "app/api/mia/conversations/delete/route.ts",
-        "app/api/internal/mia-index/route.ts"
+        "app/api/internal/mia-index/route.ts",
+        "app/api/admin/mia-index/route.ts"
       ],
       "migrations": [
         "supabase/migrations/202611032003_pgvector_match.sql",
         "supabase/migrations/202611042001_mia_quota_and_append.sql"
       ],
       "next": [
-        "Indexation Worker one-shot, authentifiée par jeton opérateur, dry-run par défaut, maximum cinq documents et sans activation automatique du RAG.",
-        "Appeler le Worker avec les secrets existants et OPENAI_EMBEDDINGS_ENABLED=true pour valider 5/5 ; contrôler la pertinence et les E2E authentifiés."
+        "Interface d'administration Mia protégée par allowlist MIA_ADMIN_USER_IDS et confirmation payante ; vérifier CI et déploiement.",
+        "Indexer 5/5 puis valider pertinence du RAG ; contrôle quotidien des modifications à préparer."
       ]
     },
     {
