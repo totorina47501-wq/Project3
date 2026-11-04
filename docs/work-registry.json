@@ -134,7 +134,7 @@
       "status": "prepared_disabled",
       "anchor": "workers/video/src/process.mjs",
       "test": "workers/video/tests/video.test.mjs",
-      "doc": "workers/video/README.md",
+      "doc": "docs/27-video-job-contract.md",
       "aliases": [
         "video",
         "carrousel",
@@ -145,7 +145,8 @@
       "routes": [],
       "migrations": [],
       "next": [
-        "Deux CLIs présentes mais aucun exécuteur de jobs connecté au site ; voir workers/carousel."
+        "Contrat vidéo local validant une ligne Supabase cohérente, bail par tentative, SHA-256 serveur ; aucun traitement automatique actif.",
+        "Ajouter contrainte UNIQUE, claim/finalisation atomiques en base, exécuteur FFmpeg isolé et E2E authentifiés avant activation."
       ]
     },
     {
