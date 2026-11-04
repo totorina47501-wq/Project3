@@ -4,7 +4,7 @@ name: MentionCheck CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, feat/mentioncheck-bloc-1-fondations]
 
 # Une seule CI par commit de branche avec PR, et une CI par push sur main.
 concurrency:
@@ -14,25 +14,49 @@ concurrency:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    env:
+      OPENAI_PAUSED: 'true'
+      OPENAI_TEXT_ENABLED: 'false'
+      OPENAI_VISION_ENABLED: 'false'
+      OPENAI_AUDIO_ENABLED: 'false'
+      OPENAI_EMBEDDINGS_ENABLED: 'false'
+      BILLING_ENABLED: 'false'
+      MEDIA_RETENTION_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
         with:
-          bun-version: 1.4.4
+          node-version-file: '.nvmrc'
+          cache: npm
       - name: Registre anti-doublons (sans réseau)
         run: node scripts/work-inventory.mjs check && node --test scripts/work-inventory.test.mjs
       - name: Installer les dépendances
-        run: bun install
+        run: npm ci --ignore-scripts
+      - name: Audit des dépendances de production
+        run: npm audit --omit=dev --audit-level=moderate
       - name: Vérification TypeScript
-        run: bun run typecheck
+        run: npm run typecheck
       - name: Lint
-        run: bun run lint
+        run: npm run lint
       - name: Tests unitaires
-        run: bun run test
+        run: npm test
+      - name: Installer FFmpeg pour les tests médias réels
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Tests vidéo hors ligne (aucun appel IA)
-        run: bun run test:video:offline
+        run: npm run test:video:offline
       - name: Tests carrousels hors ligne (aucun appel IA)
-        run: bun run test:carousel:offline
+        run: npm run test:carousel:offline
+      - name: Jobs médias et reprise hors ligne
+        run: npm run test:media-jobs:offline
+      - name: SQL et RLS sur PostgreSQL embarqué isolé
+        run: npm run test:sql-harness && npm run test:sql:offline
+      - name: Fixture HTTP locale
+        run: npm run test:fixtures
+      - name: Installer Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Parcours Playwright locaux sans fournisseur
+        run: npm run test:e2e
       - name: Compilation Next.js
-        run: bun run build
+        run: npm run build

@@ -1,0 +1,23 @@
+import { describe, expect, it } from 'vitest';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { SocialAccounts } from '../../components/SocialAccounts';
+import { AIPreferences } from '../../components/AIPreferences';
+describe('Paramètres rendus sans fournisseur',()=>{
+  it('affiche une déclaration sans prétendre à une connexion et bloque visuellement le quatrième Solo',()=>{
+    const html=renderToStaticMarkup(createElement(SocialAccounts,{plan:'solo',initialTotal:3,initialItems:[{id:'local',platform:'instagram',handle:'camille',connection_kind:'manual',connected_at:'2026-11-04'}]}));
+    expect(html).toContain('aucune connexion OAuth');expect(html).toContain('Plan Solo : 3 comptes maximum');
+    expect(html).toMatch(/<button disabled=""[^>]*>Ajouter la déclaration<\/button>/);
+    expect(html).toContain('Retirer la déclaration @camille');
+  });
+  it('conserve les comptes historiques en lecture seule',()=>{
+    const html=renderToStaticMarkup(createElement(SocialAccounts,{plan:'pro',initialTotal:1,initialItems:[{id:'legacy',platform:'youtube',handle:'archive',connection_kind:'unknown',connected_at:'2026-11-04'}]}));
+    expect(html).toContain('connexion non vérifiée');expect(html).not.toContain('Retirer la déclaration @archive');
+  });
+  it('montre la préférence persistée sans lancer une réécriture',()=>{
+    const html=renderToStaticMarkup(createElement(AIPreferences,{initialTone:'institutionnel'}));
+    expect(html).toContain('<option value="institutionnel" selected="">');
+    expect(html).toContain('ne lance aucune analyse');
+    expect(html).toMatch(/<button disabled=""[^>]*>Enregistrer le ton<\/button>/);
+  });
+});

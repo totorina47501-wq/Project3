@@ -27,30 +27,30 @@ export function MiaChat({ initialVerificationId }: { initialVerificationId?: str
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [historyError, setHistoryError] = useState('');
+  const [notice, setNotice] = useState('');
+  const pending = useRef<AbortController | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
 
-  async function refreshHistory() {
-    const response = await fetch('/api/mia/conversations', { cache: 'no-store' });
-    const data = await response.json() as { conversations?: Conversation[]; error?: string };
-    if (!response.ok) throw new Error(data.error ?? 'Historique indisponible.');
-    setConversations(data.conversations ?? []);
+  async function refreshHistory(signal?: AbortSignal) {
+    setLoading(true);
+    setHistoryError('');
+    try {
+      const response = await fetch('/api/mia/conversations', { cache: 'no-store', ...(signal ? { signal } : {}) });
+      const data = await response.json() as { conversations?: Conversation[]; error?: string };
+      if (!response.ok) throw new Error(data.error ?? 'Historique indisponible.');
+      if (!signal?.aborted) setConversations(data.conversations ?? []);
+    } catch {
+      if (!signal?.aborted) setHistoryError('Impossible de charger l’historique des discussions.');
+    } finally {
+      if (!signal?.aborted) setLoading(false);
+    }
   }
 
   useEffect(() => {
-    let current = true;
-    void (async () => {
-      try {
-        const response = await fetch('/api/mia/conversations', { cache: 'no-store' });
-        const data = await response.json() as { conversations?: Conversation[]; error?: string };
-        if (!response.ok) throw new Error(data.error ?? 'Historique indisponible.');
-        if (current) setConversations(data.conversations ?? []);
-      } catch {
-        if (current) setError('Impossible de charger l’historique des discussions.');
-      } finally {
-        if (current) setLoading(false);
-      }
-    })();
-    return () => { current = false; };
+    const controller = new AbortController();
+    void refreshHistory(controller.signal);
+    return () => { controller.abort(); pending.current?.abort(); };
   }, []);
 
   useEffect(() => {
@@ -58,14 +58,16 @@ export function MiaChat({ initialVerificationId }: { initialVerificationId?: str
   }, [messages]);
 
   function startNew() {
+    if (sending || deleting) return;
     setActiveId(null);
     setVerificationId(initialVerificationId ?? '');
     setMessages([]);
     setQuestion('');
     setError('');
+    setNotice('');
   }
   function selectConversation(item: Conversation) {
-    if (sending) return;
+    if (sending || deleting) return;
     setActiveId(item.id);
     setVerificationId(item.verificationId ?? '');
     setMessages(item.messages);
@@ -75,14 +77,18 @@ export function MiaChat({ initialVerificationId }: { initialVerificationId?: str
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const text = question.trim();
-    if (sending || text.length < 3) return;
+    if (pending.current || deleting || text.length < 3) return;
+    const controller = new AbortController();
+    pending.current = controller;
     const previous = messages;
     setMessages([...previous, { role: 'user', content: text }]);
     setSending(true);
     setError('');
+    setNotice('');
     setQuestion('');
     try {
       const response = await fetch('/api/mia/chat', {
+        signal: controller.signal,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -98,32 +104,42 @@ export function MiaChat({ initialVerificationId }: { initialVerificationId?: str
         { role: 'assistant', content: data.answer, sources: data.sources },
       ]);
       setActiveId(data.conversationId);
-      await refreshHistory().catch(() => {});
+      await refreshHistory(controller.signal);
     } catch (cause) {
       setMessages(previous);
       setQuestion(text);
-      setError(cause instanceof Error ? cause.message : 'Erreur inattendue.');
+      if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : 'Erreur inattendue.');
     } finally {
-      setSending(false);
+      if (pending.current === controller) {
+        pending.current = null;
+        setSending(false);
+      }
     }
   }
 
   async function removeConversation() {
     if (!activeId || sending || deleting) return;
     const id = activeId;
+    const controller = new AbortController();
+    pending.current = controller;
     setDeleting(true); setError('');
     try {
       const response = await fetch('/api/mia/conversations/delete', {
+        signal: controller.signal,
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ conversationId: id }),
       });
       const data = await response.json() as { error?: string };
       if (!response.ok) throw new Error(data.error ?? 'Suppression impossible.');
       setConversations((old) => old.filter((item) => item.id !== id));
-      startNew();
+      setActiveId(null);
+      setVerificationId(initialVerificationId ?? '');
+      setMessages([]);
+      setQuestion('');
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Suppression indisponible.');
+      if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : 'Suppression indisponible.');
     } finally {
+      if (pending.current === controller) pending.current = null;
       setDeleting(false);
     }
   }
@@ -131,19 +147,24 @@ export function MiaChat({ initialVerificationId }: { initialVerificationId?: str
   return (
     <div className="grid gap-5 lg:grid-cols-[260px_1fr]">
       <aside aria-label="Conversations récentes" className="rounded-2xl border border-slate-200 bg-white p-4">
-        <button type="button" onClick={startNew} disabled={sending}
+        <button type="button" onClick={startNew} disabled={sending || deleting}
           className="w-full rounded-xl bg-accent px-4 py-3 text-sm font-bold text-white disabled:opacity-50">
           Nouvelle conversation
         </button>
         <h2 className="mt-6 text-sm font-semibold text-slate-500">Mes discussions</h2>
         {loading && <p role="status" className="mt-3 text-sm text-slate-500">Chargement…</p>}
-        {!loading && conversations.length === 0 &&
+        {historyError && <div className="mt-3 text-sm text-red-800">
+          <p role="alert">{historyError}</p>
+          <button type="button" onClick={() => void refreshHistory()} disabled={loading}
+            className="mt-2 rounded-lg border border-red-200 px-3 py-2 font-semibold">Réessayer l’historique</button>
+        </div>}
+        {!loading && !historyError && conversations.length === 0 &&
           <p className="mt-3 text-sm text-slate-500">Aucune discussion enregistrée.</p>}
         <ul className="mt-2 space-y-2">
           {conversations.map((item) => {
             const firstQuestion = item.messages.find((message) => message.role === 'user');
             return <li key={item.id}>
-              <button type="button" disabled={sending} onClick={() => selectConversation(item)}
+              <button type="button" disabled={sending || deleting} onClick={() => selectConversation(item)}
                 aria-current={activeId === item.id ? 'true' : undefined}
                 className={'w-full rounded-lg px-3 py-3 text-left text-sm disabled:opacity-50 ' +
                   (activeId === item.id ? 'bg-indigo-100 font-semibold text-indigo-900' :
@@ -209,19 +230,24 @@ export function MiaChat({ initialVerificationId }: { initialVerificationId?: str
           <div ref={bottom} />
         </div>
         {error && <p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}
-        <form onSubmit={submit} className="mt-5 space-y-3 border-t border-slate-100 pt-5">
+        {notice && <p role="status" className="mt-3 rounded-lg bg-slate-100 p-3 text-sm text-slate-700">{notice}</p>}
+        <form onSubmit={submit} aria-busy={sending} className="mt-5 space-y-3 border-t border-slate-100 pt-5">
           <label htmlFor="mia-question" className="font-semibold">Ta question</label>
-          <textarea id="mia-question" value={question} rows={3} maxLength={1600}
+          <textarea disabled={sending || deleting} id="mia-question" value={question} rows={3} maxLength={1600}
             onChange={(event) => setQuestion(event.target.value)}
             placeholder="Comment déclarer un lien affilié dans une publication Instagram ?"
             className="w-full resize-y rounded-xl border border-slate-300 p-3 outline-none focus:border-accent" />
           <div className="flex items-center justify-between gap-3">
             <span className="text-xs text-slate-500">{question.length}/1600</span>
-            <button disabled={sending || question.trim().length < 3} type="submit"
+            <button disabled={sending || deleting || question.trim().length < 3} type="submit"
               className="rounded-xl bg-accent px-5 py-3 font-bold text-white disabled:opacity-50">
               {sending ? 'Envoi…' : 'Envoyer à Mia'}
             </button>
           </div>
+          {sending && <button type="button" onClick={() => {
+            pending.current?.abort();
+            setNotice('Attente arrêtée. Une réponse déjà demandée peut être enregistrée ; consulte l’historique avant de renvoyer.');
+          }} className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold">Arrêter l’attente</button>}
         </form>
       </section>
     </div>

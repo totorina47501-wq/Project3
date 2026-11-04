@@ -5,6 +5,7 @@ import { z } from 'zod';
 export const erasureActionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('request'), confirmation: z.literal('SUPPRIMER') }).strict(),
   z.object({ action: z.literal('cancel') }).strict(),
+  z.object({ action: z.literal('preview') }).strict(),
 ]);
 export const erasureStatusSchema = z.enum([
   'requested', 'reviewing', 'cancelled', 'completed', 'rejected',

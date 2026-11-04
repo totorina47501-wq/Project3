@@ -17,7 +17,7 @@ export function AIStreamProgress({ stages }: { stages: Partial<Record<Stage, Sta
   return (
     <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5" aria-live="polite">
       <h2 className="font-heading text-lg font-bold">{entries.some((name) => stages[name] === 'unavailable') ?
-        'Contrôle partiel : IA indisponible' : 'Mia analyse ta publication…'}</h2>
+        'Contrôle partiel : IA indisponible' : 'Étapes du contrôle'}</h2>
       <ol className="mt-3 space-y-2">
         {entries.map((name) => (
           <li key={name} className="flex items-center gap-2 text-sm">

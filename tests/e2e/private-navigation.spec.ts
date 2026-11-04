@@ -6,10 +6,11 @@ test('Mia et les archives restent privées', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Content de te retrouver !' })).toBeVisible();
   }
 });
-test('les endpoints privés rejettent un invité', async ({ request }) => {
+test('les endpoints privés rejettent un invité', async ({ request, baseURL }) => {
   const history = await request.get('/api/mia/conversations');
   expect(history.status()).toBe(401);
   const chat = await request.post('/api/mia/chat', {
+    headers: { Origin: baseURL! },
     data: { question: 'Quelles mentions pour une publicité ?' },
   });
   expect(chat.status()).toBe(401);

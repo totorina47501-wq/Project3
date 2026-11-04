@@ -9,7 +9,8 @@ Vérification locale du conteneur, de la durée réelle (60 s), de la taille (50
 et des dimensions ; extraction de trois JPEG et une piste WAV mono 16 kHz.
 Les sorties contiennent des données privées : ne pas les publier, purger après usage.
 Zéro appel OpenAI / Whisper et zéro transaction réseau. Non connecté au site à ce stade.
-Pour le raccorder : service isolé, limite CPU/RAM, file d'attente, stockage privé,
+L’exécuteur de jobs local est disponible dans `../media-jobs/README.md`.
+Pour le raccorder au site : service isolé, limite CPU/RAM, stockage privé,
 rétention, vérification des fichiers malveillants et choix explicite du coût IA.
 
 ## Publication atomique et sécurité locale
@@ -19,3 +20,7 @@ rétention, vérification des fichiers malveillants et choix explicite du coût 
 - Si FFmpeg ou FFprobe échoue, le répertoire temporaire est effacé. Les entrées symboliques et les vidéos de plus de 50 Mio sont refusées avant décodage.
 - **Limites :** la sécurité face à un autre programme non coopérant manipulant simultanément le même chemin reste à assurer par les permissions du conteneur. Un arrêt brutal peut laisser un verrou ou un dossier temporaire orphelin, jamais un dossier final partiellement publié. Un nettoyage opérateur sécurisé est à prévoir dans le service isolé.
 - Aucun fichier de production n'est ouvert durant les tests : les MP4 sont synthétiques, créés localement par FFmpeg.
+
+Les points d’échantillonnage en fin de vidéo utilisent la dernière image disponible
+si la cadence ne comporte pas de frame au timestamp exact (`tpad`), sans modifier
+la durée déclarée ni produire de transcription.

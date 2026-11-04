@@ -3,6 +3,11 @@
 @tailwind utilities;
 
 :root {
+  --font-inter: 'Inter';
+  --font-space-grotesk: 'Space Grotesk';
+}
+
+:root {
   color-scheme: light;
 }
 

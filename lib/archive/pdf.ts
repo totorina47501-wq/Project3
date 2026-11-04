@@ -135,3 +135,47 @@ export async function buildArchivePdf(report: ArchivePdfData): Promise<Uint8Arra
   }
   return document.save();
 }
+
+export type RegistryPdfEntry={
+  id:string;brand_name:string;start_date:string;end_date:string|null;
+  archived_at:string|null;hash_sha256:string|null;
+};
+// Étend les exports documentaires existants ; aucun certificat n'est émis.
+export async function buildRegistryPdf(records:RegistryPdfEntry[]):Promise<Uint8Array> {
+  const document=await PDFDocument.create();
+  document.setTitle('MentionCheck - Registre des collaborations');
+  document.setAuthor('MentionCheck');
+  document.setSubject('Registre informatif non certifie');
+  const regular=await document.embedFont(StandardFonts.Helvetica);
+  const bold=await document.embedFont(StandardFonts.HelveticaBold);
+  let page:PDFPage;
+  let y=0;
+  function line(text:string,heading=false) {
+    const font=heading?bold:regular,size=heading?12:10;
+    // Découpage par caractère pour éviter le dépassement des longs UUID/SHA-256.
+    for(const paragraph of safeText(text).split(/\n/)) {
+      let remaining=paragraph;
+      do {
+        if(y<60){page=document.addPage([595.28,841.89]);y=795;}
+        let length=remaining.length;
+        while(length>1 && font.widthOfTextAtSize(remaining.slice(0,length),size)>500)length--;
+        page.drawText(remaining.slice(0,length),{x:46,y,size,font,color:rgb(.13,.17,.26)});
+        y-=17;remaining=remaining.slice(length);
+      }while(remaining.length);
+    }
+  }
+  line('MentionCheck - Registre des collaborations',true);
+  line('Document informatif non certifie. '+records.length+' collaboration(s).');
+  line('Empreinte SHA-256 et horodatage interne : aucune signature qualifiee ni horodatage de confiance.');
+  line('Les fichiers de contrats et les medias ne sont pas incorpores au PDF.');
+  if(records.length===0)line('Aucun resultat pour les filtres appliques.');
+  for(const row of records) {
+    line('');line(row.brand_name,true);line('Identifiant : '+row.id);
+    line('Du '+row.start_date+(row.end_date?' au '+row.end_date:''));
+    line(row.archived_at?'Archivee UTC : '+row.archived_at:'Brouillon - non archive');
+    line('SHA-256 : '+(row.hash_sha256??'non disponible'));
+  }
+  const pages=document.getPages();
+  pages.forEach((current,index)=>current.drawText('MentionCheck - Informatif - Page '+(index+1)+'/'+pages.length,{x:46,y:29,font:regular,size:9}));
+  return document.save();
+}

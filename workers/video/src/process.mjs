@@ -4,7 +4,6 @@ import {spawn} from 'node:child_process';
 import {createReadStream} from 'node:fs';
 import {mkdtemp,rename,rm,stat,lstat,realpath,open,unlink,writeFile} from 'node:fs/promises';
 import {join,resolve,extname,basename,dirname} from 'node:path';
-import {tmpdir} from 'node:os';
 import {createHash} from 'node:crypto';
 import {validateProbe,sampleTimes,VideoInputError} from './validation.mjs';
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
@@ -20,7 +19,7 @@ export async function command(binary,args,timeout=15000){
       if(settled)return;
       settled=true;
       clearTimeout(timer);
-      error?fail(error):ok(value);
+      if(error)fail(error);else ok(value);
     };
     const timer=setTimeout(()=>{
       timedOut=true;
@@ -33,7 +32,8 @@ export async function command(binary,args,timeout=15000){
     child.on('error',()=>finish(new VideoInputError('Outil indisponible')));
     child.on('close',code=>{
       if(timedOut)return finish(new VideoInputError('Délai extraction dépassé'));
-      code===0?finish(null,output):finish(new VideoInputError('Extraction interrompue'));
+      if(code===0)finish(null,output);
+      else finish(new VideoInputError('Extraction interrompue'));
     });
   });
 }
@@ -91,7 +91,9 @@ export async function processVideo(source,destination){
       const path=join(stage,name);
       await command('ffmpeg',['-nostdin','-v','error','-protocol_whitelist','file,pipe','-i',input,
         '-ss',String(time),'-map','0:v:0','-an','-sn','-vf',
-        'scale=640:-2:force_original_aspect_ratio=decrease',
+        // La dernière image peut précéder le point demandé à faible cadence.
+        // Prolonger cette image permet d'échantillonner toute la durée déclarée.
+        'tpad=stop_mode=clone:stop_duration=1,scale=640:-2:force_original_aspect_ratio=decrease',
         '-frames:v','1','-threads','1','-y',path],20000);
       const file=await stat(path);
       if(!file.size || file.size>2*1024*1024) throw new VideoInputError('Image extraite invalide.');

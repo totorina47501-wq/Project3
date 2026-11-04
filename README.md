@@ -13,7 +13,7 @@ Cloudflare Workers + Next.js App Router + TypeScript strict + Supabase Auth/Post
 
 Commandes : npm install, npm run dev, npm run lint, npm run typecheck, npm run test, npm run build, npm run preview:cloudflare.
 
-Le dépôt ne dispose pas encore de lockfile enregistré. La CI utilise Bun avec les versions exactes du package.json.
+Les versions exactes et leurs dépendances transitives sont verrouillées dans package-lock.json. La CI utilise Node.js et npm ci, sans activer de fournisseur.
 
 ## Fonctionnalités développées dans la branche
 
@@ -65,3 +65,13 @@ Les modèles OpenAI texte/image historiques sont déjà câblés. Transcription 
 ## Stratégie anti-doublons
 
 Avant tout nouveau lot, consulter [le registre unique](docs/work-registry.json) et [le protocole](docs/07-anti-duplication.md) : `npm run work:find -- openai`, puis `npm run work:check`. La CI signale les routes et migrations non référencées ou réclamées par deux modules. Les statuts décrivent le code, pas une certification de production.
+
+## Livraison interne consolidée
+
+Collaborations privées, archivage immuable et exports de registre, Studio et clés API révocables, paramètres sociaux manuels, préférences de réécriture, quatre templates email sans envoi, exécuteur média local et préparation RGPD sont implémentés.
+
+La migration `supabase/migrations/20261104200500_internal_completion.sql` est livrée et testée sur PostgreSQL embarqué isolé ; elle n’est pas appliquée au distant. Les polices sont servies localement. Les tests Playwright locaux utilisent une fixture Supabase HTTP sans secret, jamais la production.
+
+Commandes : `npm run work:check`, `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:video:offline`, `npm run test:carousel:offline`, `npm run test:media-jobs:offline`, `npm run test:sql-harness`, `npm run test:sql:offline`, `npm run test:e2e`, `npm run build`.
+
+Détails et limites : docs/12-internal-delivery.md, docs/13-sql-offline.md. Aucune activation OpenAI, Stripe, Resend, OAuth ou purge destructive n’est incluse.

@@ -23,8 +23,16 @@ export async function middleware(request: NextRequest) {
       },
     },
   });
+  // Ces réponses peuvent porter des cookies de session : jamais de cache partagé.
+  response.headers.set('Cache-Control', 'private, no-store');
+  response.headers.append('Vary', 'Cookie');
   // Ne jamais décider des droits avec getSession() seul.
-  await supabase.auth.getUser();
+  try { await supabase.auth.getUser(); } catch {
+    // La route reste responsable de requireUser(), qui refuse une session non vérifiée.
+    // Ne pas exposer ni journaliser l'erreur fournisseur.
+  }
+  response.headers.set('Cache-Control', 'private, no-store');
+  response.headers.set('Vary', 'Cookie');
   return response;
 }
 

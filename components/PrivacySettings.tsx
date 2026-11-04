@@ -18,7 +18,9 @@ export function PrivacySettings({ initialOptIn }: { initialOptIn: boolean }) {
       if(!response.ok || typeof result.aiTrainingOptIn !== 'boolean')
         throw new Error(result.error ?? 'Impossible de sauvegarder le choix.');
       setSaved(result.aiTrainingOptIn);
-      setMessage('Préférence enregistrée. Tu peux la modifier à tout moment.');
+      setMessage(result.aiTrainingOptIn
+        ? 'Préférence enregistrée. Tu peux la modifier à tout moment.'
+        : 'Accord retiré. Les réécritures existantes et futures sont exclues des prochaines utilisations d’entraînement interne.');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Enregistrement indisponible.');
     } finally { setSaving(false); }
@@ -36,7 +38,7 @@ export function PrivacySettings({ initialOptIn }: { initialOptIn: boolean }) {
         className="mt-1 h-5 w-5 accent-indigo-600" />
       <span>J&apos;autorise MentionCheck à réutiliser les réécritures que j&apos;accepte
         pour améliorer ses modèles internes, sous réserve de la politique de confidentialité.
-        Je peux retirer mon accord pour les utilisations futures.</span>
+        Je peux retirer mon accord et exclure mes réécritures des prochaines utilisations.</span>
     </label>
     <button type="button" onClick={() => void save()} disabled={saving || saved === optIn}
       className="rounded-xl bg-accent px-5 py-3 font-bold text-white disabled:opacity-50">
@@ -49,8 +51,9 @@ export function PrivacySettings({ initialOptIn }: { initialOptIn: boolean }) {
         Exporter mes données (JSON)
       </a>
       <p className="mt-2 text-xs text-slate-500">
-        L&apos;export contient les données disponibles dans les tables de MentionCheck.
-        Les fichiers binaires et données détenues par des prestataires sont exclus.
+        L&apos;export parcourt les données personnelles du compte et inclut un manifeste
+        des fichiers privés. Les octets des fichiers, journaux, sauvegardes et données
+        détenues par les prestataires demandent une extraction complémentaire.
         Tu peux maintenant déposer et suivre une demande d&apos;effacement ci-dessous.
         La suppression technique complète n&apos;est pas encore automatisée.
       </p>

@@ -1,7 +1,7 @@
 // Chemin : app/dashboard/check/page.tsx
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { createBrowserSupabase } from '@/lib/supabase/browser';
 import { ComplianceScore } from '@/components/ComplianceScore';
 import { ViolationList } from '@/components/ViolationList';
@@ -17,7 +17,7 @@ const platformNames: { value: Platform; name: string }[] = [
   { value: 'linkedin', name: 'LinkedIn' },
 ];
 
-async function uploadImage(file: File) {
+async function uploadImage(file: File, signal: AbortSignal) {
   const accepted = ['image/jpeg', 'image/png', 'image/webp'];
   if (!accepted.includes(file.type) || file.size > 8 * 1024 * 1024) {
     throw new Error('Choisis une image JPEG, PNG ou WebP de moins de 8 Mo.');
@@ -41,6 +41,7 @@ async function uploadImage(file: File) {
     bitmap.close();
   }
   const response = await fetch('/api/media/upload-url', {
+    signal,
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ mime: prepared.type, size: prepared.size }),
   });
@@ -54,7 +55,9 @@ async function uploadImage(file: File) {
     .storage.from('verification-media')
     .uploadToSignedUrl(data.path, data.token, prepared, { contentType: prepared.type });
   if (error) throw new Error('Impossible de transférer le média privé.');
+  signal.throwIfAborted();
   const completed = await fetch('/api/media/complete', {
+    signal,
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ assetId: data.assetId }),
   });
@@ -73,16 +76,27 @@ export default function CheckPage() {
   const [stages, setStages] = useState<Partial<Record<Stage, StageStatus>>>({});
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [requestedExecution, setRequestedExecution] = useState<'rules_only' | 'ai'>('rules_only');
+  const pending = useRef<AbortController | null>(null);
+  useEffect(() => () => { pending.current?.abort(); }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending.current || !caption.trim()) return;
+    const controller = new AbortController();
+    pending.current = controller;
+    setRequestedExecution(execution);
     setLoading(true);
     setStages({});
     setResult(null);
     setError('');
+    setNotice('');
     try {
-      const path = execution === 'ai' && image ? await uploadImage(image) : undefined;
+      const path = execution === 'ai' && image ? await uploadImage(image, controller.signal) : undefined;
+      controller.signal.throwIfAborted();
       const response = await fetch('/api/check', {
+        signal: controller.signal,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -90,7 +104,7 @@ export default function CheckPage() {
         }),
       });
       if (!response.ok) {
-        const data = await response.json() as { error?: string };
+        const data = await response.json().catch(() => ({})) as { error?: string };
         throw new Error(data.error ?? 'La vérification est indisponible.');
       }
       if (!response.body) throw new Error('Le flux de vérification est indisponible.');
@@ -98,6 +112,7 @@ export default function CheckPage() {
       const decoder = new TextDecoder();
       let buffer = '';
       let receivedDone = false;
+      try {
       while (true) {
         const chunk = await reader.read();
         if (chunk.done) break;
@@ -123,10 +138,21 @@ export default function CheckPage() {
         }
       }
       if (!receivedDone) throw new Error('Le flux a été interrompu avant la fin du check.');
+      } finally {
+        await reader.cancel().catch(() => {});
+        reader.releaseLock();
+      }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Une erreur est survenue.');
+      if (!controller.signal.aborted) {
+        setStages({});
+        setResult(null);
+        setError(cause instanceof Error ? cause.message : 'Une erreur est survenue.');
+      }
     } finally {
-      setLoading(false);
+      if (pending.current === controller) {
+        pending.current = null;
+        setLoading(false);
+      }
     }
   }
 
@@ -137,15 +163,15 @@ export default function CheckPage() {
         <h1 className="mt-2 font-heading text-4xl font-bold text-primary">Check ma publication</h1>
         <p className="mt-3 text-slate-600">Colle une légende et, si tu veux, ajoute une image. Mia repère les signaux à corriger avant publication.</p>
       </div>
-      <form onSubmit={submit} className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <form onSubmit={submit} aria-busy={loading} className="space-y-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <label className="block font-semibold">
           Plateforme
-          <select value={platform} onChange={(event) => setPlatform(event.target.value as Platform)}
+          <select disabled={loading} value={platform} onChange={(event) => setPlatform(event.target.value as Platform)}
             className="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-4 py-3">
             {platformNames.map((item) => <option key={item.value} value={item.value}>{item.name}</option>)}
           </select>
         </label>
-        <fieldset className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+        <fieldset disabled={loading} className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
           <legend className="px-2 font-semibold">Mode de vérification</legend>
           <label className="flex items-start gap-3 text-sm">
             <input type="radio" name="execution" value="rules_only" checked={execution === 'rules_only'}
@@ -157,21 +183,21 @@ export default function CheckPage() {
           <label className="mt-4 flex items-start gap-3 text-sm">
             <input type="radio" name="execution" value="ai" checked={execution === 'ai'}
               onChange={() => setExecution('ai')} className="mt-1" />
-            <span><strong>Analyse complète avec Mia (utilise des crédits OpenAI)</strong>
+            <span><strong>Analyse avec Mia (utilise des crédits OpenAI)</strong>
               <span className="mt-1 block text-slate-600">N&apos;active pas cette option pendant les tests sans budget IA.</span>
             </span>
           </label>
         </fieldset>
         <label className="block font-semibold">
           Légende sponsorisée
-          <textarea required minLength={1} maxLength={10000} value={caption}
+          <textarea disabled={loading} required minLength={1} maxLength={10000} value={caption}
             onChange={(event) => setCaption(event.target.value)}
             placeholder="Voici mon dernier produit préféré…"
             className="mt-2 block min-h-48 w-full rounded-xl border border-slate-300 p-4 font-normal outline-none focus:border-accent" />
         </label>
         {execution === 'ai' && <label className="block font-semibold">
           Visuel (facultatif)
-          <input type="file" accept="image/jpeg,image/png,image/webp"
+          <input disabled={loading} type="file" accept="image/jpeg,image/png,image/webp"
             onChange={(event) => setImage(event.target.files?.[0] ?? null)}
             className="mt-2 block w-full text-sm font-normal text-slate-600" />
           <span className="mt-2 block text-xs font-normal text-slate-500">
@@ -186,8 +212,16 @@ export default function CheckPage() {
           className="w-full rounded-xl bg-accent px-6 py-3.5 font-bold text-white shadow-md hover:bg-indigo-700 disabled:opacity-50">
           {loading ? 'Vérification…' : execution === 'ai' ? 'Analyser avec Mia (crédits IA)' : 'Vérifier sans IA'}
         </button>
+        {loading && <button type="button" onClick={() => {
+          pending.current?.abort();
+          setStages({});
+          setNotice('Attente arrêtée. Une opération déjà reçue par le serveur peut continuer ; consulte tes archives avant de relancer.');
+        }} className="w-full rounded-xl border border-slate-300 px-4 py-3 font-semibold">
+          Arrêter l’attente
+        </button>}
       </form>
       <AIStreamProgress stages={stages} />
+      {notice && <p role="status" className="rounded-xl bg-slate-100 p-4 text-sm text-slate-700">{notice}</p>}
       {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{error}</p>}
       {result && (
         <div className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6">
@@ -199,7 +233,7 @@ export default function CheckPage() {
           </h2>
           {result.analysisMode !== 'full' && (
             <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
-              <p className="font-bold">{result.analysisMode === 'rules_only'
+              <p className="font-bold">{result.analysisMode === 'rules_only' && requestedExecution === 'rules_only'
                 ? 'Contrôle déterministe volontairement sélectionné : aucun appel IA'
                 : 'Analyse partielle : une fonction IA est indisponible'}</p>
               <p className="mt-2 text-sm">
@@ -227,9 +261,9 @@ export default function CheckPage() {
           {result.rewrite && <AIRewriteDiff rewrite={result.rewrite} verificationId={result.verificationId} />}
           {result.score < 60 && !result.rewrite && (
             <p className="rounded-lg bg-amber-50 p-3 text-amber-800">
-              {result.analysisMode === 'rules_only'
+              {result.analysisMode === 'rules_only' && requestedExecution === 'rules_only'
                 ? 'Réécriture non générée : tu as choisi le mode sans IA.'
-                : result.analysisMode === 'partial'
+                : result.analysisMode !== 'full'
                   ? 'Réécriture indisponible : le service IA a rencontré une erreur.'
                   : 'Aucune réécriture proposée : le quota de réécritures est peut-être atteint.'}
             </p>
