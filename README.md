@@ -61,3 +61,7 @@ Préparation FFmpeg/FFprobe des vidéos et Sharp des carrousels **hors ligne**, 
 ### OpenAI : configuration et budget
 
 Les modèles OpenAI texte/image historiques sont déjà câblés. Transcription `gpt-transcribe` et embeddings `text-embedding-3-small` sont préparés côté serveur mais **non activés**. Pas de nouvelles requêtes API pour la préparation ; une mise en pause générale est disponible via `OPENAI_PAUSED=true`. Voir `docs/06-openai-setup.md`.
+
+## Stratégie anti-doublons
+
+Avant tout nouveau lot, consulter [le registre unique](docs/work-registry.json) et [le protocole](docs/07-anti-duplication.md) : `npm run work:find -- openai`, puis `npm run work:check`. La CI signale les routes et migrations non référencées ou réclamées par deux modules. Les statuts décrivent le code, pas une certification de production.

@@ -1,0 +1,379 @@
+{
+  "schemaVersion": 1,
+  "updated": "2026-11-04",
+  "scope": "Code de la branche, non preuve de déploiement ni de commercialisation.",
+  "features": [
+    {
+      "id": "auth",
+      "name": "Auth Supabase et sessions",
+      "status": "implemented_code",
+      "anchor": "lib/security/auth.ts",
+      "test": "tests/unit/auth-diagnostics.test.ts",
+      "doc": "docs/01-architecture.md",
+      "aliases": [
+        "auth",
+        "login",
+        "inscription"
+      ],
+      "routes": [
+        "app/api/auth/login/route.ts",
+        "app/api/auth/logout/route.ts",
+        "app/api/auth/register/route.ts"
+      ],
+      "migrations": [
+        "supabase/migrations/202611032001_initial_schema.sql",
+        "supabase/migrations/202611032002_rls_and_functions.sql"
+      ],
+      "next": [
+        "Valider Auth et E2E en environnement authentifié."
+      ]
+    },
+    {
+      "id": "checks",
+      "name": "Vérification règles, texte et image",
+      "status": "implemented_code",
+      "anchor": "lib/ai/mentioncheck-engine.ts",
+      "test": "tests/unit/rules.test.ts",
+      "doc": "docs/03-ai.md",
+      "aliases": [
+        "check",
+        "score",
+        "analyse",
+        "image",
+        "regles"
+      ],
+      "routes": [
+        "app/api/check/route.ts",
+        "app/api/verifications/route.ts"
+      ],
+      "migrations": [],
+      "next": [
+        "Tests E2E réels encore à fournir ; vidéo non analysée."
+      ]
+    },
+    {
+      "id": "openai",
+      "name": "OpenAI, budgets, audio et embeddings",
+      "status": "partial",
+      "anchor": "lib/openai/config.ts",
+      "test": "tests/unit/openai-config.test.ts",
+      "doc": "docs/06-openai-setup.md",
+      "aliases": [
+        "openai",
+        "gpt",
+        "429",
+        "credits",
+        "whisper",
+        "transcription",
+        "embeddings"
+      ],
+      "routes": [],
+      "migrations": [],
+      "next": [
+        "429 historique suivi de deux vérifications complètes. Audio et embeddings non raccordés, ne pas tester en payant automatiquement."
+      ]
+    },
+    {
+      "id": "mia",
+      "name": "Mia, historique et corpus juridique",
+      "status": "partial",
+      "anchor": "lib/mia/assistant.ts",
+      "test": "tests/unit/mia-retrieval.test.ts",
+      "doc": "docs/04-mia-archives.md",
+      "aliases": [
+        "mia",
+        "rag",
+        "chat",
+        "assistant"
+      ],
+      "routes": [
+        "app/api/mia/chat/route.ts",
+        "app/api/mia/conversations/route.ts",
+        "app/api/mia/conversations/delete/route.ts"
+      ],
+      "migrations": [
+        "supabase/migrations/202611032003_pgvector_match.sql",
+        "supabase/migrations/202611042001_mia_quota_and_append.sql"
+      ],
+      "next": [
+        "Recherche lexicale présente ; RAG vectoriel non activé."
+      ]
+    },
+    {
+      "id": "media-upload",
+      "name": "Uploads privés et bibliothèque",
+      "status": "implemented_code",
+      "anchor": "lib/media/browser-upload.ts",
+      "test": "tests/unit/media-validation.test.ts",
+      "doc": "docs/05-zero-credit-workstreams.md",
+      "aliases": [
+        "media",
+        "stockage",
+        "upload",
+        "images"
+      ],
+      "routes": [
+        "app/api/media/prepare/route.ts",
+        "app/api/media/complete/route.ts",
+        "app/api/media/library/route.ts",
+        "app/api/media/remove/route.ts",
+        "app/api/media/upload-url/route.ts"
+      ],
+      "migrations": [
+        "supabase/migrations/202611042002_media_assets.sql"
+      ],
+      "next": [
+        "La bibliothèque prépare les fichiers ; elle ne réalise pas une analyse vidéo."
+      ]
+    },
+    {
+      "id": "media-offline",
+      "name": "FFmpeg et Sharp hors ligne",
+      "status": "prepared_disabled",
+      "anchor": "workers/video/src/process.mjs",
+      "test": "workers/video/tests/video.test.mjs",
+      "doc": "workers/video/README.md",
+      "aliases": [
+        "video",
+        "carrousel",
+        "frames",
+        "ffmpeg",
+        "sharp"
+      ],
+      "routes": [],
+      "migrations": [],
+      "next": [
+        "Deux CLIs présentes mais aucun exécuteur de jobs connecté au site ; voir workers/carousel."
+      ]
+    },
+    {
+      "id": "media-retention",
+      "name": "Purge et rétention des médias",
+      "status": "prepared_disabled",
+      "anchor": "app/api/internal/media-retention/route.ts",
+      "test": "tests/unit/media-retention.test.ts",
+      "doc": "docs/05-zero-credit-workstreams.md",
+      "aliases": [
+        "purge",
+        "retention",
+        "cron",
+        "expiration"
+      ],
+      "routes": [
+        "app/api/internal/media-retention/route.ts"
+      ],
+      "migrations": [],
+      "next": [
+        "Purge physique et Worker Cron non activés."
+      ]
+    },
+    {
+      "id": "privacy-export",
+      "name": "Consentement et export RGPD",
+      "status": "partial",
+      "anchor": "app/api/account/export/route.ts",
+      "test": "tests/unit/privacy-export.test.ts",
+      "doc": "docs/05-zero-credit-workstreams.md",
+      "aliases": [
+        "rgpd",
+        "consentement",
+        "export",
+        "donnees"
+      ],
+      "routes": [
+        "app/api/account/consent/route.ts",
+        "app/api/account/export/route.ts"
+      ],
+      "migrations": [],
+      "next": [
+        "Storage et données des prestataires exclus du JSON."
+      ]
+    },
+    {
+      "id": "privacy-erasure",
+      "name": "Dépôt de demandes d'effacement",
+      "status": "partial",
+      "anchor": "app/api/account/erasure/route.ts",
+      "test": "tests/unit/privacy-erasure.test.ts",
+      "doc": "docs/02-database.md",
+      "aliases": [
+        "suppression",
+        "compte",
+        "effacement",
+        "droit",
+        "oubli"
+      ],
+      "routes": [
+        "app/api/account/erasure/route.ts"
+      ],
+      "migrations": [
+        "supabase/migrations/202611042004_privacy_erasure_requests.sql"
+      ],
+      "next": [
+        "Suivi non destructif, effacement complet Auth/Storage non mis en oeuvre."
+      ]
+    },
+    {
+      "id": "archives",
+      "name": "Archives et export PDF",
+      "status": "implemented_code",
+      "anchor": "lib/archive/pdf.ts",
+      "test": "tests/unit/archive-pdf.test.ts",
+      "doc": "docs/04-mia-archives.md",
+      "aliases": [
+        "historique",
+        "archives",
+        "pdf"
+      ],
+      "routes": [
+        "app/api/archive/[id]/pdf/route.ts"
+      ],
+      "migrations": [],
+      "next": [
+        "PDF informatif, ni certificat ni preuve qualifiée."
+      ]
+    },
+    {
+      "id": "stripe",
+      "name": "Stripe Checkout et Webhooks",
+      "status": "prepared_disabled",
+      "anchor": "lib/billing/config.ts",
+      "test": "tests/unit/billing-config.test.ts",
+      "doc": "docs/05-zero-credit-workstreams.md",
+      "aliases": [
+        "stripe",
+        "paiement",
+        "abonnement",
+        "checkout"
+      ],
+      "routes": [
+        "app/api/stripe/checkout/route.ts",
+        "app/api/stripe/portal/route.ts",
+        "app/api/stripe/webhook/route.ts"
+      ],
+      "migrations": [
+        "supabase/migrations/202611042003_stripe_event_inbox.sql"
+      ],
+      "next": [
+        "Sandbox à valider ; BILLING_ENABLED désactivé."
+      ]
+    },
+    {
+      "id": "rewrites",
+      "name": "Réécriture et acceptation",
+      "status": "implemented_code",
+      "anchor": "lib/ai/rewriter.ts",
+      "test": "tests/unit/disclosure.test.ts",
+      "doc": "docs/03-ai.md",
+      "aliases": [
+        "réécriture",
+        "correction",
+        "publication"
+      ],
+      "routes": [
+        "app/api/rewrite/accept/route.ts"
+      ],
+      "migrations": [],
+      "next": [
+        "Maintenir la vérification des mentions sponsorisées en début de texte."
+      ]
+    },
+    {
+      "id": "quotas",
+      "name": "Quotas et limites de débit",
+      "status": "implemented_code",
+      "anchor": "lib/security/quota.ts",
+      "test": "tests/unit/cloudflare-config.test.ts",
+      "doc": "docs/01-architecture.md",
+      "aliases": [
+        "quotas",
+        "rate",
+        "limit"
+      ],
+      "routes": [],
+      "migrations": [
+        "supabase/migrations/202611032004_quotas.sql"
+      ],
+      "next": [
+        "Tests de charge et E2E production à compléter."
+      ]
+    },
+    {
+      "id": "resend",
+      "name": "Emails transactionnels Resend",
+      "status": "planned",
+      "anchor": ".env.example",
+      "test": null,
+      "doc": "docs/01-architecture.md",
+      "aliases": [
+        "emails",
+        "resend",
+        "notifications"
+      ],
+      "routes": [],
+      "migrations": [],
+      "next": [
+        "Intégration et consentements à développer ; aucun envoi autorisé."
+      ]
+    },
+    {
+      "id": "oauth-social",
+      "name": "OAuth Instagram TikTok YouTube",
+      "status": "planned",
+      "anchor": "docs/01-architecture.md",
+      "test": null,
+      "doc": "docs/01-architecture.md",
+      "aliases": [
+        "social",
+        "instagram",
+        "tiktok",
+        "youtube",
+        "oauth"
+      ],
+      "routes": [],
+      "migrations": [],
+      "next": [
+        "Autorisation fournisseur et implémentation manquantes."
+      ]
+    },
+    {
+      "id": "seo-legal",
+      "name": "SEO et pages légales",
+      "status": "partial",
+      "anchor": "app/legal/mentions-legales/page.tsx",
+      "test": "tests/e2e/landing.spec.ts",
+      "doc": "docs/01-architecture.md",
+      "aliases": [
+        "seo",
+        "mentions",
+        "legales",
+        "cgu"
+      ],
+      "routes": [],
+      "migrations": [],
+      "next": [
+        "Identité juridique et contenu final non validés."
+      ]
+    },
+    {
+      "id": "production-tests",
+      "name": "Tests E2E authentifiés et accessibilité",
+      "status": "partial",
+      "anchor": "tests/e2e/authenticated-navigation.spec.ts",
+      "test": "tests/e2e/authenticated-navigation.spec.ts",
+      "doc": "docs/05-zero-credit-workstreams.md",
+      "aliases": [
+        "playwright",
+        "tests",
+        "mobile",
+        "clavier",
+        "wcag"
+      ],
+      "routes": [],
+      "migrations": [],
+      "next": [
+        "CI verte ne prouve pas des parcours authentifiés sur Cloudflare."
+      ]
+    }
+  ]
+}

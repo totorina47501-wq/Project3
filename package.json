@@ -16,7 +16,10 @@
     "cf:typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "cf:whoami": "wrangler whoami",
     "test:video:offline": "node --test workers/video/tests/video.test.mjs",
-    "test:carousel:offline": "node --test workers/carousel/tests/carousel.test.mjs"
+    "test:carousel:offline": "node --test workers/carousel/tests/carousel.test.mjs",
+    "work:check": "node scripts/work-inventory.mjs check",
+    "work:find": "node scripts/work-inventory.mjs find",
+    "work:test": "node --test scripts/work-inventory.test.mjs"
   },
   "engines": {
     "node": ">=22.12.0 <27"
