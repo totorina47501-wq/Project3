@@ -145,8 +145,8 @@
       "routes": [],
       "migrations": [],
       "next": [
-        "Contrat de job vidéo déterministe testé ; aucun exécuteur de queue ni traitement automatique connecté au site.",
-        "Ajouter un claim atomique persistant, un worker FFmpeg isolé et des tests E2E avant activation."
+        "Contrat vidéo local validant une ligne Supabase cohérente, bail par tentative, SHA-256 serveur ; aucun traitement automatique actif.",
+        "Ajouter contrainte UNIQUE, claim/finalisation atomiques en base, exécuteur FFmpeg isolé et E2E authentifiés avant activation."
       ]
     },
     {

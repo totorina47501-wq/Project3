@@ -1,13 +1,22 @@
-# Contrat de traitement vidéo (non activé)
+# Contrat de jobs vidéo — préparation sans activation
+Ce lot de la PR #14 implémente un contrat **purement local** et testé. Aucun backend de queue, worker en production, transcription IA ni nouvel appel OpenAI n'est présent.
 
-Ce lot ajoute le contrat pur de la file vidéo, sans fournisseur de queue, base de jobs ni déploiement de worker. Il ne prétend pas connecter la vidéo au site : cela nécessite une infrastructure d'exécution FFmpeg isolée, un stockage de sorties privé et une persistance atomique des états.
+## Contrat de provenance
+`createVideoJob(row, now)` reçoit **une seule ligne serveur** `public.media_assets`, lue depuis Supabase par un service authentifié et autorisé : `id`, `user_id`, `storage_path`, `media_sha256`, `status`, `kind`, `mime_type`, `actual_bytes`, `expires_at`. Ne jamais construire le paramètre en mélangeant des valeurs fournies par le client ou plusieurs lignes.
 
-- Identité déterministe `SHA256(assetId:mediaSha256)` : déduplication à faire respecter par une contrainte unique en base.
-- Seuls les médias `ready` avec SHA-256 persisté et chemin de propriétaire validé sont éligibles.
-- États : `queued → processing → extracted`, échec avec trois tentatives maximum et lease de cinq minutes. Les transitions de ce module ne constituent **pas** un verrou distribué : le futur exécuteur doit effectuer un claim atomique en base.
-- Aucun appel OpenAI, Whisper ou service IA ; `aiCalls=0`.
-- `workers/video/src/process.mjs` reste l'unique implémentation FFmpeg locale et n'est pas dupliquée.
-- Pour tester : `node --test workers/video/tests/job-contract.test.mjs`.
+- L'identifiant `media_assets.id` et l'UUID dans `storage_path` sont distincts dans le code d'upload. Ne pas exiger leur égalité, mais **vérifier que tous les attributs appartiennent à la même ligne DB**, dans le contexte du propriétaire authentifié.
+- Vérifier `ready`, SHA-256 serveur stocké, taille, MIME et expiration. Cela ne prouve PAS l'immuabilité des octets Storage. Le futur worker devra les retélécharger et re-hasher avant traitement.
+- Clé de déduplication déterministe `SHA256(assetId:mediaSha256)`. La base devra imposer une contrainte `UNIQUE(key)` pour éviter une double insertion concurrente.
 
-## Étape suivante avant activation
-Choisir un exécuteur Linux isolé avec FFmpeg et un backend de queue ; ajouter migration de jobs + RLS sans exposer les données, claim atomique et vérification de SHA-256 des octets téléchargés ; valider le coût, la purge des sorties et les E2E authentifiés. Aucun média client n'est traité automatiquement par ce lot.
+## États et concurrence
+- `queued → processing → extracted` ou `failed`. Maximum trois tentatives ; lease de cinq minutes.
+- Un `leaseToken` UUID transmis par le futur service de claim identifie la tentative. Succès/échec nécessitent le même token et un lease valide ; un token d'une tentative expirée est refusé après reprise.
+- Ces transitions in-memory **ne constituent pas un verrou distribué**. Un service de jobs devra réclamer/terminer les jobs dans PostgreSQL avec une transition atomique conditionnelle `WHERE state, lease_token, lease_until`, une clé unique et une isolation par propriétaire.
+- Aucun traitement `FFmpeg` ne s'exécute dans le Worker Next.js. L'unique moteur local reste `workers/video/src/process.mjs`.
+- `aiCalls=0` ; aucun appel réseau dans les tests du contrat.
+
+## Contrôles
+`node --test workers/video/tests/*.test.mjs`, puis `npm run work:check`, lint, typecheck, tests unitaires, build Next.js. En production, il faudra aussi vérifier les logs **Cloudflare Workers Builds** sur le SHA de la PR ; une CI GitHub verte seule n'autorise pas le merge. Les exécutions authentifiées E2E restent à faire.
+
+## Avant mise en service
+Choisir l'exécuteur Linux isolé, limiter CPU/RAM/temps et sortie réseau, ajouter migration RLS des jobs, claim atomique en base, permissions des fichiers privés, publication atomique des JPEG/WAV/manifeste et tests de concurrence, expiration et crash. Chiffrer les coûts et obtenir une autorisation avant toute activation. Aucun média client n'est traité par ce contrat.
