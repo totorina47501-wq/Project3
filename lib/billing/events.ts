@@ -1,6 +1,6 @@
 // Traduction contrôlée des offres et statuts Stripe en droits applicatifs.
-import type { PaidPlan } from '@/lib/billing/config';
-import { isBillableStatus } from '@/lib/billing/config';
+import type { PaidPlan } from './config';
+import { isBillableStatus } from './config';
 
 export function paidPlanFromPrices(priceIds: string[], config: {
   pro?: string | undefined; studio?: string | undefined;
