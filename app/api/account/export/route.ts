@@ -45,7 +45,7 @@ export async function GET() {
       information: {
         limitPerCollection: LIMIT,
         truncated, structuredDataComplete: !hasTruncation, isComplete: false,
-        note: 'L'export est partiel par conception : les octets des fichiers Storage et données des prestataires externes ne sont pas inclus. Pour un export complet des fichiers ou des collections tronquées, demander une extraction complémentaire.',
+        note: 'L\'export est partiel par conception : les octets des fichiers Storage et données des prestataires externes ne sont pas inclus. Pour un export complet des fichiers ou des collections tronquées, demander une extraction complémentaire.',
       },
     };
     return new Response(JSON.stringify(payload, null, 2), {
