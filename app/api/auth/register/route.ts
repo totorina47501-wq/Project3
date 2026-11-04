@@ -1,3 +1,4 @@
+import { isSameOrigin } from '@/lib/security/origin';
 // Chemin : app/api/auth/register/route.ts
 import { z } from 'zod';
 import { createServerSupabase } from '@/lib/supabase/server';
@@ -10,6 +11,7 @@ const credentials = z.object({
 
 export async function POST(request: Request) {
   try {
+    if (!isSameOrigin(request)) return Response.json({ error: 'Origine interdite.' }, { status: 403 });
     const body = credentials.safeParse(await request.json());
     if (!body.success) return Response.json({
       error: 'Email invalide ou mot de passe trop court (10 caractères minimum).',

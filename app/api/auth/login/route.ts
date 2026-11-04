@@ -1,3 +1,4 @@
+import { isSameOrigin } from '@/lib/security/origin';
 // Chemin : app/api/auth/login/route.ts
 import { z } from 'zod';
 import { createServerSupabase } from '@/lib/supabase/server';
@@ -11,6 +12,7 @@ const credentials = z.object({
 
 export async function POST(request: Request) {
   try {
+    if (!isSameOrigin(request)) return Response.json({ error: 'Origine interdite.' }, { status: 403 });
     const body = credentials.safeParse(await request.json());
     if (!body.success) return Response.json({ error: 'Identifiants invalides.' }, { status: 400 });
     // Les variables NEXT_PUBLIC_ doivent aussi exister dans l'environnement

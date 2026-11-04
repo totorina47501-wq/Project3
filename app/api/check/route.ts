@@ -1,3 +1,4 @@
+import { isSameOrigin } from '@/lib/security/origin';
 // Chemin : app/api/check/route.ts
 import { checkInputSchema } from '@/lib/ai/schemas';
 import { runCheck, validateMedia } from '@/lib/ai/mentioncheck-engine';
@@ -13,6 +14,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
+    if (!isSameOrigin(request)) return Response.json({ error: 'Origine interdite.' }, { status: 403 });
     const { user } = await requireUser();
     const payload = checkInputSchema.safeParse(await request.json());
     if (!payload.success) {

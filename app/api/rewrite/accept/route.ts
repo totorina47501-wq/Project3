@@ -1,3 +1,4 @@
+import { isSameOrigin } from '@/lib/security/origin';
 // Chemin : app/api/rewrite/accept/route.ts
 import { z } from 'zod';
 import { createAdminSupabase } from '@/lib/supabase/admin';
@@ -11,6 +12,7 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   try {
+    if (!isSameOrigin(request)) return Response.json({ error: 'Origine interdite.' }, { status: 403 });
     const { user } = await requireUser();
     const data = schema.safeParse(await request.json());
     if (!data.success) return Response.json({ error: 'Texte invalide.' }, { status: 400 });

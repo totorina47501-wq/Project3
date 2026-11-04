@@ -1,3 +1,4 @@
+import { isSameOrigin } from '@/lib/security/origin';
 // Chemin : app/api/mia/chat/route.ts
 // Mia documentaire : authentification, quotas, isolation et historique privé.
 import { requireUser, HttpError, publicError } from '@/lib/security/auth';
@@ -14,6 +15,7 @@ export async function POST(request: Request) {
   let charged = false;
   let userId: string | null = null;
   try {
+    if (!isSameOrigin(request)) return Response.json({ error: 'Origine interdite.' }, { status: 403 });
     const { user } = await requireUser();
     userId = user.id;
     let body: unknown;

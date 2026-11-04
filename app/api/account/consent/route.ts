@@ -1,3 +1,4 @@
+import { isSameOrigin } from '@/lib/security/origin';
 // Choix explicite et réversible d'usage des textes pour entraînement.
 // Cette case n'autorise jamais OpenAI à utiliser des contenus automatiquement.
 import { z } from 'zod';
@@ -8,8 +9,7 @@ const schema = z.object({ aiTrainingOptIn: z.boolean() }).strict();
 export async function POST(request: Request) {
   try {
     const { user, client } = await requireUser();
-    const origin = request.headers.get('origin');
-    if (origin && origin !== new URL(request.url).origin)
+    if (!isSameOrigin(request))
       throw new HttpError(403, 'Origine de la requête interdite.');
     let body: unknown;
     try { body = await request.json(); }

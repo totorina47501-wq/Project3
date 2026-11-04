@@ -1,3 +1,4 @@
+import { isSameOrigin } from '@/lib/security/origin';
 // Chemin : app/api/mia/conversations/delete/route.ts
 // Suppression explicite d'une discussion, limitée au propriétaire authentifié.
 import { z } from 'zod';
@@ -8,6 +9,7 @@ export const runtime = 'nodejs';
 const inputSchema = z.object({ conversationId: z.string().uuid() }).strict();
 export async function POST(request: Request) {
   try {
+    if (!isSameOrigin(request)) return Response.json({ error: 'Origine interdite.' }, { status: 403 });
     const { user } = await requireUser();
     let input: unknown;
     try { input = await request.json(); }
