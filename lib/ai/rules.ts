@@ -2,7 +2,7 @@
 import type { Platform, Violation } from '@/lib/ai/schemas';
 
 // Ces détecteurs exposent des indicateurs : certains sont des heuristiques UX.
-const explicit = /(?:\bpublicit[eé](?![\p{L}\p{N}_])|\bcollaboration commerciale\b|\bpartenariat r[eé]mun[eé]r[eé](?![\p{L}\p{N}_])|\bcontenu sponsoris[eé](?![\p{L}\p{N}_])|\bsponsoris[eé](?![\p{L}\p{N}_])|#(?:publicit[eé]|sponsoris[eé]|ad)(?![\p{L}\p{N}_])|\ben collaboration avec\b)/iu;
+const explicit = /(?:\bpublicit[eé](?![\p{L}\p{N}_])|\bcollaboration commerciale\b|\bcommunication commerciale\b|\bpartenariat r[eé]mun[eé]r[eé](?![\p{L}\p{N}_])|\bcontenu sponsoris[eé](?![\p{L}\p{N}_])|\bsponsoris[eé](?![\p{L}\p{N}_])|#(?:publicit[eé]|sponsoris[eé]|ad)(?![\p{L}\p{N}_])|\ben collaboration avec\b)/iu;
 const ambiguous = /(?:#collab\b|#sp\b|\bcollab\b|\bmerci\s+@[\w.]+)/i;
 const affiliate = /(?:affili(?:ation|[eé])|lien partenaire|commission sur les ventes|[?&](?:aff|affiliate|ref)=)/i;
 const promo = /(?:code\s+promo|-\s?\d{1,2}\s?%|r[eé]duction)/i;
@@ -51,7 +51,9 @@ export function riskFrom(violations: Violation[], aiConfidence: number): number 
   // qu'un petit coefficient et ne remplacent pas les violations explicites.
   const weights = { low: 6, medium: 18, high: 32, critical: 55 };
   const total = violations.reduce((sum, item) => sum + weights[item.severity], 0);
-  return Math.min(100, total + Math.round(Math.min(1, Math.max(0, aiConfidence)) * 5));
+  // Une confiance IA malformée ne doit jamais produire NaN dans le score archivé.
+  const confidence = Number.isFinite(aiConfidence) ? Math.min(1, Math.max(0, aiConfidence)) : 0;
+  return Math.min(100, total + Math.round(confidence * 5));
 }
 
 export function levelFromRisk(risk: number): 'low' | 'medium' | 'high' | 'critical' {
