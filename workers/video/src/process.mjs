@@ -12,12 +12,26 @@ export async function command(binary,args,timeout=15000){
   return new Promise((ok,fail)=>{
     let output='';
     const child=spawn(binary,args,{shell:false,stdio:['ignore','pipe','pipe']});
-    const timer=setTimeout(()=>child.kill('SIGKILL'),timeout);
-    child.stdout.on('data',chunk=>{if(output.length<90000)output+=String(chunk)});
+    let timedOut=false;
+    let settled=false;
+    const finish=(error,value)=>{
+      if(settled)return;
+      settled=true;
+      clearTimeout(timer);
+      error?fail(error):ok(value);
+    };
+    const timer=setTimeout(()=>{
+      timedOut=true;
+      child.kill('SIGKILL');
+    },timeout);
+    child.stdout.on('data',chunk=>{
+      if(Buffer.byteLength(output)<90000)output+=String(chunk).slice(0,90000-Buffer.byteLength(output));
+    });
     child.stderr.resume();
-    child.on('error',()=>{clearTimeout(timer);fail(new VideoInputError('Outil indisponible'))});
-    child.on('close',code=>{clearTimeout(timer);
-      code===0?ok(output):fail(new VideoInputError('Extraction interrompue'));
+    child.on('error',()=>finish(new VideoInputError('Outil indisponible')));
+    child.on('close',code=>{
+      if(timedOut)return finish(new VideoInputError('Délai extraction dépassé'));
+      code===0?finish(null,output):finish(new VideoInputError('Extraction interrompue'));
     });
   });
 }
