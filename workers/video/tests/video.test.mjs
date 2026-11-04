@@ -15,6 +15,14 @@ describe('FFprobe local sans crédits IA',()=>{
       assert.equal(validateProbe({...sample,format:{...sample.format,format_name}},10).width,1080);
     }
   });
+  it('refuse les flux FFprobe absents ou malformés sans TypeError',()=>{
+    for(const streams of [undefined,null,{},'video',[],[null],['video'],[{codec_type:'audio'}]]){
+      assert.throws(()=>validateProbe({...sample,streams},10),VideoInputError);
+    }
+  });
+  it('ignore les entrées nulles parmi les flux valides',()=>{
+    assert.equal(validateProbe({...sample,streams:[null,...sample.streams]},10).hasAudio,true);
+  });
   it('rejette 61s',()=>assert.throws(()=>validateProbe({...sample,
     format:{format_name:'mp4',duration:'61'}},10),VideoInputError));
   it('rejette 50 Mo dépassés',()=>assert.throws(()=>validateProbe(sample,52428801),VideoInputError));
