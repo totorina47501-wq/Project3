@@ -10,7 +10,9 @@ import { BRAND } from '@/lib/branding';
 import { publicSiteUrl } from '@/lib/site-url';
 import './globals.css';
 
-export const viewport: Viewport = { width: 'device-width', initialScale: 1 };\n\nexport const metadata: Metadata = {
+export const viewport: Viewport = { width: 'device-width', initialScale: 1 };
+
+export const metadata: Metadata = {
   title: `${BRAND.publicName} — Vérifiez vos partenariats avec Mia`,
   description: BRAND.tagline,
   metadataBase: new URL(publicSiteUrl()),
