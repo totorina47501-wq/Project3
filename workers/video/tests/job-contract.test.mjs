@@ -23,7 +23,7 @@ test('claim, extraction et absence de double exécution',()=>{
  assert.equal(claimed.attempts,1);
  assert.throws(()=>nextJobState(claimed,'claim',new Date(2000)));
  assert.equal(nextJobState(claimed,'success',new Date(2000)).state,'extracted');
- assert.throws(()=>nextJobState(claimed,'success',new Date(2000)).state);
+ assert.throws(()=>nextJobState(nextJobState(claimed,'success',new Date(2000)),'success',new Date(2000)));
 });
 test('reprise bornée puis échec définitif',()=>{
  let job=createVideoJob(base);
