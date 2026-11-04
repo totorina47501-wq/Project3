@@ -182,24 +182,25 @@ Le jeton n'est jamais retourné ni journalisé.
 
 La CI n'appelle pas cette route et n'exécute aucune requête OpenAI payante.
 
-## GitHub Actions — manual deployment and indexing
+## Déploiement et indexation Mia sur Cloudflare
 
-The workflow .github/workflows/mentioncheck-cloudflare-operator.yml is manually
-triggered only (Actions > MentionCheck Cloudflare operator > Run workflow).
+Le déploiement de MentionCheck est déjà géré par l'intégration GitHub
+native de Cloudflare à chaque fusion sur `main`. Ne pas ajouter un
+second workflow de déploiement GitHub Actions ni recopier les secrets
+d'exécution Cloudflare dans GitHub.
 
-- deploy: requires GitHub secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID;
-  deploys main with npm run deploy:cloudflare, preserving existing Cloudflare vars.
-- mia-preview: requires GitHub secret MIA_INDEX_TOKEN or MEDIA_RETENTION_TOKEN,
-  matching the Worker-side token; no OpenAI calls.
-- mia-index-five: same operator secret and confirmation INDEXER-5.
-  Calls the existing Worker with execute=true, up to five embeddings.
-  Worker must have OPENAI_EMBEDDINGS_ENABLED=true, OPENAI_API_KEY,
-  SUPABASE_SERVICE_KEY, and OPENAI_PAUSED must not be true.
+L'endpoint `POST /api/internal/mia-index` est conservé sur le Worker.
+Il exige un jeton opérateur côté Cloudflare (`MIA_INDEX_TOKEN` ou
+`MEDIA_RETENTION_TOKEN`, 32 caractères minimum). L'appel sans paramètre
+effectue un aperçu sans consommation OpenAI. `?execute=true` déclenche
+une indexation idempotente de cinq documents uniquement si
+`OPENAI_EMBEDDINGS_ENABLED=true`, `OPENAI_PAUSED` différent de
+`true`, et les clés OpenAI et Supabase sont présentes côté Worker.
 
-Cloudflare secrets are NOT automatically available to GitHub Actions. Missing
-GitHub secrets cause safe failure without indexing. Never put a secret in workflow
-inputs, source control or logs. No operation changes MIA_VECTOR_SEARCH_ENABLED.
-
-Verify with Supabase: SELECT COUNT(*) AS documents, COUNT(embedding) AS indexed
-FROM public.law_documents; Expected result 5 / 5. Real retrieval relevance
-and production deployment still require separate validation.
+L'appel d'administration doit être effectué depuis un environnement
+opérateur sécurisé, sans placer le jeton dans le dépôt, les logs ou
+l'URL. Vérifier ensuite dans Supabase :
+`SELECT COUNT(*) AS documents, COUNT(embedding) AS indexed FROM public.law_documents;`
+Résultat attendu : 5 / 5. Ne pas activer
+`MIA_VECTOR_SEARCH_ENABLED` avant validation des cinq vecteurs et
+un test de pertinence du RAG.
