@@ -14,7 +14,7 @@ type Item = {
 type PrepareResult = PreparedUpload & { error?: string };
 type ItemsResult = { items?: Item[]; error?: string };
 
-export function MediaLibrary() {
+export function MediaLibrary({ supabaseUrl, supabaseAnonKey }: { supabaseUrl: string; supabaseAnonKey: string }) {
   const [items, setItems] = useState<Item[]>([]);
   const [mode, setMode] = useState<'video'|'carousel'>('video');
   const [busy, setBusy] = useState(false);
@@ -44,6 +44,10 @@ export function MediaLibrary() {
 
   async function uploadFiles(files: File[]) {
     if (busy || files.length === 0) return;
+    if (!supabaseUrl || !supabaseAnonKey) {
+      setError('Stockage indisponible : configuration publique absente du Worker. Aucun fichier envoyé.');
+      return;
+    }
     setError(''); setNotice(''); setProgress(0);
     setBusy(true);
     try {
@@ -65,9 +69,16 @@ export function MediaLibrary() {
         if (!mediaPrepareSchema.safeParse(input).success)
           throw new Error('Média refusé : type, taille ou durée dépassée.');
         const prepared = await post<PrepareResult>('/api/media/prepare', input);
-        await uploadPreparedFile(file, prepared,
-          (ratio) => setProgress(Math.round(((index + ratio / 100) / files.length) * 100)));
-        await post('/api/media/complete', { assetId: prepared.assetId });
+        try {
+          await uploadPreparedFile(file, prepared,
+            (ratio) => setProgress(Math.round(((index + ratio / 100) / files.length) * 100)),
+            { supabaseUrl, supabaseAnonKey });
+          await post('/api/media/complete', { assetId: prepared.assetId });
+        } catch (uploadError) {
+          // Best effort cleanup: never leave a false "uploaded" claim behind.
+          await post('/api/media/remove', { assetId: prepared.assetId }).catch(() => {});
+          throw uploadError;
+        }
       }
       setNotice(mode === 'video'
         ? 'Vidéo conservée en privé. La transcription et l’analyse IA ne sont pas lancées.'

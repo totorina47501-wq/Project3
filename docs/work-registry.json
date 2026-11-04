@@ -124,8 +124,8 @@
         "supabase/migrations/202611042005_media_asset_sha256.sql"
       ],
       "next": [
-        "SHA-256 persistence implemented behind MEDIA_SHA256_PERSISTENCE_ENABLED; production migration and env activation pending.",
-        "Validate 50 MiB Cloudflare memory, Storage object immutability, and authenticated concurrent E2E."
+        "Correctif runtime Cloudflare pour upload navigateur : valider un vrai transfert puis confirmation SHA-256 sur production.",
+        "Valider 50 MiB Cloudflare memory, Storage immutability, authenticated concurrent E2E."
       ]
     },
     {

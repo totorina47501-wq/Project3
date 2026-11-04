@@ -3,6 +3,10 @@ import { MediaLibrary } from '@/components/MediaLibrary';
 
 export const dynamic = 'force-dynamic';
 export default function MediaPage() {
+  // Worker runtime bindings are available here even when NEXT_PUBLIC values were
+  // not embedded in the browser bundle at Cloudflare build time.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
   return <div className="mx-auto max-w-3xl space-y-6">
     <div>
       <p className="text-sm font-bold uppercase tracking-wide text-accent">Sans crédit IA</p>
@@ -12,6 +16,6 @@ export default function MediaPage() {
         Aucun appel payant à OpenAI n&apos;est lancé.
       </p>
     </div>
-    <MediaLibrary />
+    <MediaLibrary supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey} />
   </div>;
 }
