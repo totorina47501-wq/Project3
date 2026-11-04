@@ -21,3 +21,7 @@ body {
   background: #c7d2fe;
   color: #0f172a;
 }
+
+/* Preserve readable text and prevent accidental horizontal overflow on phones. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { min-width: 0; overflow-x: clip; }
