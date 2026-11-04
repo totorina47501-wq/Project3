@@ -153,8 +153,8 @@
       "name": "Purge et rétention des médias",
       "status": "prepared_disabled",
       "anchor": "app/api/internal/media-retention/route.ts",
-      "test": "tests/unit/media-retention.test.ts",
-      "doc": "docs/05-zero-credit-workstreams.md",
+      "test": "tests/unit/media-retention-worker.test.ts",
+      "doc": "docs/26-media-retention-validation.md",
       "aliases": [
         "purge",
         "retention",
@@ -166,7 +166,8 @@
       ],
       "migrations": [],
       "next": [
-        "Purge physique et Worker Cron non activés."
+        "Cron toujours désactivé : valider dry-run et autorisations sur environnement de test avant activation.",
+        "E2E média opt-in avec compte de test et nettoyage : tests/e2e/media-upload-authenticated.spec.ts."
       ]
     },
     {
