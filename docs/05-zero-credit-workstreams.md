@@ -119,3 +119,8 @@ Le validateur rejette maintenant les listes `streams` absentes, nulles ou non-ta
 ## Validation durée FFprobe — 4 novembre 2026, 06:20 Europe/Paris
 
 Le validateur refuse explicitement les durées absentes, nulles, vides, blanches ou non numériques, plutôt que de laisser les conversions JavaScript implicites décider. Les durées négatives, nulles et supérieures à 60 secondes restent interdites. Test de régression ajouté au jeu Node offline (`workers/video/tests/video.test.mjs`). Commits du lot : `78b7257a3465b98e832d020a852ecbd0dec1e7a2` (correctif), `51cbd4c356c276aed878862818f5fdeb9ec5e4cf` (tests). CI du lot à vérifier séparément ; aucune API IA, Stripe, purge ou déploiement déclenché. CI de référence précédente pour `8699392066fd823a421cb01862029b04e9e5d7a1` : GitHub Actions `41771644455`, success.
+
+
+### Contrôle du 4 novembre 2026 — durée vidéo ultra-courte
+
+Le processeur FFmpeg hors ligne rejette maintenant les durées inférieures à 50 ms lors du calcul des trois instants d'échantillonnage : l'ancienne borne `s-.01` pouvait produire un seek négatif pour les vidéos de moins de 10 ms. Un test Node natif couvre les valeurs 1, 9, 10, 49 et 50 ms. Le contrôle de durée de FFprobe tolère toujours les valeurs positives jusqu'à 60 s, mais le traitement refuse les vidéos trop courtes pour l'échantillonnage. Le parseur de durée utilise un accès optionnel à `format` pour éviter une exception native si cette section manque. Aucun média distant ni API IA n'est sollicité. CI du SHA précédent `613d0e3` : succès GitHub Actions #65 (run 41778621749). Les nouveaux SHA nécessitent confirmation CI ; ce processeur reste non déployé.
