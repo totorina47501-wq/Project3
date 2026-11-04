@@ -16,6 +16,7 @@ export default function MediaPage() {
         Aucun appel payant à OpenAI n&apos;est lancé.
       </p>
     </div>
-    <MediaLibrary supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey} />
+    <MediaLibrary supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey}
+      processingEnabled={process.env.MEDIA_PROCESSING_ENABLED === 'true' && process.env.MEDIA_JOBS_SCHEMA_READY === 'true'} />
   </div>;
 }

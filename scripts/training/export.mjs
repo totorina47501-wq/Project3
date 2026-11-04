@@ -4,6 +4,7 @@ import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { prepareDataset } from './dataset.mjs';
+import { signDataset, readKey } from './integrity.mjs';
 
 export async function exportDataset(args) {
   const [inputPath, quarter, keyPath, outputPath, ...extra] = args;
@@ -24,7 +25,8 @@ export async function exportDataset(args) {
   if (!Number.isFinite(age) || age < 0 || age > 24 * 60 * 60 * 1000) {
     throw new Error('Le relevé des consentements doit dater de moins de 24 heures.');
   }
-  const result = prepareDataset(envelope.rows, { quarter, key: await readFile(keyPath) });
+  const key = await readKey(keyPath);
+  const result = prepareDataset(envelope.rows, { quarter, key });
   if (!result.examples.length) throw new Error('Aucune paire admissible ; aucun fichier écrit.');
   const output = resolve(outputPath);
   // Répertoire neuf et privé : aucun écrasement d’un lot antérieur.
@@ -36,10 +38,12 @@ export async function exportDataset(args) {
     hashes[`${split}.jsonl`] = createHash('sha256').update(content).digest('hex');
     await writeFile(join(output, `${split}.jsonl`), content, { mode: 0o600, flag: 'wx' });
   }
-  await writeFile(join(output, 'manifest.json'), JSON.stringify({ captured_at: envelope.captured_at, entries: result.manifest }, null, 2), { mode: 0o600, flag: 'wx' });
+  const manifestBytes = JSON.stringify({ captured_at: envelope.captured_at, entries: result.manifest }, null, 2);
+  await writeFile(join(output, 'manifest.json'), manifestBytes, { mode: 0o600, flag: 'wx' });
   // Ce rapport n’inclut ni texte ni identité ni secret.
   const report = { ...result.report, sha256: hashes };
   await writeFile(join(output, 'report.json'), JSON.stringify(report, null, 2), { mode: 0o600, flag: 'wx' });
+  await signDataset(output, manifestBytes, report, key);
   return report;
 }
 

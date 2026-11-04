@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   const supabase = await createServerSupabase();
-  const { data: checks } = await supabase.from('verifications')
+  const { data: checks, error } = await supabase.from('verifications')
     .select('id,platform,ai_score,created_at,status')
     .order('created_at', { ascending: false })
     .limit(10);
@@ -28,6 +28,10 @@ export default async function DashboardPage() {
           Check ma publication
         </Link>
       </div>
+      {error && <div role="alert" className="space-y-2 rounded-xl bg-red-50 p-4 text-red-800">
+        <p>Les vérifications sont momentanément indisponibles.</p>
+        <a href="/dashboard" className="inline-block font-semibold underline">Réessayer le chargement</a>
+      </div>}
       <div className="grid gap-5 sm:grid-cols-2">
         <article className="rounded-2xl border border-slate-200 bg-white p-7">
           <p className="text-slate-600">Score moyen des dernières vérifications</p>
@@ -35,7 +39,7 @@ export default async function DashboardPage() {
         </article>
         <article className="rounded-2xl border border-slate-200 bg-white p-7">
           <p className="text-slate-600">Vérifications récentes</p>
-          <strong className="mt-3 block text-5xl text-primary">{checks?.length ?? 0}</strong>
+          <strong className="mt-3 block text-5xl text-primary">{error ? '—' : checks?.length ?? 0}</strong>
         </article>
       </div>
       <section aria-label="Outils MentionCheck" className="grid gap-4 sm:grid-cols-2">
@@ -50,10 +54,10 @@ export default async function DashboardPage() {
       </section>
       <section className="rounded-2xl border border-slate-200 bg-white p-7">
         <h2 className="font-heading text-xl font-bold">Derniers checks</h2>
-        {checks?.length ? (
+        {error ? <p className="mt-4 text-slate-600">Historique indisponible. Tes données restent enregistrées.</p> : checks?.length ? (
           <ul className="mt-5 divide-y divide-slate-100">
             {checks.map((item) => (
-              <li className="flex items-center justify-between gap-4 py-4" key={item.id}>
+              <li className="flex flex-wrap items-center justify-between gap-4 py-4" key={item.id}>
                 <span className="capitalize text-slate-700">{item.platform} — {new Date(item.created_at).toLocaleDateString('fr-FR')}</span>
                 <span className="font-semibold text-primary">
                   {checkLabel(item.status, item.ai_score)}

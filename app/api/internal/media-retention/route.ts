@@ -47,6 +47,13 @@ export async function POST(request: Request) {
     if (referenceError) throw new Error('Références non vérifiables.');
     const protectedPaths = new Set((referenced??[]).flatMap(x =>
       x.media_url ? [String(x.media_url)] : []));
+    if (process.env.MEDIA_JOBS_SCHEMA_READY === 'true' && candidates.length) {
+      const { data: inputs, error: inputsError } = await admin.from('media_processing_inputs')
+        .select('asset_id').in('asset_id', candidates.map(row => row.id));
+      if (inputsError) throw new Error('Preuves techniques non vérifiables.');
+      const linked = new Set((inputs ?? []).map(row => row.asset_id));
+      for (const row of candidates) if (linked.has(row.id)) protectedPaths.add(row.storage_path);
+    }
     const eligible = selectExpiredMedia(candidates, protectedPaths)
       .slice(0,MAX_PER_RUN);
     if (!execute) {

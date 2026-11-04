@@ -1,4 +1,5 @@
 // Classification des erreurs IA sans journaliser les prompts, les clés ni la légende.
+import { logServerError } from '@/lib/security/logging';
 export type AiFailureCategory =
   | 'missing_key' | 'authentication' | 'permission' | 'credit' | 'rate_limit'
   | 'request' | 'provider' | 'network' | 'disabled' | 'unknown';
@@ -25,7 +26,7 @@ export function classifyAiFailure(error: unknown): AiFailureCategory {
 export function reportAiFailure(stage: 'text' | 'vision' | 'rewrite', error: unknown) {
   const status = error && typeof error === 'object' && 'status' in error
     && typeof error.status === 'number' ? error.status : undefined;
-  console.error('[mentioncheck][ai_failure]', {
+  logServerError('ai_failure', error, {
     stage, category: classifyAiFailure(error), status,
   });
 }

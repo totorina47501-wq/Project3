@@ -15,6 +15,7 @@ for (const key of [
 Object.assign(env, {
   NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:54329',
   NEXT_PUBLIC_SUPABASE_ANON_KEY: 'offline-public-fixture',
+  SUPABASE_SERVICE_KEY: 'offline-service-fixture',
   OPENAI_PAUSED: 'true', OPENAI_TEXT_ENABLED: 'false', OPENAI_VISION_ENABLED: 'false',
   OPENAI_AUDIO_ENABLED: 'false', OPENAI_EMBEDDINGS_ENABLED: 'false',
   BILLING_ENABLED: 'false', MEDIA_RETENTION_ENABLED: 'false',

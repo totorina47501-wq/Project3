@@ -26,6 +26,10 @@ export const PERSONAL_COLLECTIONS = [
   ['invitationsAccepted','workspace_invitations','id,workspace_id,email,role,created_by,expires_at,accepted_at,accepted_by,revoked_at,created_at','accepted_by','id'],
   ['workspaceVerifications','workspace_verifications','id,workspace_id,created_by,platform,caption,result,created_at','created_by','id'],
 ] as const;
+const MEDIA_JOB_COLLECTIONS = [
+  ['mediaJobs','media_processing_jobs','id,verification_id,kind,status,attempts,failure_code,result,created_at,updated_at,completed_at','user_id','id'],
+  ['mediaJobInputs','media_processing_inputs','job_id,asset_id,position','user_id','job_id,position'],
+] as const;
 
 export async function readPersonalData(user: ExportUser) {
   const admin = createAdminSupabase();
@@ -35,7 +39,9 @@ export async function readPersonalData(user: ExportUser) {
   if (profile.error || !profile.data) throw new Error('Profil indisponible.');
   const collections: Record<string, unknown[]> = {};
   let bytes = 0;
-  for (const [name, table, fields, ownerColumn, orderColumns] of PERSONAL_COLLECTIONS) {
+  const collectionsToRead = [...PERSONAL_COLLECTIONS,
+    ...(process.env.MEDIA_JOBS_SCHEMA_READY === 'true' ? MEDIA_JOB_COLLECTIONS : [])];
+  for (const [name, table, fields, ownerColumn, orderColumns] of collectionsToRead) {
     collections[name] = await collectPages(async (offset, size) => {
       let query = admin.from(table).select(fields, {count:'exact'}).eq(ownerColumn,user.id);
       for (const column of orderColumns.split(',')) query = query.order(column,{ascending:true});

@@ -24,6 +24,12 @@ export async function POST(request: Request) {
     if (lookupError) throw new Error('Référence du média indisponible.');
     if (used?.length) throw new HttpError(409,
       'Ce média est lié à un contrôle archivé et ne peut pas être supprimé ici.');
+    if (process.env.MEDIA_JOBS_SCHEMA_READY === 'true') {
+      const { data: linked, error: linkedError } = await admin.from('media_processing_inputs')
+        .select('job_id').eq('asset_id', item.id).eq('user_id', user.id).limit(1);
+      if (linkedError) throw new Error('Références techniques indisponibles.');
+      if (linked?.length) throw new HttpError(409, 'Ce média est lié à une préparation archivée.');
+    }
     const { error: fileError } = await admin.storage.from('verification-media')
       .remove([item.storage_path]);
     if (fileError) throw new Error('Suppression du fichier impossible.');

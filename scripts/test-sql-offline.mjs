@@ -29,7 +29,7 @@ export function migrationForOffline(name,original) {
   return {sql,omissions};
 }
 
-async function installSupabaseStubs(db) {
+export async function installSupabaseStubs(db) {
   await db.exec(`
     create role anon;
     create role authenticated;
@@ -61,6 +61,19 @@ async function installSupabaseStubs(db) {
   `);
 }
 
+// Fabrique sans URL ni option de persistance : uniquement PostgreSQL en mémoire.
+export async function createOfflineDatabase() {
+  const db = new PGlite({extensions:{pgcrypto}});
+  try {
+    await installSupabaseStubs(db);
+    for (const name of (await readdir(migrationDir)).filter(n=>n.endsWith('.sql')).sort()) {
+      const {sql} = migrationForOffline(name,await readFile(new URL(name,migrationDir),'utf8'));
+      if (sql !== null) await db.exec(sql);
+    }
+    return db;
+  } catch (error) { await db.close(); throw error; }
+}
+
 export async function runSqlOffline() {
   const db=new PGlite({extensions:{pgcrypto}});
   const migrations=(await readdir(migrationDir)).filter(name=>name.endsWith('.sql')).sort();
@@ -78,26 +91,12 @@ export async function runSqlOffline() {
       }
       applied++;console.log('Migration OK : '+name);
     }
-    // Pendant l'intégration uniquement : repli sur les SQL préparés dans /tmp.
-    // Après création de la migration finale, aucun fichier /tmp n'est nécessaire.
-    for(const [domain,table] of [
-      ['studio','workspaces'],['settings','user_preferences'],
-      ['collaborations','brand_deal_verifications'],['privacy','privacy_consent_events'],
-    ]) {
+    for (const table of ['workspaces','user_preferences','brand_deal_verifications','privacy_consent_events','media_processing_jobs']) {
       const {rows}=await db.query('select to_regclass($1) is not null as present',['public.'+table]);
-      if(rows[0]?.present)continue;
-      const path='/tmp/mentioncheck-'+domain+'.sql';
-      let sql;
-      try {sql=await readFile(path,'utf8');}catch {
-        throw new Error('Migration interne manquante pour '+domain+'. Intégrer le SQL final à supabase/migrations avant livraison (repli temporaire attendu : '+path+').');
-      }
-      try {await db.exec(sql);}catch(error) {
-        throw new Error('Échec SQL interne '+domain+': '+(error instanceof Error?error.message:String(error)),{cause:error});
-      }
-      console.log('SQL interne temporaire OK : '+domain+' ('+path+')');
+      if(!rows[0]?.present)throw new Error('Migration interne manquante pour '+table+'. Aucun SQL temporaire non versionné n’est exécuté.');
     }
     let suites=0;
-    for(const name of ['studio_security.sql','settings_security.sql','collaborations_security.sql','privacy_regressions.sql']) {
+    for(const name of ['studio_security.sql','settings_security.sql','collaborations_security.sql','privacy_regressions.sql','media_jobs_security.sql']) {
       try {await db.exec(await readFile(new URL(name,regressionDir),'utf8'));}catch(error) {
         throw new Error('Échec régression '+name+': '+(error instanceof Error?error.message:String(error)),{cause:error});
       }

@@ -284,7 +284,8 @@
       "migrations": [],
       "next": [
         "Maintenir la vérification des mentions sponsorisées en début de texte.",
-        "Préparation trimestrielle hors ligne : scripts/training/export.mjs et docs/28-training-offline.md ; aucun entraînement déclenché."
+        "Préparation trimestrielle hors ligne : scripts/training/export.mjs et docs/28-training-offline.md ; aucun entraînement déclenché.",
+        "Lots signés HMAC, retrait local des révocations et évaluation comparative sans entraînement : docs/30-rag-training.md."
       ]
     },
     {
@@ -433,7 +434,8 @@
       ],
       "migrations": [],
       "next": [
-        "Migration appliquée : internal_completion, version distante 20261104184723 ; Stripe et IA restent inactifs."
+        "Migration appliquée : internal_completion, version distante 20261104184723 ; Stripe et IA restent inactifs.",
+        "Parcours navigateur invitation/clé et collaboration validés contre PostgreSQL local : docs/33-studio-e2e.md."
       ]
     },
     {
@@ -454,6 +456,29 @@
       ],
       "next": [
         "Migration testée hors ligne et appliquée avec autorisation ; version distante 20261104184723. Ne pas la réappliquer."
+      ]
+    },
+    {
+      "id": "media-processing-queue",
+      "name": "File média et archivage technique hors IA",
+      "status": "implemented_code",
+      "anchor": "app/api/media/jobs/route.ts",
+      "test": "tests/sql/media_jobs_security.sql",
+      "doc": "docs/35-local-media-pipeline.md",
+      "aliases": [
+        "file",
+        "queue",
+        "bail",
+        "processing"
+      ],
+      "routes": [
+        "app/api/media/jobs/route.ts"
+      ],
+      "migrations": [
+        "supabase/migrations/20261104225500_media_processing_queue.sql"
+      ],
+      "next": [
+        "Migration uniquement validée localement, non appliquée à distance. API désactivée par défaut. Runner Sharp/FFmpeg et archivage SQL testés hors ligne."
       ]
     }
   ]

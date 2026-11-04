@@ -72,3 +72,15 @@ export function validatedLawSource(item: {
   } catch { return null; }
 }
 
+// Une citation du modèle ne peut ajouter ni référence ni URL au corpus fourni.
+export function sourcesForCitations(citations: readonly string[], sources: readonly LawSource[]): Omit<LawSource, 'content'>[] {
+  const wanted = new Set(citations);
+  const seen = new Set<string>();
+  return sources.filter(source => {
+    if (!wanted.has(source.articleRef) || seen.has(source.articleRef)) return false;
+    const valid = validatedLawSource({ article_ref: source.articleRef, content: source.content, source_url: source.sourceUrl });
+    if (!valid) return false;
+    seen.add(source.articleRef); return true;
+  }).slice(0, 5).map(({articleRef,sourceUrl,effectiveOn,checkedAt})=>({articleRef,sourceUrl,effectiveOn,checkedAt}));
+}
+

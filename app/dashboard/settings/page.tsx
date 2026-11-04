@@ -16,7 +16,7 @@ export default async function SettingsPage() {
   const isMiaAdmin = Boolean(authData.user && (process.env.MIA_ADMIN_USER_IDS ?? '').split(',').map(v => v.trim()).includes(authData.user.id));
   const { data: userData, error } = await supabase.from('users')
     .select('id,plan,ai_training_opt_in,created_at').single();
-  const { data: usage } = await supabase.from('usage_monthly')
+  const { data: usage, error: usageError } = await supabase.from('usage_monthly')
     .select('checks_used,rewrites_used,mia_messages_used,period_start')
     .order('period_start', { ascending:false }).limit(1).maybeSingle();
   const [social,preferences] = userData ? await Promise.all([
@@ -35,12 +35,15 @@ export default async function SettingsPage() {
     </header>
     {error || !userData ? <p role="alert" className="rounded-xl bg-red-50 p-4 text-red-800">
       Les informations du compte sont momentanément indisponibles.
+      {' '}<a className="font-semibold underline" href="/dashboard/settings">Réessayer le chargement</a>
     </p> : <>
       <section className="rounded-2xl border border-slate-200 bg-white p-6">
         <h2 className="font-heading text-xl font-bold">Mon abonnement actuel</h2>
         <p className="mt-3 text-lg font-semibold capitalize">{userData.plan}</p>
         <p className="mt-1 text-sm text-slate-500">Les paiements ne sont pas encore activés.</p>
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        {usageError ? <p role="alert" className="mt-5 text-sm text-red-800">Quotas momentanément indisponibles.{' '}
+          <a className="font-semibold underline" href="/dashboard/settings">Réessayer le chargement</a>
+        </p> : <div className="mt-5 grid gap-3 sm:grid-cols-3">
           {[
             { label:'Checks', value:usage?.checks_used ?? 0 },
             { label:'Réécritures', value:usage?.rewrites_used ?? 0 },
@@ -49,7 +52,7 @@ export default async function SettingsPage() {
             <p className="text-xs text-slate-500">{entry.label}</p>
             <p className="mt-1 text-2xl font-bold">{entry.value}</p>
           </div>)}
-        </div>
+        </div>}
         <p className="mt-3 text-xs text-slate-500">Dernière période enregistrée. Les contrôles sans IA ne consomment pas de quota de vérifications payantes.</p>
       </section>
       <SocialAccounts initialItems={(social?.data??[]) as unknown as SocialAccount[]} initialTotal={social?.count??0}

@@ -3,6 +3,7 @@
 import { chatText } from '@/lib/openai';
 import { miaModelSchema, type MiaMessage } from '@/lib/mia/schemas';
 import { retrieveLawSources } from '@/lib/mia/retrieval';
+import { sourcesForCitations } from '@/lib/mia/ranking';
 
 const SYSTEM = [
   'Tu es Mia, assistante de préparation des publications commerciales en France.',
@@ -48,11 +49,6 @@ export async function answerMia(
     })),
   });
   const result = await chatText(SYSTEM, input, miaModelSchema);
-  const allowed = new Set(sources.map((source) => source.articleRef));
-  const valid = new Set(result.value.citations.filter((reference) => allowed.has(reference)));
-  const usedSources = sources.filter((source) => valid.has(source.articleRef))
-    .map(({ articleRef, sourceUrl, effectiveOn, checkedAt }) => ({
-      articleRef, sourceUrl, effectiveOn, checkedAt,
-    }));
+  const usedSources = sourcesForCitations(result.value.citations,sources);
   return { answer: result.value.answer, sources: usedSources, usage: result.usage };
 }

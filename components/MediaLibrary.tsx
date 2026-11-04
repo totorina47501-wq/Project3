@@ -5,6 +5,7 @@ import { MAX_CAROUSEL_IMAGES, MAX_VIDEO_DURATION_SECONDS,
   mediaPrepareSchema, isVideo } from '@/lib/media/validation';
 import { uploadPreparedFile, readVideoDuration,
   type PreparedUpload } from '@/lib/media/browser-upload';
+import { MediaJobsPanel } from './MediaJobsPanel';
 
 type Item = {
   id: string; group_id: string | null; kind: 'image'|'video';
@@ -14,7 +15,7 @@ type Item = {
 type PrepareResult = PreparedUpload & { error?: string };
 type ItemsResult = { items?: Item[]; error?: string };
 
-export function MediaLibrary({ supabaseUrl, supabaseAnonKey }: { supabaseUrl: string; supabaseAnonKey: string }) {
+export function MediaLibrary({ supabaseUrl, supabaseAnonKey, processingEnabled = false }: { supabaseUrl: string; supabaseAnonKey: string; processingEnabled?: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
   const [mode, setMode] = useState<'video'|'carousel'>('video');
   const [busy, setBusy] = useState(false);
@@ -115,8 +116,8 @@ export function MediaLibrary({ supabaseUrl, supabaseAnonKey }: { supabaseUrl: st
         Aucun GPT-4o, Whisper ni autre appel IA n&apos;est effectué ici.
       </p>
       <p className="mt-2 text-sm text-slate-600">
-        Les vidéos sont conservées temporairement, mais leur conformité n&apos;est pas encore
-        analysée. La durée doit aussi être recontrôlée côté serveur lors du futur traitement vidéo.
+        Les vidéos sont conservées temporairement. Leur préparation technique et le contrôle
+        de leur légende sont distincts d&apos;une analyse visuelle IA.
       </p>
       <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label="Choisir le type de média">
         <button type="button" aria-pressed={mode === 'video'} disabled={busy}
@@ -174,5 +175,6 @@ export function MediaLibrary({ supabaseUrl, supabaseAnonKey }: { supabaseUrl: st
         </li>)}
       </ul>
     </section>
+    <MediaJobsPanel enabled={processingEnabled} assets={items} />
   </div>;
 }

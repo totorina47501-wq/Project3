@@ -5,6 +5,9 @@ export type EmailInput = Common & (
   | {kind:'report-ready';verificationId:string}
   | {kind:'quota-warning';used:number;limit:number;periodEnd:string}
   | {kind:'erasure-received';requestId:string}
+  | {kind:'critical-compliance';verificationId:string;signals:number}
+  | {kind:'monthly-report';period:string;checks:number;risks:number}
+  | {kind:'subscription-confirmed';plan:'solo'|'pro'|'studio'}
 );
 export type RenderedEmail = {subject:string;text:string;html:string};
 const uuid=/^[a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12}$/i;
@@ -21,6 +24,21 @@ export function renderEmail(input:EmailInput):RenderedEmail {
   const origin=originUrl(input.siteOrigin);
   let subject:string;let paragraphs:string[];let path='/dashboard';let action='Ouvrir MentionCheck';
   switch(input.kind){
+    case 'critical-compliance':
+      if(!uuid.test(input.verificationId)||!Number.isSafeInteger(input.signals)||input.signals<1||input.signals>1000)throw new Error('Alerte invalide.');
+      subject='Mia a repéré des signaux à vérifier avant publication';
+      paragraphs=[`Mia a relevé ${input.signals} signal(s) de risque dans ta publication.`,`Relis le contrôle et corrige les mentions avant publication. Ce résultat dépend des contrôles exécutés ; il ne certifie pas la conformité juridique.`];
+      path='/dashboard/archive/'+input.verificationId;action='Relire le contrôle';break;
+    case 'monthly-report':
+      if(!/^(0[1-9]|1[0-2])\/20\d{2}$/.test(input.period)||![input.checks,input.risks].every(value=>Number.isSafeInteger(value)&&value>=0&&value<=100000))throw new Error('Rapport mensuel invalide.');
+      subject=`Ton bilan MentionCheck — ${input.period}`;
+      paragraphs=[`${input.checks} vérification(s) réalisée(s) sur la période ${input.period}.`,`Mia a intercepté ${input.risks} signal(s) de risque à relire ce mois-ci.`,`Retrouve tes contrôles et corrections dans tes archives.`];path='/dashboard/archive';action='Consulter mon bilan';break;
+    case 'subscription-confirmed': {
+      const labels={solo:'Solo',pro:'Pro',studio:'Studio'};
+      if(!Object.hasOwn(labels,input.plan))throw new Error('Offre invalide.');
+      subject=`Confirmation de ton offre MentionCheck ${labels[input.plan]}`;
+      paragraphs=[`Ton offre ${labels[input.plan]} est enregistrée.`,`Retrouve le détail de tes droits et de ton abonnement dans tes paramètres.`];path='/dashboard/settings';action='Voir mon abonnement';break;
+    }
     case 'welcome':
       if(!input.name.trim()||input.name.length>200||/[\x00-\x1f]/.test(input.name))throw new Error('Nom invalide.');
       subject='Bienvenue sur MentionCheck';

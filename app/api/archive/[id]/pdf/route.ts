@@ -3,6 +3,7 @@
 import { requireUser, HttpError, publicError } from '@/lib/security/auth';
 import { buildArchivePdf } from '@/lib/archive/pdf';
 import { z } from 'zod';
+import { logServerError } from '@/lib/security/logging';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -48,6 +49,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     });
   } catch (error) {
     const { status, message } = publicError(error);
+    if (status >= 500) logServerError('archive_pdf_failure', error, { status });
     return Response.json({ error: message }, { status,
       headers: { 'Cache-Control': 'no-store' } });
   }

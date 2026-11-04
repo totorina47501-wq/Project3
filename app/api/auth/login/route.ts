@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { publicError } from '@/lib/security/auth';
 import { missingAuthConfig, categorizeAuthError } from '@/lib/security/auth-diagnostics';
+import { logServerError } from '@/lib/security/logging';
 
 const credentials = z.object({
   email: z.string().email().max(320),
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
       supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     });
     if (missingVariables.length > 0) {
-      console.error('[mentioncheck][auth_login_failure]', {
+      logServerError('auth_login_failure', undefined, {
         category: 'missing_runtime_config', missingVariables,
       });
       return Response.json({ error: 'Configuration du service de connexion indisponible.' },
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
         return Response.json({ error: 'Email ou mot de passe incorrect.' },
           { status: 401, headers: { 'Cache-Control': 'no-store' } });
       }
-      console.error('[mentioncheck][auth_login_failure]', {
+      logServerError('auth_login_failure', error, {
         category, providerStatus: typeof error.status === 'number' ? error.status : null,
       });
       return Response.json({
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
     return Response.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     // Diagnostic sans messages bruts, sans emails, mots de passe ni jetons.
-    console.error('[mentioncheck][auth_login_failure]', {
+    logServerError('auth_login_failure', error, {
       category: categorizeAuthError(error),
       errorType: error instanceof Error ? error.name : 'unknown',
       runtimeUrlPresent: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),

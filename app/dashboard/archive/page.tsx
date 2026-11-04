@@ -44,13 +44,13 @@ export default async function ArchivePage({searchParams}: {
       <div><label htmlFor="archive-to">Jusqu’au (UTC)</label><input id="archive-to" name="to" type="date" defaultValue={filters.to} min={filters.from||undefined} className={inputClass}/></div>
       <div className="flex items-end gap-3"><button className="rounded-lg bg-accent px-4 py-2.5 font-semibold text-white">Filtrer</button><Link href="/dashboard/archive" className="py-2 text-accent underline">Réinitialiser</Link></div>
     </form>
-    {failure?<p role="alert" className="rounded-xl bg-red-50 p-4 text-red-700">{failure}</p>:!records.length?<p className="rounded-xl bg-white p-6 text-slate-600">Aucune archive sur cette page. <Link className="font-semibold text-accent underline" href="/dashboard/check">Effectuer un contrôle</Link></p>:<ul className="space-y-3">{records.map(item=><li key={item.id}>
+    {failure?<div role="alert" className="space-y-2 rounded-xl bg-red-50 p-4 text-red-700"><p>{failure}</p><a className="inline-block font-semibold underline" href={archivePageHref(filters,page)}>Réessayer le chargement</a></div>:!records.length?<p className="rounded-xl bg-white p-6 text-slate-600">Aucune archive sur cette page. <Link className="font-semibold text-accent underline" href="/dashboard/check">Effectuer un contrôle</Link></p>:<ul className="space-y-3">{records.map(item=><li key={item.id}>
       <Link href={'/dashboard/archive/'+item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-5 hover:border-indigo-400">
         <div><p className="font-semibold capitalize">{item.platform}</p><p className="mt-1 text-sm text-slate-500">{new Date(item.created_at).toLocaleString('fr-FR',{timeZone:'UTC'})} UTC</p></div>
         <span className="font-semibold text-primary">{checkLabel(item.status,item.ai_score)}</span><span className="text-sm font-semibold text-accent">Voir le détail</span>
       </Link>
     </li>)}</ul>}
-    {!failure && <nav aria-label="Pagination des archives" className="flex items-center justify-between gap-3">
+    {!failure && <nav aria-label="Pagination des archives" className="flex flex-wrap items-center justify-between gap-3">
       {page>1?<Link className="rounded-xl border border-slate-300 bg-white px-4 py-2" href={archivePageHref(filters,page-1)}>Précédent</Link>:<span className="text-slate-400">Première page</span>}
       <span className="text-sm text-slate-600">Page {page} · {count===null?'Nombre indisponible':count+' résultats'}</span>
       {count!==null&&count>page*limit?<Link className="rounded-xl border border-slate-300 bg-white px-4 py-2" href={archivePageHref(filters,page+1)}>Suivant</Link>:<span className="text-slate-400">Fin</span>}
