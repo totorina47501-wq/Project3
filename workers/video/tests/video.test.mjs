@@ -33,6 +33,12 @@ describe('FFprobe local sans crédits IA',()=>{
   it('rejette 50 Mo dépassés',()=>assert.throws(()=>validateProbe(sample,52428801),VideoInputError));
   it('rejette resolution extreme',()=>assert.throws(()=>validateProbe({...sample,
     streams:[{codec_type:'video',width:9000,height:1080}]},10),VideoInputError));
+  it('rejette les durées sous 50 ms pour éviter les timestamps négatifs',()=>{ 
+    for(const seconds of [0.001,0.009,0.01,0.049]){
+      assert.throws(()=>sampleTimes(seconds),VideoInputError);
+    }
+    assert.ok(sampleTimes(0.05).every(t=>t>=0&&t<0.05));
+  });
   it('calcule trois images sans sortir du média',()=>{
     const t=sampleTimes(1);
     assert.equal(t.length,3);
