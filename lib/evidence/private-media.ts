@@ -1,4 +1,3 @@
-import 'server-only';
 import { sha256Blob } from './sha256';
 
 export type PrivateMediaStorage = {
