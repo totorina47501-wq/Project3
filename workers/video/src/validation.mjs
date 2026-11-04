@@ -22,7 +22,7 @@ export function validateProbe(probe,bytes){
     codec:String(v.codec_name??'unknown').slice(0,40)};
 }
 export function sampleTimes(s){
-  if(!Number.isFinite(s)||s<=0||s>60)throw new VideoInputError('Durée invalide');
+  if(!Number.isFinite(s)||s<0.05||s>60)throw new VideoInputError('Durée invalide');
   return [.15,.5,.85].map(p=>Math.max(0,Math.min(s-.01,Math.round(s*p*1000)/1000)))
     .filter((value,i,all)=>i===0||value>all[i-1]);
 }
