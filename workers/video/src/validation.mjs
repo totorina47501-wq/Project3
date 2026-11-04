@@ -5,14 +5,15 @@ export function validateProbe(probe,bytes){
   const formats=String(probe?.format?.format_name??'').split(',');
   if(!formats.some(format=>['mov','mp4'].includes(format.trim())))
     throw new VideoInputError('MP4/MOV uniquement');
-  const v=probe?.streams?.find(s=>s.codec_type==='video');
+  if(!Array.isArray(probe?.streams))throw new VideoInputError('Flux manquants');
+  const v=probe.streams.find(s=>s?.codec_type==='video');
   if(!v || !Number.isInteger(v.width)||!Number.isInteger(v.height)||
     Math.min(v.width,v.height)<16||Math.max(v.width,v.height)>4096)
     throw new VideoInputError('Flux vidéo invalide');
   const duration=Number(probe.format.duration??v.duration);
   if(!Number.isFinite(duration)||duration<=0||duration>60)throw new VideoInputError('60 s maximum');
   return {durationSeconds:duration,width:v.width,height:v.height,
-    hasAudio:probe.streams.some(s=>s.codec_type==='audio'),
+    hasAudio:probe.streams.some(s=>s?.codec_type==='audio'),
     codec:String(v.codec_name??'unknown').slice(0,40)};
 }
 export function sampleTimes(s){
