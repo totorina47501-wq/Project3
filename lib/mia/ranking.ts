@@ -14,11 +14,13 @@ const STOP_WORDS = new Set([
   'etre', 'sur', 'que', 'qui', 'par', 'quoi', 'peut', 'faut', 'elle',
   'il', 'nous', 'vous', 'cela', 'aussi', 'doit', 'cette', 'cet',
   'bonjour', 'merci', 'salut', 'demain', 'hier', 'aujourd', 'hui', 'prix', 'combien',
+  'besoin', 'obligation', 'obligatoire', 'possible', 'necessaire', 'faire', 'mettre',
+  'publication', 'publier', 'contenu', 'reseau', 'sociaux', 'question', 'regle',
 ]);
 const KEYWORDS: Record<string, string[]> = {
-  commercial: ['publicite', 'collaboration', 'sponsorise', 'mention', 'affiliation', 'promo', 'partenariat'],
-  retouche: ['retouchee', 'retouche', 'filtre', 'image', 'virtuel', 'intelligence', 'artificielle'],
-  definition: ['influenceur', 'influence', 'activite', 'remuneration', 'contrepartie'],
+  commercial: ['publicite', 'collaboration', 'sponsorise', 'mention', 'affiliation', 'promo', 'partenariat', 'sponsoring', 'sponsor', 'placement'],
+  retouche: ['retouchee', 'retouche', 'filtre', 'image', 'virtuel', 'intelligence', 'artificielle', 'photo', 'photographie', 'ia'],
+  definition: ['influenceur', 'influence', 'activite', 'remuneration', 'contrepartie', 'cadeau', 'gratuit', 'offert'],
   restriction: ['interdit', 'restriction', 'sante', 'medical', 'produit', 'risque'],
 };
 function normalize(text: string): string {
@@ -32,14 +34,17 @@ function words(text: string): string[] {
 }
 export function chooseLawSources(question: string, sources: LawSource[], max = 4): LawSource[] {
   const input = new Set(words(question));
+  if (!input.size) return [];
   const expansions = new Set(input);
   for (const group of Object.values(KEYWORDS)) {
     if (group.some((word) => input.has(word))) group.forEach((word) => expansions.add(word));
   }
   return sources.map((source) => {
     const terms = new Set(words(source.content + ' ' + source.articleRef));
-    const overlap = [...expansions].reduce((sum, word) =>
-      sum + (terms.has(word) ? (input.has(word) ? 2 : 0.25) : 0), 0);
+    const direct = [...input].filter((word) => terms.has(word)).length;
+    const synonyms = [...expansions].filter((word) => !input.has(word) && terms.has(word)).length;
+    // Les synonymes seuls ne prouvent jamais la pertinence juridique.
+    const overlap = direct ? direct * 2 + Math.min(synonyms, 4) * 0.25 : 0;
     return { source, overlap };
   }).sort((a, b) => b.overlap - a.overlap || a.source.articleRef.localeCompare(b.source.articleRef))
     .filter((entry) => entry.overlap > 0)
