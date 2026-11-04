@@ -23,5 +23,7 @@ jobs:
         run: bun run lint
       - name: Tests unitaires
         run: bun run test
+      - name: Tests vidéo hors ligne (aucun appel IA)
+        run: bun run test:video:offline
       - name: Compilation Next.js
         run: bun run build

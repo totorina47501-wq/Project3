@@ -40,3 +40,56 @@ La recherche vectorielle pgvector (embeddings), le traitement FFmpeg/Whisper, l'
 
 ## Préparation opérationnelle
 Ne jamais enregistrer les clés dans le code ou les logs. Maintenir keep_vars dans wrangler.jsonc et --keep-vars dans Cloudflare Workers Builds. Ne pas déployer des variables d'activation Stripe avant validation des prérequis réglementaires.
+
+
+## Nouveau lot — extraction vidéo locale, rétention et protections médias (novembre 2026)
+
+**Extraction vidéo offline :** `workers/video/src/process.mjs` fonctionne
+avec FFprobe/FFmpeg sur un hôte indépendant, en contrôlant réellement le
+format MP4/MOV, les 60 secondes, 50 Mio, résolution, puis extraction
+de trois JPEG et éventuellement d'un WAV 16 kHz. Les empreintes SHA-256 sont
+dans `manifest.json`. Ni GPT-4o, ni Whisper, ni appel réseau. Ce processeur
+n'est PAS déployé en tant que service et ne traite pas encore les fichiers
+enregistrés par la page /dashboard/media.
+
+**Purge des médias :** `POST /api/internal/media-retention` gère un
+mode d'inventaire sans suppression et un mode `execute=true`.
+Protection obligatoire par un bearer token aléatoire (au moins 32 caractères).
+Le mode destructif exige en plus `MEDIA_RETENTION_ENABLED=true`, absent
+par défaut. Le code supprime les blobs uniquement par Supabase Storage API
+puis leur enregistrement ; il ne touche jamais directement à storage.objects.
+Un média associé à une vérification archivée est exclu du nettoyage et de
+la suppression manuelle.
+
+Le retrait des médias `pending` attend trois heures supplémentaires APRÈS
+leur expiration logique afin de laisser expirer les jetons d'upload signés.
+Une limite de 20 objets par exécution est appliquée, avec arrêt en cas
+d'erreur et nouvelle tentative lors de l'exécution suivante.
+Le Worker planificateur est préparé dans `workers/media-retention`,
+avec cadence quotidienne 03:15 UTC, mais il est **non déployé et désactivé**
+pour éviter de supprimer des médias sans validation d'exploitation.
+Les scripts ont été ajoutés sans aucune clé ni configuration active.
+
+**Durcissement :** la validation des uploads refuse un objet expiré,
+protège contre les races d'édition, vérifie l'origine des POST et bloque
+la suppression d'un média devenu élément probatoire. Les mises à jour de
+médias expirés sont toujours refusées même si un jeton Storage subsiste.
+
+### Activation ultérieure (après essais manuels et revue RGPD)
+
+1. Créer deux secrets `MEDIA_RETENTION_TOKEN` identiques dans le Worker
+   principal et le Worker Cron, générés par un gestionnaire de secrets.
+2. Configurer l'URL `MEDIA_RETENTION_URL` dans le Worker Cron vers
+   `https://mentioncheck.toto-rina47501.workers.dev/api/internal/media-retention`.
+3. Exécuter une requête d'inventaire (POST authentifié sans `execute=true`)
+   et vérifier qu'aucun média archivé n'est sélectionné.
+4. Seulement ensuite définir `MEDIA_RETENTION_ENABLED=true` dans
+   les deux Workers, puis déployer le Worker Cron séparé en l'ayant relié
+   aux secrets adéquats.
+5. Suivre les logs, les retours 503, les coûts Storage et les effets de
+   l'expiration sur l'interface utilisateur.
+
+**Limites restantes :** aucun processeur vidéo réseau, aucune transcription,
+aucun contrat d'effacement RGPD complet ; le planificateur n'est pas activé.
+Les contrôles vidéos du navigateur ne remplacent pas la validation
+FFprobe serveur avant une éventuelle analyse IA.

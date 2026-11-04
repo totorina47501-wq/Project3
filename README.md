@@ -21,6 +21,8 @@ Le dépôt ne dispose pas encore de lockfile enregistré. La CI utilise Bun avec
 - Tableau de bord et historique des vérifications.
 - Mode sans IA par défaut, sans appel OpenAI ni consommation du quota de checks IA.
 - Préparation privée de vidéos courtes et de carrousels (sans analyse ni transcription).
+- Processeur FFmpeg/FFprobe hors ligne préparé dans workers/video (extraction audio et images, sans intégration IA).
+- Purge de médias expirés préparée, protégée par secret et désactivée par défaut ; aucune suppression automatisée activée.
 - Analyse texte et image, scores et détection des mentions ambiguës.
 - SSE, réécriture sous quota et confirmation explicite.
 - Mia conversationnelle avec sources juridiques référencées, historique privé et quotas.
@@ -30,7 +32,7 @@ Le dépôt ne dispose pas encore de lockfile enregistré. La CI utilise Bun avec
 - Journalisation des analyses et de leurs coûts estimés.
 - Limitation de débit Cloudflare et quotas transactionnels Supabase.
 
-**Le SaaS n'est pas encore prêt à commercialiser.** Vidéo et carrousel : préparation et stockage uniquement, aucune analyse ni transcription. Stripe reste inactif par défaut et limité aux tests. La purge physique des médias, l'effacement RGPD complet, les mentions légales définitives, les E2E en production, Resend, les intégrations sociales et les embeddings pgvector restent à terminer.
+**Le SaaS n'est pas encore prêt à commercialiser.** Vidéo et carrousel : préparation et stockage uniquement, aucune analyse ni transcription. Stripe reste inactif par défaut et limité aux tests. L'activation et la validation de la purge physique des médias, l'effacement RGPD complet, les mentions légales définitives, les E2E en production, Resend, les intégrations sociales et les embeddings pgvector restent à terminer.
 
 ## Documentation
 

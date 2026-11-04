@@ -1,5 +1,6 @@
 // Prépare un upload directement dans le Storage privé; aucun appel à OpenAI.
 import { requireUser, publicError, HttpError } from '@/lib/security/auth';
+import { isSameOrigin } from '@/lib/security/origin';
 import { createAdminSupabase } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/security/rate-limit';
 import { mediaPrepareSchema, isVideo, mediaExtension, MAX_CAROUSEL_IMAGES } from '@/lib/media/validation';
@@ -8,6 +9,7 @@ export const runtime = 'nodejs';
 export async function POST(request: Request) {
   try {
     const { user } = await requireUser();
+    if (!isSameOrigin(request)) throw new HttpError(403, 'Origine interdite.');
     let input: unknown;
     try { input = await request.json(); }
     catch { throw new HttpError(400, 'JSON incorrect.'); }
