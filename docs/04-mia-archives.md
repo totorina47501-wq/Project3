@@ -103,3 +103,7 @@ Les tests Vitest couvrent validation, isolation des routes, CSRF, limites
 honnêtes des exports, canonicalisation/empreinte et PDF ; ils ne prouvent pas
 les garanties transactionnelles d'une base déployée. Les collaborations restent
 personnelles (`user_id`) ; aucun partage Studio implicite n'est accordé.
+
+## Garde-fou de pertinence documentaire
+
+La sélection lexicale exclut désormais les articles sans aucun recoupement de mots-clés avec la question. Une question hors corpus produit une liste vide plutôt que des références arbitraires ; le prompt de Mia demande explicitement de reconnaître l'absence de sources. Test de non-pertinence ajouté. Cette protection ne remplace pas la validation E2E authentifiée ni l'indexation vectorielle, qui restent à faire avant de qualifier Mia de RAG hybride opérationnel.

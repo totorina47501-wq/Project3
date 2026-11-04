@@ -19,6 +19,9 @@ describe('Mia documentaire', () => {
     expect(chooseLawSources('Une image retouchée nécessite une mention ?',docs)[0]?.articleRef)
       .toBe('A-5');
   });
+  it('ne cite aucun article pour une question hors corpus', () => {
+    expect(chooseLawSources('Quel est le prix du carburant demain ?', docs)).toEqual([]);
+  });
   it('ne retourne jamais plus de cinq sources', () => {
     expect(chooseLawSources('test', Array.from({length:20},(_,i) => ({
       ...base, articleRef:String(i),content:'test',
