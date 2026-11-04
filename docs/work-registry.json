@@ -120,11 +120,12 @@
         "app/api/media/upload-url/route.ts"
       ],
       "migrations": [
-        "supabase/migrations/202611042002_media_assets.sql"
+        "supabase/migrations/202611042002_media_assets.sql",
+        "supabase/migrations/202611042005_media_asset_sha256.sql"
       ],
       "next": [
-        "Le hash SHA-256 des octets est calculé avant confirmation et renvoyé pour les nouveaux uploads ; persistance probatoire en base encore absente.",
-        "Tester les téléchargements de 50 Mio sur Cloudflare et les E2E authentifiés."
+        "SHA-256 persistence implemented behind MEDIA_SHA256_PERSISTENCE_ENABLED; production migration and env activation pending.",
+        "Validate 50 MiB Cloudflare memory, Storage object immutability, and authenticated concurrent E2E."
       ]
     },
     {
