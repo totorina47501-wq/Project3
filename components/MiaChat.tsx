@@ -18,7 +18,7 @@ type Reply = {
   error?: string;
 };
 
-export function MiaChat({ initialVerificationId, displayName }: { initialVerificationId?: string | undefined; displayName?: string }) {
+export function MiaChat({ initialVerificationId, displayName }: { initialVerificationId?: string | undefined; displayName?: string | undefined }) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [verificationId, setVerificationId] = useState(initialVerificationId ?? '');
