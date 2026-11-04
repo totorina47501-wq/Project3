@@ -44,14 +44,23 @@ async function uploadImage(file: File) {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ mime: prepared.type, size: prepared.size }),
   });
-  const data = await response.json() as { path?: string; token?: string; error?: string };
-  if (!response.ok || !data.path || !data.token) {
+  const data = await response.json() as {
+    path?: string; token?: string; assetId?: string; error?: string;
+  };
+  if (!response.ok || !data.path || !data.token || !data.assetId) {
     throw new Error(data.error ?? 'Impossible de préparer le média.');
   }
   const { error } = await createBrowserSupabase()
     .storage.from('verification-media')
     .uploadToSignedUrl(data.path, data.token, prepared, { contentType: prepared.type });
   if (error) throw new Error('Impossible de transférer le média privé.');
+  const completed = await fetch('/api/media/complete', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ assetId: data.assetId }),
+  });
+  if (!completed.ok) {
+    throw new Error('Fichier transféré, mais sa confirmation a échoué. Recommence le contrôle.');
+  }
   return data.path;
 }
 
@@ -191,7 +200,7 @@ export default function CheckPage() {
           {result.analysisMode !== 'full' && (
             <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
               <p className="font-bold">{result.analysisMode === 'rules_only'
-                ? 'Contrôle limité aux règles : Mia IA indisponible'
+                ? 'Contrôle déterministe volontairement sélectionné : aucun appel IA'
                 : 'Analyse partielle : une fonction IA est indisponible'}</p>
               <p className="mt-2 text-sm">
                 Le score ci-dessous est provisoire, pas une validation juridique.
@@ -219,7 +228,7 @@ export default function CheckPage() {
           {result.score < 60 && !result.rewrite && (
             <p className="rounded-lg bg-amber-50 p-3 text-amber-800">
               {result.analysisMode === 'rules_only'
-                ? 'Réécriture indisponible : Mia IA n’a pas pu analyser la publication.'
+                ? 'Réécriture non générée : tu as choisi le mode sans IA.'
                 : result.analysisMode === 'partial'
                   ? 'Réécriture indisponible : le service IA a rencontré une erreur.'
                   : 'Aucune réécriture proposée : le quota de réécritures est peut-être atteint.'}

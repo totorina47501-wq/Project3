@@ -49,7 +49,7 @@ describe('FFprobe local sans crédits IA',()=>{
 
 // Intégration locale : création d'une vidéo synthétique, sans Internet ni IA.
 import {spawnSync} from 'node:child_process';
-import {mkdtemp,readFile,rm} from 'node:fs/promises';
+import {mkdtemp,readFile,rm,readdir,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {processVideo,command} from '../src/process.mjs';
@@ -74,6 +74,16 @@ it('extrait localement un MP4 synthétique et inscrit aiCalls=0',
       const disk=JSON.parse(await readFile(join(out,'manifest.json'),'utf8'));
       assert.equal(disk.video.width,320);
       assert.equal(disk.frames.length,3);
+      const visible=await readdir(root);
+      assert.ok(visible.includes('outputs'));
+      assert.ok(!visible.some(name=>name.startsWith('.mc-video-stage-')),
+        'Aucun répertoire de préparation partiel ne doit rester après publication.');
+      assert.ok(!visible.includes('outputs.lock'),'Le verrou doit être relâché.');
+      const bundle=await readdir(out);
+      assert.deepEqual(bundle.sort(),['frame-01.jpg','frame-02.jpg','frame-03.jpg','manifest.json'].sort());
+      assert.equal(disk.schemaVersion,2);
+      assert.ok(disk.frames.every(frame=>frame.bytes>0));
+
     }finally{await rm(root,{recursive:true,force:true})}
 });
 
@@ -101,8 +111,50 @@ it('préserve un répertoire de sortie préexistant sans écraser de preuve', {s
     const {mkdir,writeFile,readdir}=await import('node:fs/promises');
     await mkdir(out);
     await writeFile(join(out,'proof.txt'),'existing');
-    await assert.rejects(processVideo(input,out),{code:'EEXIST'});
+    await assert.rejects(processVideo(input,out),VideoInputError);
     assert.deepEqual(await readdir(out),['proof.txt']);
     assert.equal(await readFile(join(out,'proof.txt'),'utf8'),'existing');
+  }finally{await rm(root,{recursive:true,force:true})}
+});
+
+
+it('refuse une sortie verrouillée en conservant les fichiers concurrents',
+  {skip:!ffmpegAvailable},async()=>{
+  const root=await mkdtemp(join(tmpdir(),'mc-video-locked-'));
+  const input=join(root,'video.mp4'),out=join(root,'outputs');
+  try {
+    const generated=spawnSync('ffmpeg',[
+      '-hide_banner','-loglevel','error','-f','lavfi',
+      '-i','testsrc=size=320x240:rate=6','-t','1',
+      '-c:v','mpeg4','-pix_fmt','yuv420p','-y',input,
+    ],{timeout:15000,stdio:'pipe'});
+    assert.equal(generated.status,0);
+    await writeFile(out+'.lock','reserved');
+    await assert.rejects(processVideo(input,out),VideoInputError);
+    assert.equal(await readFile(out+'.lock','utf8'),'reserved');
+    assert.ok(!(await readdir(root)).includes('outputs'));
+  } finally { await rm(root,{recursive:true,force:true}); }
+});
+
+it('rejette une source vidéo trop lourde avant de lancer FFprobe',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'mc-video-too-big-'));
+  const input=join(root,'big.mp4');
+  try {
+    const {open}=await import('node:fs/promises');
+    const handle=await open(input,'w');
+    try {await handle.truncate(50*1024*1024+1);}finally{await handle.close();}
+    await assert.rejects(processVideo(input,join(root,'outputs')),VideoInputError);
+    assert.ok(!(await readdir(root)).includes('outputs'));
+  }finally{await rm(root,{recursive:true,force:true})}
+});
+
+it('ne suit pas les liens symboliques comme fichiers sources',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'mc-video-symlink-'));
+  const input=join(root,'source.mp4');
+  try {
+    await writeFile(input,'fake');
+    const {symlink}=await import('node:fs/promises');
+    await symlink(input,join(root,'alias.mp4'));
+    await assert.rejects(processVideo(join(root,'alias.mp4'),join(root,'outputs')),VideoInputError);
   }finally{await rm(root,{recursive:true,force:true})}
 });

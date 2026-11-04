@@ -133,3 +133,16 @@ Contrôle préalable : PR #1 toujours brouillon, branche `feat/mentioncheck-bloc
 **Correctif publication partielle** : `workers/video/src/process.mjs` suit désormais explicitement si le répertoire de destination a été créé et si le manifeste final a été publié. En cas d'échec entre la création du répertoire et la fin de la publication, seul le répertoire neuf créé par cette exécution est retiré. Un répertoire préexistant n'est jamais supprimé. Le répertoire de travail temporaire est toujours purgé. Test hors ligne ajouté pour vérifier qu'une preuve préexistante n'est pas écrasée.
 
 **Limites** : ce nettoyage n'est pas une transaction atomique ; un arrêt brutal du processus peut laisser des sorties partielles. Une publication atomique sur le même système de fichiers et une isolation de l'exécuteur restent nécessaires avant intégration en production. Aucun appel IA, Stripe, purge Storage ni déploiement n'a été déclenché. Commits : `6d9b33d` (correctif), `e65bb6b` (test). Validation CI du SHA final à confirmer séparément.
+
+
+## Lot immédiat — consolidation hors IA
+
+- **Publication vidéo atomique :** les artefacts FFmpeg/FFprobe sont entièrement construits dans un répertoire temporaire privé situé sur le même disque que la sortie. L'unique renommage final publie images, audio et manifeste d'un coup. Les sources symboliques ou supérieures à 50 Mio sont refusées, et un verrou protège les tâches concurrentes coopérantes. Le dossier de sortie existant n'est jamais remplacé intentionnellement. Des tests MP4 synthétiques contrôlent la publication, les verrous, les échecs et le nettoyage des répertoires partiels. En cas d'arrêt brutal, les dossiers temporaires/verrous peuvent rester ; leur purge future doit respecter des permissions strictes.
+- **Carrousels offline :** `workers/carousel/src/process.mjs` valide 2 à 5 vraies images avec Sharp, rejette les images corrompues, décode, réoriente, redimensionne en WebP et produit des empreintes SHA-256. Publication par renommage ; tests locaux sans réseau. Ces outils ne sont pas encore reliés à la page `/dashboard/media`.
+- **Fin des doublons d'upload :** la route historique `/api/media/upload-url` délègue à `/api/media/prepare`, avec les mêmes contrôles d'origine, limite de fichiers temporaires, association au propriétaire et rate limit correspondant à l'offre. Les images utilisées par Check sont désormais confirmées via `/api/media/complete` après téléversement.
+- **Export RGPD :** chaque collection est lue avec `count:'exact'` et la limite `0..999` ; la troncature est basée sur le nombre réel, pas sur les lignes retournées. Un export ne prétend jamais être intégral : `isComplete:false`, `structuredDataComplete` signale la complétude des seules collections SQL. Médias et prestataires restent hors du JSON.
+- **UX :** le mode `rules_only` est correctement présenté comme un choix volontaire sans IA, pas comme une panne de Mia.
+
+### Contrôles de validation
+
+CI : TypeScript, ESLint strict, Vitest offline, Node tests vidéo offline, Node tests carrousels offline, compilation Next.js. Aucune étape ne lance d'appel IA réel. L'activation de la chaîne de traitement multimédia, Stripe, de l'indexation vectorielle et de la purge destructive demeure interdite sans validation d'exploitation et budget explicite.

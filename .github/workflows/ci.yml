@@ -25,5 +25,7 @@ jobs:
         run: bun run test
       - name: Tests vidéo hors ligne (aucun appel IA)
         run: bun run test:video:offline
+      - name: Tests carrousels hors ligne (aucun appel IA)
+        run: bun run test:carousel:offline
       - name: Compilation Next.js
         run: bun run build

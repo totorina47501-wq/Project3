@@ -15,7 +15,8 @@
     "deploy:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare deploy -- --keep-vars",
     "cf:typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "cf:whoami": "wrangler whoami",
-    "test:video:offline": "node --test workers/video/tests/video.test.mjs"
+    "test:video:offline": "node --test workers/video/tests/video.test.mjs",
+    "test:carousel:offline": "node --test workers/carousel/tests/carousel.test.mjs"
   },
   "engines": {
     "node": ">=22.12.0 <27"

@@ -49,3 +49,8 @@ Le dépôt ne dispose pas encore de lockfile enregistré. La CI utilise Bun avec
 Le Worker de fondation a été publié sur https://mentioncheck.toto-rina47501.workers.dev ; cela ne valide pas encore les nouvelles routes privées.
 
 Créer et connecter Supabase, appliquer les migrations, ajouter les variables Cloudflare puis effectuer les tests d'accès. Aucune clé ne doit être poussée sur GitHub.
+
+
+### Consolidation sans consommation d'IA — novembre 2026
+
+Préparation FFmpeg/FFprobe des vidéos et Sharp des carrousels **hors ligne**, publication atomique des résultats locaux, gestion des téléversements renforcée, modes sans IA explicitement distingués et export JSON des données avec pagination honnête. Voir `docs/05-zero-credit-workstreams.md` pour la limite exacte de ce périmètre. L'analyse vidéo et carrousel de bout en bout n'est **pas encore active sur Cloudflare**.

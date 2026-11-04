@@ -16,8 +16,11 @@ export async function POST(request: Request) {
     const parsed = mediaPrepareSchema.safeParse(input);
     if (!parsed.success) throw new HttpError(422, 'Format, taille ou durée du média non autorisé.');
 
-    await checkRateLimit(user.id, 'solo');
     const admin = createAdminSupabase();
+    const { data: account, error: accountError } = await admin.from('users')
+      .select('plan').eq('id', user.id).single();
+    if (accountError || !account) throw new HttpError(503, 'Compte indisponible.');
+    await checkRateLimit(user.id, account.plan);
     const { count: activeCount, error: countError } = await admin.from('media_assets')
       .select('id', { head: true, count: 'exact' })
       .eq('user_id', user.id).gt('expires_at', new Date().toISOString());
