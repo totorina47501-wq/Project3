@@ -17,17 +17,21 @@ export async function POST(request: Request) {
     const admin = createAdminSupabase();
     // The new column is queried only after the additive migration has been applied.
     const persistDigest = process.env.MEDIA_SHA256_PERSISTENCE_ENABLED === 'true';
-    const selection = 'id,storage_path,status,mime_type,declared_bytes,expires_at' +
-      (persistDigest ? ',media_sha256' : '');
     const { data: item, error } = await admin.from('media_assets')
-      .select(selection)
+      .select('id,storage_path,status,mime_type,declared_bytes,expires_at')
       .eq('id', payload.data.assetId).eq('user_id', user.id).single();
     if (error || !item) throw new HttpError(404, 'Média introuvable.');
     if (Date.parse(item.expires_at) <= Date.now()) {
       throw new HttpError(410, 'L’autorisation de ce média a expiré.');
     }
     if (item.status === 'ready') {
-      return readyMediaResponse(persistDigest ? item.media_sha256 : null);
+      if (persistDigest) {
+        const { data: existing, error: existingError } = await admin.from('media_assets')
+          .select('media_sha256').eq('id', item.id).eq('user_id', user.id).single();
+        if (existingError) throw new Error('Empreinte du média indisponible.');
+        return readyMediaResponse(existing.media_sha256);
+      }
+      return readyMediaResponse(null);
     }
     const { data: info, error: storageError } = await admin.storage
       .from('verification-media').info(item.storage_path);
