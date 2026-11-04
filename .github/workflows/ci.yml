@@ -1,0 +1,38 @@
+# Chemin : .github/workflows/ci.yml
+name: MentionCheck CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Une seule CI par commit de branche avec PR, et une CI par push sur main.
+concurrency:
+  group: mentioncheck-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: Registre anti-doublons (sans réseau)
+        run: node scripts/work-inventory.mjs check && node --test scripts/work-inventory.test.mjs
+      - name: Installer les dépendances
+        run: bun install
+      - name: Vérification TypeScript
+        run: bun run typecheck
+      - name: Lint
+        run: bun run lint
+      - name: Tests unitaires
+        run: bun run test
+      - name: Tests vidéo hors ligne (aucun appel IA)
+        run: bun run test:video:offline
+      - name: Tests carrousels hors ligne (aucun appel IA)
+        run: bun run test:carousel:offline
+      - name: Compilation Next.js
+        run: bun run build

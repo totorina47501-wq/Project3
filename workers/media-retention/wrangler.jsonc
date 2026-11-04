@@ -1,0 +1,15 @@
+{
+  "name": "mentioncheck-media-retention",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-03",
+  "triggers": {
+    "crons": [
+      "15 3 * * *"
+    ]
+  },
+  "observability": {
+    "enabled": true
+  },
+  "workers_dev": false,
+  "keep_vars": true
+}
