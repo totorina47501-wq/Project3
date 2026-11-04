@@ -1,7 +1,7 @@
 // Téléversements directs Supabase (jamais via Cloudflare Worker, jamais via OpenAI).
 'use client';
 import { Upload } from 'tus-js-client';
-import { createBrowserSupabase } from '@/lib/supabase/browser';
+import { createBrowserClient } from '@supabase/ssr';
 import { isVideo } from '@/lib/media/validation';
 
 const CHUNK_SIZE = 6 * 1024 * 1024;
@@ -9,9 +9,11 @@ export type PreparedUpload = { assetId: string; path: string; token: string; kin
 
 export async function uploadPreparedFile(
   file: File, prepared: PreparedUpload, onProgress: (ratio: number) => void,
+  config: { supabaseUrl: string; supabaseAnonKey: string },
 ) {
   if (file.size <= CHUNK_SIZE) {
-    const { error } = await createBrowserSupabase()
+    if (!config.supabaseUrl || !config.supabaseAnonKey) throw new Error('Configuration du stockage absente côté serveur.');
+    const { error } = await createBrowserClient(config.supabaseUrl, config.supabaseAnonKey)
       .storage.from('verification-media')
       .uploadToSignedUrl(prepared.path, prepared.token, file, { contentType: file.type });
     if (error) throw new Error('Transfert du média privé impossible.');
@@ -20,7 +22,8 @@ export async function uploadPreparedFile(
   }
   // TUS est préférable pour les vidéos >6 Mo et sur connexion mobile instable.
   // Le jeton signé est transmis à Supabase Storage, jamais à un service tiers.
-  const host = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').hostname;
+  if (!config.supabaseUrl || !config.supabaseAnonKey) throw new Error('Configuration du stockage absente côté serveur.');
+  const host = new URL(config.supabaseUrl).hostname;
   const projectId = host.split('.')[0];
   if (!/^[a-z0-9-]+$/.test(projectId ?? '') || !host.endsWith('.supabase.co'))
     throw new Error('Stockage Supabase non configuré.');
