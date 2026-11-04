@@ -134,7 +134,7 @@
       "status": "prepared_disabled",
       "anchor": "workers/video/src/process.mjs",
       "test": "workers/video/tests/video.test.mjs",
-      "doc": "workers/video/README.md",
+      "doc": "docs/27-video-job-contract.md",
       "aliases": [
         "video",
         "carrousel",
@@ -145,7 +145,8 @@
       "routes": [],
       "migrations": [],
       "next": [
-        "Deux CLIs présentes mais aucun exécuteur de jobs connecté au site ; voir workers/carousel."
+        "Contrat de job vidéo déterministe testé ; aucun exécuteur de queue ni traitement automatique connecté au site.",
+        "Ajouter un claim atomique persistant, un worker FFmpeg isolé et des tests E2E avant activation."
       ]
     },
     {
