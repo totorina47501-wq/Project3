@@ -90,9 +90,9 @@ test('Mia distingue historique indisponible et vide puis permet une nouvelle ten
   });
   await page.goto('/dashboard/mia');
   await expect(page.getByText('Impossible de charger l’historique des discussions.')).toBeVisible();
-  await expect(page.getByText('Aucune discussion enregistrée.')).toHaveCount(0);
+  await expect(page.getByText('Tes prochaines discussions apparaîtront ici.')).toHaveCount(0);
   await page.getByRole('button', { name: 'Réessayer l’historique' }).click();
-  await expect(page.getByText('Aucune discussion enregistrée.')).toBeVisible();
+  await expect(page.getByText('Tes prochaines discussions apparaîtront ici.')).toBeVisible();
 });
 
 test('Mia conserve la question après une erreur puis affiche réponse et sources', async ({ page }) => {
