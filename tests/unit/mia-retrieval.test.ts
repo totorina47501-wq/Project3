@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { chooseLawSources, type LawSource } from '../../lib/mia/ranking';
 import { miaQuestionSchema, miaModelSchema } from '../../lib/mia/schemas';
+import { validatedLawSource } from '../../lib/mia/retrieval';
 
 const base = { sourceUrl: 'https://www.legifrance.gouv.fr/loda/id/TEST',
   effectiveOn: null, checkedAt: null };
@@ -18,6 +19,15 @@ describe('Mia documentaire', () => {
   it('priorise les images retouchées', () => {
     expect(chooseLawSources('Une image retouchée nécessite une mention ?',docs)[0]?.articleRef)
       .toBe('A-5');
+  });
+  it('refuse les URL externes, les identifiants dangereux et les sources vides', () => {
+    const source = { article_ref: 'A-5', content: 'Publicité commerciale',
+      source_url: 'https://www.legifrance.gouv.fr/loda/id/TEST' };
+    expect(validatedLawSource(source)?.articleRef).toBe('A-5');
+    expect(validatedLawSource({ ...source, source_url: 'https://www.legifrance.gouv.fr.evil.example/' })).toBeNull();
+    expect(validatedLawSource({ ...source, source_url: 'https://user:pass@www.legifrance.gouv.fr/' })).toBeNull();
+    expect(validatedLawSource({ ...source, article_ref: '../escape' })).toBeNull();
+    expect(validatedLawSource({ ...source, content: '   ' })).toBeNull();
   });
   it('ne cite aucun article pour une question hors corpus', () => {
     expect(chooseLawSources('Quel est le prix du carburant demain ?', docs)).toEqual([]);

@@ -13,6 +13,7 @@ const STOP_WORDS = new Set([
   'mon', 'ton', 'leur', 'leurs', 'donc', 'comment', 'dois', 'fait',
   'etre', 'sur', 'que', 'qui', 'par', 'quoi', 'peut', 'faut', 'elle',
   'il', 'nous', 'vous', 'cela', 'aussi', 'doit', 'cette', 'cet',
+  'bonjour', 'merci', 'salut', 'demain', 'hier', 'aujourd', 'hui', 'prix', 'combien',
 ]);
 const KEYWORDS: Record<string, string[]> = {
   commercial: ['publicite', 'collaboration', 'sponsorise', 'mention', 'affiliation', 'promo', 'partenariat'],
