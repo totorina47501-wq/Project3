@@ -36,7 +36,7 @@ const worker = {
     }
     const results = await Promise.allSettled(jobs);
     if (results.some(result => result.status === 'rejected'))
-      throw new Error('Une opération planifiée a échoué : consulter les logs.');
+      throw new Error(env.MEDIA_RETENTION_ENABLED === 'true' ? 'Purge média incomplète : consulter les logs.' : 'Indexation Mia incomplète : consulter les logs.');
   },
 };
 export default worker;
