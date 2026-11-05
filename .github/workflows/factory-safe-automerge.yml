@@ -1,0 +1,63 @@
+name: Safe documentation auto-merge
+
+# Runs only after the existing full CI has finished. No checkout or execution of PR code.
+on:
+  workflow_run:
+    workflows: ["MentionCheck CI"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify exact head, source, full CI and safe paths
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The trusted CI must have a PR association and a matching head SHA.
+          pr_numbers="$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq '.pull_requests[].number')"
+          [ "$(printf '%s\n' "$pr_numbers" | sed '/^$/d' | wc -l)" -eq 1 ] || exit 0
+          pr_number="$pr_numbers"
+          pr="$(gh api "repos/$REPO/pulls/$pr_number")"
+          [ "$(jq -r '.state' <<< "$pr")" = open ] || exit 0
+          [ "$(jq -r '.draft' <<< "$pr")" = false ] || exit 0
+          [ "$(jq -r '.base.ref' <<< "$pr")" = main ] || exit 0
+          [ "$(jq -r '.head.sha' <<< "$pr")" = "$RUN_SHA" ] || exit 0
+          [ "$(jq -r '.head.repo.full_name' <<< "$pr")" = "$REPO" ] || exit 0
+          # Require explicit opt-in label, never automatically merge pre-existing PRs.
+          jq -e '[.labels[].name] | index("factory:auto-merge-safe") != null' <<< "$pr" >/dev/null || exit 0
+          # A human must approve the allowlisted automation PR before enabling this label.
+          # Only Markdown under docs/ (excluding policy/security instructions) is eligible.
+          files="$(gh api --paginate "repos/$REPO/pulls/$pr_number/files?per_page=100" --jq '.[].filename')"
+          [ -n "$files" ] || exit 0
+          while IFS= read -r file; do
+            case "$file" in
+              docs/*.md|docs/*/*.md) ;;
+              *) echo "Not auto-merge eligible: $file"; exit 0 ;;
+            esac
+            case "$file" in
+              docs/12-privacy-security.md|docs/08-studio.md|docs/04-mia-archives.md|docs/42-copilot-mobile-workflow.md)
+                echo "Sensitive document: $file"; exit 0 ;;
+            esac
+          done <<< "$files"
+          # The full quality job and media-container job must both have succeeded.
+          jobs="$(gh api --paginate "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100" --jq '.jobs[] | [.name,.conclusion] | @tsv')"
+          grep -Fxq "$(printf 'quality\tsuccess')" <<< "$jobs" || exit 0
+          grep -Fxq "$(printf 'Image du runner média (sans fournisseur)\tsuccess')" <<< "$jobs" || exit 0
+          # Re-read the PR immediately before merging and reject moved heads.
+          latest="$(gh api "repos/$REPO/pulls/$pr_number" --jq '.head.sha')"
+          [ "$latest" = "$RUN_SHA" ] || exit 0
+          gh api --method PUT "repos/$REPO/pulls/$pr_number/merge" \
+            -f merge_method=squash -f sha="$RUN_SHA" \
+            -f commit_title="docs: auto-merge verified PR #$pr_number"
