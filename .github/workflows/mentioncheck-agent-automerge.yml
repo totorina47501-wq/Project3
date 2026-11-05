@@ -1,0 +1,80 @@
+name: Agent safe-code auto-merge
+# Trusted workflow only; never check out PR code with a write token.
+on:
+  workflow_run:
+    workflows: ["MentionCheck CI"]
+    types: [completed]
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+concurrency:
+  group: mentioncheck-safe-agent-merge
+  cancel-in-progress: false
+jobs:
+  merge:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      RUN_ID: ${{ github.event.workflow_run.id }}
+      RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Verify safe files and full CI then merge
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ "$REPO" = "totorina47501-wq/Project3" ] || exit 1
+          numbers="$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq '.pull_requests[].number')"
+          [ "$(printf '%s\n' "$numbers" | sed '/^$/d' | wc -l)" -eq 1 ] || exit 0
+          number="$numbers"
+          pr="$(gh api "repos/$REPO/pulls/$number")"
+          [ "$(jq -r .state <<< "$pr")" = open ] || exit 0
+          [ "$(jq -r .base.ref <<< "$pr")" = main ] || exit 0
+          [ "$(jq -r .head.repo.full_name <<< "$pr")" = "$REPO" ] || exit 0
+          [ "$(jq -r .head.sha <<< "$pr")" = "$RUN_SHA" ] || exit 0
+          [ "$(jq -r .user.login <<< "$pr")" = Copilot ] || exit 0
+          # Keep the existing docs-only auto-merge as the sole handler for its opt-in PRs.
+          jq -e '[.labels[].name] | index("factory:auto-merge-safe") == null' <<< "$pr" >/dev/null || exit 0
+
+          # Only automatic merges of tests, local fixtures and documentation.
+          # Changes to production code, dependencies, scripts, deployment, API,
+          # authentication implementation or workflows are never auto-merged.
+          changed="$(gh api --paginate "repos/$REPO/pulls/$number/files?per_page=100")"
+          count="$(jq 'length' <<< "$changed")"
+          [ "$count" -gt 0 ] && [ "$count" -le 30 ] || exit 0
+          while IFS=$'\t' read -r file status additions deletions; do
+            [ "$status" != removed ] || exit 0
+            [ "$status" != renamed ] || exit 0
+            case "$file" in
+              tests/*|docs/*.md|docs/*/*.md|docs/work-registry.json)
+                ;;
+              *)
+                echo "Not eligible for trusted auto-merge: $file"
+                exit 0
+                ;;
+            esac
+            # No large unreviewed changes.
+            [ "$additions" -le 500 ] && [ "$deletions" -le 500 ] || exit 0
+          done < <(jq -r '.[] | [.filename,.status,(.additions|tostring),(.deletions|tostring)] | @tsv' <<< "$changed")
+
+          jobs="$(gh api --paginate "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100" --jq '.jobs[] | [.name,.conclusion] | @tsv')"
+          grep -Fxq "$(printf 'quality\tsuccess')" <<< "$jobs" || exit 0
+          grep -Fxq "$(printf 'Image du runner média (sans fournisseur)\tsuccess')" <<< "$jobs" || exit 0
+          # Copilot normally opens draft PRs. Mark one ready automatically only
+          # after the cloud agent for its branch has completed successfully.
+          if [ "$(jq -r .draft <<< "$pr")" = true ]; then
+            head_branch="$(jq -r '.head.ref' <<< "$pr")"
+            agent_runs="$(gh api "repos/$REPO/actions/runs?branch=$head_branch&per_page=100")"
+            jq -e '[.workflow_runs[] | select(.name == "Running Copilot cloud agent" and .status == "completed" and .conclusion == "success")] | length > 0' <<< "$agent_runs" >/dev/null || exit 0
+            node_id="$(jq -r .node_id <<< "$pr")"
+            gh api graphql -f query='mutation($id: ID!){markPullRequestReadyForReview(input:{pullRequestId:$id}){pullRequest{isDraft}}}' -f id="$node_id" >/dev/null
+          fi
+          # Require CI success on exact PR head and recheck immediately.
+          [ "$(gh api "repos/$REPO/pulls/$number" --jq '.head.sha')" = "$RUN_SHA" ] || exit 0
+          gh api --method PUT "repos/$REPO/pulls/$number/merge" \
+            -f merge_method=squash -f sha="$RUN_SHA" \
+            -f commit_title="test: verified Copilot PR #$number"
+          echo "Merged fully verified safe Copilot PR #$number." >> "$GITHUB_STEP_SUMMARY"
