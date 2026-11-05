@@ -21,3 +21,9 @@ cloudflare-env.d.ts
 
 # Lots de réécriture et clés locales : jamais versionnés
 .local-training/
+
+# Document discovery and editorial review artifacts (not committed)
+mia-candidates.pending-review.json
+mia-review.pending-approval.json
+mia-approvals.local.json
+mia-approved-manifest.local.json
