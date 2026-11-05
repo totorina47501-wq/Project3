@@ -9,7 +9,7 @@ describe('MentionCheck SDK', () => {
   });
 
   it('sends a server-side authenticated check with expected body', async () => {
-    const fetchImpl = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) =>
+    const fetchImpl = vi.fn(async (..._args: [string | URL | Request, RequestInit?]) =>
       new Response(JSON.stringify({ verification: { id: 'ok' } }), { status: 201 }));
     const client = new MentionCheckClient({ apiKey: key, fetchImpl: fetchImpl as typeof fetch });
     expect(await client.check({ caption: 'Publicité', platform: 'instagram' })).toEqual({ verification: { id: 'ok' } });
