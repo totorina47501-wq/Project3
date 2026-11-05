@@ -29,3 +29,12 @@ test('un visiteur ne peut ni lire ni déposer de demande d effacement',async({re
   // avant l'authentification; dans les deux cas, aucune donnée n'est créée.
   expect([401,403]).toContain(create.status());
 });
+
+test('un POST Mia depuis une origine externe est refusé hors ligne', async ({ request }) => {
+  test.skip(process.env.E2E_OFFLINE_AUTH !== '1', 'Réservé au serveur E2E local.');
+  const response = await request.post('/api/mia/chat', {
+    headers: { Origin: 'https://attacker.invalid' },
+    data: { question: 'Question fictive sans fournisseur.' },
+  });
+  expect(response.status()).toBe(403);
+});

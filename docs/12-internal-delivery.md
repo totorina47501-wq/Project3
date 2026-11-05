@@ -105,6 +105,15 @@ exécution autorisée des politiques de conservation/effacement. Le réglage
 Supabase de protection contre les mots de passe compromis reste désactivé.
 Aucun de ces services n’est activé par la préparation locale des données.
 
+## Parcours authentifiés locaux et navigation mobile
+
+Playwright utilise une session Supabase factice et vérifie l’accès authentifié
+à l’historique, les refus HTTP 401/403, puis les liens de navigation mobile à
+360 px : libellés accessibles, page courante annoncée, cibles d’au moins 44 px,
+absence de débordement horizontal et parcours clavier avec indicateur de focus.
+Les requêtes externes sont interdites dans ce scénario. Ces contrôles locaux ne
+remplacent pas une recette E2E distante avec identifiants autorisés.
+
 Validation du complément hors ligne : TypeScript et lint réussis, 194 tests
 unitaires et 15 tests de préparation IA réussis, 46 tests médias, 4 suites SQL,
 4 tests de harnais et 2 tests de fixture réussis. Playwright : 19 réussites,
