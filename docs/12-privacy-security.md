@@ -34,4 +34,8 @@ Le middleware vérifie les sessions avec `getUser`, conserve les cookies rafraî
 
 ## Preuves et limites
 
-Les régressions Vitest couvrent pagination réelle, limites/chemins Storage, corps sans `Content-Length`, authentification/origine des routes, erreurs privées, RPC de consentement, dry-run et cache des cookies. Le réseau est bloqué pendant tous les tests unitaires. Les migrations, triggers SQL, permissions, E2E authentifiés et cache réel Cloudflare nécessitent des vérifications distinctes ; les mocks de routes ne prouvent pas les permissions d’une instance distante.
+Les régressions Vitest couvrent pagination réelle, limites/chemins Storage, corps sans `Content-Length`, authentification/origine des routes, erreurs privées, RPC de consentement, dry-run et cache des cookies. `privacy-personal-data.test.ts` exerce les collections `ai_analyses` et `usage_monthly` avec des métriques de deux comptes et vérifie que l’export ne contient que celles du propriétaire connecté. `privacy-routes.test.ts` vérifie qu’un aperçu d’effacement ne renvoie que le plan et ses compteurs, journalise une seule ligne `dry_run` et n’appelle aucune mutation SQL ou Storage.
+
+Playwright local vérifie les réponses invité 401/403 et le refus d’une origine tierce (`private-navigation.spec.ts`). Les parcours SQL locaux collaborations/Studio couvrent également les lectures A/B isolées (`collaborations-sql.spec.ts`, `studio-sql.spec.ts`). Ces scénarios n’appellent aucun fournisseur externe ; les parcours déjà couverts ne sont pas dupliqués.
+
+Le réseau est bloqué pendant les tests unitaires. Les migrations, triggers SQL, permissions, E2E authentifiés sur l’instance distante et cache réel Cloudflare nécessitent des vérifications distinctes ; les mocks et la base locale ne prouvent pas les permissions ni les effets sur une instance distante. Aucun effacement réel, migration appliquée ou test de production n’a été exécuté.

@@ -198,7 +198,7 @@
       ],
       "migrations": [],
       "next": [
-        "Schéma interne et ownership des coûts appliqués ; exporter aussi les métriques Mia sans vérification liée.",
+        "Export existant des métriques ai_analyses et quotas usage_monthly filtrés par propriétaire ; tests A/B hors ligne. Permissions de l’instance distante à valider séparément.",
         "Les octets privés, sauvegardes et données des prestataires restent hors du JSON structuré."
       ]
     },
@@ -223,7 +223,7 @@
         "supabase/migrations/202611042004_privacy_erasure_requests.sql"
       ],
       "next": [
-        "Préparation et journal dry-run terminés ; exécution destructive volontairement désactivée."
+        "Aperçu et journal dry_run testés hors ligne ; aucune mutation SQL/Storage destructive. Permissions distantes et toute procédure opérateur restent à valider séparément."
       ]
     },
     {
@@ -397,7 +397,7 @@
       "routes": [],
       "migrations": [],
       "next": [
-        "Playwright local vérifie session, refus 401/403 et navigation mobile accessible au clavier ; E2E distant avec identifiants à valider séparément."
+        "Playwright local vérifie session, refus 401/403, origine tierce et navigation clavier ; scénarios SQL A/B dans collaborations/Studio. E2E distant avec identifiants à valider séparément."
       ]
     },
     {

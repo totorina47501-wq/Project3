@@ -39,16 +39,24 @@ describe('Frontière des routes personnelles',()=>{
 });
 
 it('prépare et journalise un dry-run sans aucune suppression',async()=>{
+  const insert=vi.fn().mockResolvedValue({data:null,error:null});
+  const forbiddenMutation=vi.fn();
+  const storageRemove=vi.fn();
   const query={select:vi.fn().mockReturnThis(),eq:vi.fn().mockReturnThis(),order:vi.fn().mockReturnThis(),limit:vi.fn().mockReturnThis(),maybeSingle:vi.fn().mockResolvedValue({data:{id:'request',status:'requested'},error:null}),
-    insert:vi.fn().mockResolvedValue({data:null,error:null})};
-  mocks.admin.mockReturnValue({from:()=>query});
-  mocks.inventory.mockResolvedValue({collections:{workspaces:[]},privateFiles:[]});
+    insert,update:forbiddenMutation,delete:forbiddenMutation,upsert:forbiddenMutation};
+  mocks.admin.mockReturnValue({from:()=>query,storage:{from:()=>({remove:storageRemove})}});
+  const inventory={collections:{workspaces:[],metrics:[{id:'mia-usage'}],usage:[{mia_messages_used:3}]},privateFiles:[{bucket:'verification-media',path:'owner/file.png'}]};
+  mocks.inventory.mockResolvedValue(inventory);
   const response=await erasure(request('{"action":"preview"}'));
   expect(response.status).toBe(200);
   const body=await response.json();
-  expect(body.plan.dryRun).toBe(true);
-  expect(body.plan.deleted).toBe(false);
-  expect(query.insert).toHaveBeenCalledWith(expect.objectContaining({mode:'dry_run',status:'prepared_disabled'}));
+  expect(body.plan).toMatchObject({dryRun:true,deleted:false,status:'prepared_disabled',
+    counts:{workspaces:0,metrics:1,usage:1},privateFiles:inventory.privateFiles});
+  expect(mocks.inventory).toHaveBeenCalledWith({id:'owner'});
+  expect(insert).toHaveBeenCalledTimes(1);
+  expect(insert).toHaveBeenCalledWith(expect.objectContaining({mode:'dry_run',status:'prepared_disabled',user_id:'owner'}));
+  expect(forbiddenMutation).not.toHaveBeenCalled();
+  expect(storageRemove).not.toHaveBeenCalled();
 });
 
 it('retire le consentement via la transaction versionnée en base',async()=>{
