@@ -28,8 +28,10 @@ describe('MentionCheck SDK', () => {
     const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ items: [], limit: 100 })));
     const client = new MentionCheckClient({ apiKey: key, fetchImpl: fetchImpl as typeof fetch });
     expect(await client.verifications()).toEqual({ items: [], limit: 100 });
-    expect(fetchImpl).toHaveBeenCalledWith(expect.stringContaining('/api/v1/verifications'),
-      expect.objectContaining({ method: 'GET', body: undefined }));
+    const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toContain('/api/v1/verifications');
+    expect(init.method).toBe('GET');
+    expect(init.body).toBeUndefined();
   });
 
   it('exposes HTTP status without leaking secrets', async () => {
