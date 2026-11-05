@@ -66,3 +66,25 @@ jobs:
         run: npm run build
       - name: Packager OpenNext pour Cloudflare (offline, sans déploiement)
         run: npm run test:cloudflare:bundle
+
+  media-container:
+    name: Image du runner média (sans fournisseur)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Valider la configuration Compose sans secret
+        run: docker compose -f workers/media-jobs/compose.yaml config --quiet
+      - name: Construire l’image sans publication de registre
+        run: docker build --file workers/media-jobs/Dockerfile --tag mentioncheck-media-runner:ci .
+      - name: Recette Sharp et FFmpeg dans le conteneur sans réseau
+        run: |
+          docker run --rm --init --network none --read-only \
+            --cap-drop ALL --security-opt no-new-privileges:true \
+            --memory 1g --cpus 1.5 --pids-limit 128 \
+            --tmpfs /work:uid=1000,gid=1000,mode=0700,size=512m \
+            --tmpfs /tmp:uid=1000,gid=1000,mode=0700,size=64m \
+            --mount type=bind,source="$GITHUB_WORKSPACE/workers/media-jobs/tests/container-smoke.node.mjs",target=/app/validation.mjs,readonly \
+            mentioncheck-media-runner:ci node /app/validation.mjs

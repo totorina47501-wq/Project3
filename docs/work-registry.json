@@ -154,7 +154,8 @@
       "migrations": [],
       "next": [
         "Sharp/FFmpeg, baux SQL et reprise existants réutilisés par le transport distant. Sources et sorties SHA-256 vérifiées ; publication privée relue avant finalisation CAS.",
-        "Commande et conteneur opt-in livrés ; aucun runner hébergé ou démarré. Image Docker non construite ici (accès démon refusé) ; voir docs/40-remote-media-runner.md."
+        "Commande et conteneur opt-in livrés ; aucun runner hébergé ou démarré. Image Docker non construite ici (accès démon refusé) ; voir docs/40-remote-media-runner.md.",
+        "Construction de l’image et recette confinée déléguées au job CI media-container, sans réseau à l’exécution ni secrets. Vérifier ce job sur le dernier SHA ; aucun service permanent déployé."
       ]
     },
     {

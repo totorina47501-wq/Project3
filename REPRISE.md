@@ -141,3 +141,7 @@ Consulter son bilan dans [docs/39-technical-reliability.md](docs/39-technical-re
 
 Le raccordement Storage est livré séparément du démarrage distant. Aucun appel IA
 ni transcription n’est ajouté au runner. Son guide est [docs/40-remote-media-runner.md](docs/40-remote-media-runner.md).
+
+La CI comporte désormais `media-container` : construction de l’image et recette
+Sharp/FFmpeg sans réseau ni secrets. Vérifier son résultat sur le dernier SHA ;
+elle ne remplace pas l’hébergement et la recette Storage réelle.

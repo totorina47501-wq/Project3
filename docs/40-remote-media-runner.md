@@ -126,3 +126,20 @@ est jetable. Ne pas nettoyer automatiquement un volume partagé entre hôtes.
 Les appels OpenAI réels précédents sont documentés dans
 [docs/37](37-real-openai-validation.md). Ils ne valident pas l’analyse IA vidéo
 ou carrousel : ce runner prépare seulement les artefacts.
+
+## Validation de l’image dans GitHub Actions
+
+Le job `media-container` construit désormais l’image à chaque CI, sans la
+publier dans un registre. Il exécute ensuite une recette dans le conteneur
+sous UID 1000, sans réseau, avec les restrictions mémoire/CPU/PID et les tmpfs
+privés prévus. Aucun secret fournisseur n’est injecté.
+
+Le script monté en lecture seule prépare un carrousel et une vidéo/audio
+synthétiques, contrôle trois frames, WAV, SHA-256 et reprise, puis vérifie le
+refus de démarrage du runner sans opt-in. Il a été validé localement ; le
+résultat du job CI fait foi pour la construction et l’exécution dans l’image.
+Cette recette ne valide pas les échanges Storage réels ni un hôte permanent.
+
+L’environnement actuel ne dispose toujours d’aucun hôte ni secret serveur du
+runner. Une CI réussie ne démarre pas un service en production. Après le job,
+la machine de CI est jetée et aucun média réel n’a été traité.
