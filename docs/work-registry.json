@@ -268,7 +268,8 @@
       ],
       "next": [
         "Les trois offres sont raccordées dans le code de test, dont Solo ; tarif validé avant création d’un client.",
-        "Le mode live reste refusé ; aucune activation ni requête de paiement réelle."
+        "Le mode live reste refusé ; aucune activation ni requête de paiement réelle.",
+        "Page /tarifs améliorée : cartes responsives, comparaison accessible, FAQ et positionnement Pro ; prix et quotas restent indicatifs, Stripe live désactivé."
       ]
     },
     {
