@@ -36,6 +36,8 @@ jobs:
           [ "$(jq -r .head.repo.full_name <<< "$pr")" = "$REPO" ] || exit 0
           [ "$(jq -r .head.sha <<< "$pr")" = "$RUN_SHA" ] || exit 0
           [ "$(jq -r .user.login <<< "$pr")" = Copilot ] || exit 0
+          # Keep the existing docs-only auto-merge as the sole handler for its opt-in PRs.
+          jq -e '[.labels[].name] | index("factory:auto-merge-safe") == null' <<< "$pr" >/dev/null || exit 0
 
           # Only automatic merges of tests, local fixtures and documentation.
           # Changes to production code, dependencies, scripts, deployment, API,
