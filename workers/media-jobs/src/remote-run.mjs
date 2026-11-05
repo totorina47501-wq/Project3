@@ -19,7 +19,7 @@ try{
   const {data,error}=await startup.storage.getBucket(name);
   if(error||!data||data.public)throw new Error('Bucket privé indisponible.');
  }
- await runRemoteLoop({signal:controller.signal,pollMs:config.pollMs,runOnce:async()=>{
+ await runRemoteLoop({signal:controller.signal,pollMs:config.pollMs,once:process.env.MEDIA_RUNNER_ONCE==='true',runOnce:async()=>{
   // Le budget de bout en bout reste inférieur au bail SQL de cinq minutes.
   const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(240000)]);
   return runRemoteMediaOnce({client:clientFor(signal),workRoot:config.workRoot,workerId,signal});

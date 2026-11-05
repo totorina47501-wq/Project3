@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ requireUser: vi.fn(), rpc: vi.fn(), rate: vi.fn() }));
+const mocks = vi.hoisted(() => ({ requireUser: vi.fn(), rpc: vi.fn(), rate: vi.fn(), wake:vi.fn() }));
+vi.mock('../../lib/media/cloudflare-runner',()=>({notifyCloudflareMediaRunner:mocks.wake,readCloudflareMediaStatus:async()=>({configured:false})}));
 vi.mock('server-only', () => ({}));
 vi.mock('../../lib/security/auth', async original => ({ ...await original<typeof import('../../lib/security/auth')>(), requireUser: mocks.requireUser }));
 vi.mock('../../lib/supabase/admin', () => ({ createAdminSupabase: () => ({ rpc: mocks.rpc }) }));
@@ -15,6 +16,7 @@ beforeEach(() => {
   vi.unstubAllEnvs(); vi.clearAllMocks();
   vi.stubEnv('MEDIA_PROCESSING_ENABLED', 'true'); vi.stubEnv('MEDIA_JOBS_SCHEMA_READY', 'true');
   mocks.requireUser.mockResolvedValue({ user: { id: user } });
+  mocks.wake.mockResolvedValue(true);
   mocks.rpc.mockResolvedValue({ data: '83000000-0000-4000-8000-000000000001', error: null });
 });
 it('reste désactivé et ne contacte pas la base sans activation explicite', async () => {
@@ -33,6 +35,7 @@ it('refuse corps volumineux, score ou identité injectés', async () => {
 it('calcule le score côté serveur et transmet uniquement l’identité authentifiée', async () => {
   const response = await POST(request({ action: 'enqueue', assetIds: [asset], caption: 'Merci @marque #collab', platform: 'instagram' }));
   expect(response.status).toBe(202);
+  expect(mocks.wake).toHaveBeenCalledOnce();
   expect(mocks.rpc).toHaveBeenCalledWith('media_job_enqueue', expect.objectContaining({ p_user: user, p_analysis: expect.objectContaining({ score: expect.any(Number), violations: expect.any(Array) }) }));
   expect(response.headers.get('cache-control')).toContain('no-store');
 });
@@ -44,4 +47,13 @@ it('traduit un refus de propriété sans exposer le message SQL', async () => {
 it('annulation périmée répond 409', async () => {
   mocks.rpc.mockResolvedValue({ data: false, error: null });
   expect((await POST(request({ action: 'cancel', jobId: asset }))).status).toBe(409);
+});
+it('ne perd pas le job si le réveil Cloudflare est temporairement indisponible',async()=>{
+ mocks.wake.mockResolvedValue(false);
+ const response=await POST(request({action:'enqueue',assetIds:[asset],caption:'Publicité — Test',platform:'instagram'}));
+ expect(response.status).toBe(202);expect((await response.json()).runnerScheduled).toBe(false);
+});
+it('le coupe-circuit empêche création et réveil de nouvelles préparations',async()=>{
+ vi.stubEnv('MEDIA_RUNNER_PAUSED','true');expect((await POST(request({action:'enqueue',assetIds:[asset],caption:'Test',platform:'instagram'}))).status).toBe(503);
+ expect(mocks.rpc).not.toHaveBeenCalled();expect(mocks.wake).not.toHaveBeenCalled();
 });

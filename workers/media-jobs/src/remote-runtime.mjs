@@ -28,13 +28,13 @@ export async function runRemoteMediaOnce({client,workRoot,workerId,signal}={}){
   await rm(attempt,{recursive:true,force:true});
  }
 }
-export async function runRemoteLoop({runOnce,signal,pollMs=5000,log=entry=>console.log(JSON.stringify(entry))}={}){
+export async function runRemoteLoop({runOnce,signal,pollMs=5000,once=false,log=entry=>console.log(JSON.stringify(entry))}={}){
  if(!Number.isInteger(pollMs)||pollMs<1||pollMs>60000)throw new Error('Intervalle invalide.');
  while(!signal?.aborted){
   let failed=false;
   try{const result=await runOnce();log({state:result.state,...(result.id?{id:result.id}:{}),...(result.code?{code:result.code}:{})});}
   catch{failed=true;log({state:'error',code:'PROCESS_FAILED'});}
-  if(signal?.aborted)break;
+  if(once||signal?.aborted)break;
   try{await delay(failed?Math.max(30000,pollMs):pollMs,undefined,{signal});}catch{if(!signal?.aborted)throw new Error('Attente interrompue.');}
  }
 }

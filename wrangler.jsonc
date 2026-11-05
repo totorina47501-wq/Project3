@@ -1,8 +1,8 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "mentioncheck",
-  "main": ".open-next/worker.js",
-  "compatibility_date": "2026-11-03",
+  "main": "workers/cloudflare-entry.mjs",
+  "compatibility_date": "2026-11-05",
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
@@ -32,6 +32,41 @@
     "nodejs_compat"
   ],
   "workers_dev": true,
-  "preview_urls": true,
-  "keep_vars": true
+  "preview_urls": false,
+  "keep_vars": true,
+  "containers": [
+    {
+      "class_name": "MediaRunner",
+      "scheduling_policy": "default",
+      "image": "./workers/media-jobs/Dockerfile",
+      "image_build_context": ".",
+      "max_instances": 1,
+      "instance_type": "basic",
+      "constraints": {
+        "jurisdiction": "eu"
+      }
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "MEDIA_RUNNER",
+        "class_name": "MediaRunner"
+      }
+    ]
+  },
+  "exports": {
+    "MediaRunner": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    }
+  },
+  "vars": {
+    "MEDIA_JOBS_SCHEMA_READY": "true",
+    "MEDIA_PROCESSING_ENABLED": "true",
+    "MEDIA_CLOUDFLARE_RUNNER_ENABLED": "true"
+  },
+  "dev": {
+    "enable_containers": false
+  }
 }

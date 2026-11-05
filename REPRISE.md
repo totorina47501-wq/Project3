@@ -145,3 +145,18 @@ ni transcription n’est ajouté au runner. Son guide est [docs/40-remote-media-
 La CI comporte désormais `media-container` : construction de l’image et recette
 Sharp/FFmpeg sans réseau ni secrets. Vérifier son résultat sur le dernier SHA ;
 elle ne remplace pas l’hébergement et la recette Storage réelle.
+
+## Passage sur Cloudflare Containers autorisé
+
+L’utilisateur confirme son forfait Cloudflare payé et demande de l’utiliser.
+Le lot suivant réutilise Workers Builds et les secrets du Worker existant ;
+il n’exige pas de nouvel hôte ni de copie de clé hors du compte. Lire
+[docs/41-cloudflare-containers.md](docs/41-cloudflare-containers.md) avant de
+modifier le point d’entrée ou de chercher à créer un autre serveur.
+
+Le wrapper `workers/cloudflare-entry.mjs` conserve OpenNext et exporte le
+Durable Object `MediaRunner`. Les flags média de `wrangler.jsonc` sont activés
+intentionnellement pour ce déploiement ; les autres secrets restent préservés.
+Le coupe-circuit runtime est `MEDIA_RUNNER_PAUSED=true`. Aucun appel IA ajouté.
+Le statut réel doit être contrôlé sur le dernier SHA et via la route média
+avec un compte authentifié ; un build réussi seul ne prouve pas une extraction.

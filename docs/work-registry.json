@@ -153,9 +153,8 @@
       "routes": [],
       "migrations": [],
       "next": [
-        "Sharp/FFmpeg, baux SQL et reprise existants réutilisés par le transport distant. Sources et sorties SHA-256 vérifiées ; publication privée relue avant finalisation CAS.",
-        "Commande et conteneur opt-in livrés ; aucun runner hébergé ou démarré. Image Docker non construite ici (accès démon refusé) ; voir docs/40-remote-media-runner.md.",
-        "Construction de l’image et recette confinée déléguées au job CI media-container, sans réseau à l’exécution ni secrets. Vérifier ce job sur le dernier SHA ; aucun service permanent déployé."
+        "Le transport privé et le conteneur testés en CI sont réutilisés par le mode one-shot Cloudflare. Aucun appel OpenAI ni transcription.",
+        "Déploiement via le Workers Builds connecté à main ; contrôler le dernier déploiement et la recette réelle dans docs/41-cloudflare-containers.md."
       ]
     },
     {
@@ -491,8 +490,8 @@
         "supabase/migrations/20261105084500_private_media_outputs.sql"
       ],
       "next": [
-        "File et bucket dérivé privés appliqués ; bucket vide après migration private_media_outputs, version distante 20261105083555.",
-        "Adaptateur distant réutilisant les RPC existantes livré ; hébergement et secrets du runner à configurer. Flags applicatifs non activés ; voir docs/40-remote-media-runner.md."
+        "Baux et bucket privé déjà appliqués. La configuration Cloudflare autorisée active la préparation et réveille un Durable Object interne à chaque enqueue authentifié.",
+        "Une instance basic maximum, UE, arrêt one-shot, watchdog 270 s, plafond de 60 démarrages/heure ; MEDIA_RUNNER_PAUSED=true sert de coupe-circuit. Voir docs/41-cloudflare-containers.md."
       ]
     }
   ]

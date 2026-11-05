@@ -1,5 +1,6 @@
 // File de préparation technique : aucun modèle IA ni exécuteur distant lancé ici.
 import { z } from 'zod';
+import { notifyCloudflareMediaRunner, readCloudflareMediaStatus } from '@/lib/media/cloudflare-runner';
 import { requireUser, publicError, HttpError } from '@/lib/security/auth';
 import { isSameOrigin } from '@/lib/security/origin';
 import { checkRateLimit } from '@/lib/security/rate-limit';
@@ -16,7 +17,7 @@ const actions = z.discriminatedUnion('action', [
   z.object({ action: z.literal('cancel'), jobId: z.string().uuid() }).strict(),
 ]);
 function enabled() {
-  if (process.env.MEDIA_PROCESSING_ENABLED !== 'true' || process.env.MEDIA_JOBS_SCHEMA_READY !== 'true')
+  if (process.env.MEDIA_RUNNER_PAUSED === 'true' || process.env.MEDIA_PROCESSING_ENABLED !== 'true' || process.env.MEDIA_JOBS_SCHEMA_READY !== 'true')
     throw new HttpError(503, 'La préparation automatique des médias est désactivée.');
 }
 const respond = (body: unknown, status = 200) => Response.json(body, { status, headers: {
@@ -38,7 +39,9 @@ export async function GET(request: Request) {
       .eq('user_id', user.id).order('created_at', { ascending: false }).order('id', { ascending: false })
       .range(parsed.data, parsed.data + 19);
     if (error) throw new Error('File indisponible.');
-    return respond({ jobs: data ?? [], total: count ?? 0, offset: parsed.data, limit: 20 });
+    if (data?.some(job => ['queued','processing'].includes(job.status))) await notifyCloudflareMediaRunner();
+    const runner = await readCloudflareMediaStatus();
+    return respond({ runner, jobs: data ?? [], total: count ?? 0, offset: parsed.data, limit: 20 });
   } catch (error) { return failure(error); }
 }
 export async function POST(request: Request) {
@@ -69,6 +72,7 @@ export async function POST(request: Request) {
       if (['22023', '22P02', '23514'].includes(error.code)) throw new HttpError(422, 'Médias expirés, incompatibles ou non confirmés.');
       throw new Error('File indisponible.');
     }
-    return respond({ jobId: data, notice: 'Préparation en attente. Seule la légende sera contrôlée automatiquement, sans analyse IA des médias.' }, 202);
+    const runnerScheduled = await notifyCloudflareMediaRunner();
+    return respond({ jobId: data, runnerScheduled, notice: 'Préparation en attente. Seule la légende sera contrôlée automatiquement, sans analyse IA des médias.' }, 202);
   } catch (error) { return failure(error); }
 }

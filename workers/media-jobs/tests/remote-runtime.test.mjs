@@ -22,3 +22,8 @@ it('la boucle cesse sans nouvelle réservation après arrêt et minimise les err
  await runRemoteLoop({signal:controller.signal,pollMs:1,runOnce:async()=>{calls++;controller.abort();throw Error('provider-private-sentinel');},log:entry=>logs.push(entry)});
  assert.equal(calls,1);assert.deepEqual(logs,[{state:'error',code:'PROCESS_FAILED'}]);
 });
+it('le mode one-shot termine après un seul essai sans garder une boucle payante active',async()=>{
+ const controller=new AbortController();let calls=0;
+ await runRemoteLoop({once:true,signal:controller.signal,pollMs:1,log:()=>{},runOnce:async()=>{if(++calls>1)controller.abort();return {state:'idle'};}});
+ assert.equal(calls,1);
+});
