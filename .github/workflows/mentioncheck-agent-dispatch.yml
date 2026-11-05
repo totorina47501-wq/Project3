@@ -5,6 +5,10 @@ name: MentionCheck agent dispatch
 on:
   schedule:
     - cron: '0,30 * * * *'
+  issues:
+    types: [closed]
+  pull_request:
+    types: [closed]
   workflow_dispatch:
     inputs:
       dry_run:
