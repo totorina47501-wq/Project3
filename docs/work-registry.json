@@ -397,7 +397,7 @@
       "routes": [],
       "migrations": [],
       "next": [
-        "Fixtures locales sans fournisseur ; E2E authentifié en production à valider séparément."
+        "Playwright local vérifie session, refus 401/403 et navigation mobile accessible au clavier ; E2E distant avec identifiants à valider séparément."
       ]
     },
     {
