@@ -55,3 +55,13 @@ it('diagnostique une erreur HTTP sans révéler le corps ni la clé',async()=>{
  const response=await f.runner.fetch(new Request('https://internal/status'));const data=await response.json();
  expect(data).toMatchObject({failureStage:'poll',httpStatus:403});expect(JSON.stringify(data)).not.toContain('Donnée privée');expect(JSON.stringify(data)).not.toContain('server-fixture');
 });
+it('utilise le mode redirect manual accepté à l’edge et refuse une réponse de redirection',async()=>{
+ const f=fixture();
+ const nativeLike=vi.fn(async(_input:RequestInfo|URL,init?:RequestInit)=>{
+  if(init?.redirect==='error')throw new TypeError('Invalid redirect value');
+  return Response.json([{status:'queued',available_at:new Date(now-1).toISOString()}]);
+ });
+ await new CloudflareMediaController({storage:f.storage,container:f.container},f.env,nativeLike,()=>now).alarm();
+ expect(f.container.start).toHaveBeenCalledOnce();expect(nativeLike.mock.calls[0]?.[1]?.redirect).toBe('manual');
+ const g=fixture();g.fetcher.mockResolvedValue(new Response(null,{status:302}));await g.runner.alarm();expect(g.container.start).not.toHaveBeenCalled();
+});

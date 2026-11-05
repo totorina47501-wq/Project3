@@ -31,7 +31,7 @@ export class CloudflareMediaController {
   async fetch(request: Request): Promise<Response> {
     const path = new URL(request.url).pathname;
     if (path === '/status' && request.method === 'GET') return this.response({
-      revision: 'cloudflare-media-v3',
+      revision: 'cloudflare-media-v4',
       failureStage: await this.ctx.storage.get<string>('failureStage') ?? null,
       failureType: await this.ctx.storage.get<string>('failureType') ?? null,
       failureCode: await this.ctx.storage.get<string>('failureCode') ?? null,
@@ -84,7 +84,7 @@ export class CloudflareMediaController {
       endpoint.searchParams.set('limit', '100');
       const key = this.env.SUPABASE_SERVICE_KEY!;
       const response = await this.fetcher.call(globalThis, endpoint, { headers: { apikey: key, Authorization: `Bearer ${key}` },
-        redirect: 'error', signal: AbortSignal.timeout(10_000), cache: 'no-store' });
+        redirect: 'manual', signal: AbortSignal.timeout(10_000), cache: 'no-store' });
       await storage.put('httpStatus', response.status);
       if (!response.ok) throw new Error('File indisponible.');
       stage = 'decode';

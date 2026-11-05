@@ -105,3 +105,9 @@ supplémentaire. Aucun résultat partiel n’est annoncé comme une extraction r
 
 Le statut inclut une révision, l’étape d’échec, son type, un statut HTTP et un
 code classé sur liste fermée. Les messages d’erreur bruts et clés sont exclus.
+
+Le diagnostic de la seconde erreur a identifié `redirect: error`, refusé par
+le fetch natif Cloudflare (reproduit sous workerd avec `nodejs_compat`). Le
+contrôleur utilise `manual` et refuse toute réponse HTTP non réussie, y compris
+une redirection. Les identifiants ne sont donc pas suivis vers une autre adresse.
+Le client Node du conteneur conserve son mode `error`, valide dans Node.
