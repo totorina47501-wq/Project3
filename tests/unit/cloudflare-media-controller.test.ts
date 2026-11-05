@@ -50,3 +50,8 @@ it('appelle fetch avec le contexte global exigé par le runtime Cloudflare',asyn
  const controller=new CloudflareMediaController({storage:f.storage,container:f.container},f.env,nativeLike,()=>now);
  await controller.alarm();expect(f.container.start).toHaveBeenCalledOnce();
 });
+it('diagnostique une erreur HTTP sans révéler le corps ni la clé',async()=>{
+ const f=fixture();f.fetcher.mockResolvedValue(new Response('Donnée privée', {status:403}));await f.runner.alarm();
+ const response=await f.runner.fetch(new Request('https://internal/status'));const data=await response.json();
+ expect(data).toMatchObject({failureStage:'poll',httpStatus:403});expect(JSON.stringify(data)).not.toContain('Donnée privée');expect(JSON.stringify(data)).not.toContain('server-fixture');
+});

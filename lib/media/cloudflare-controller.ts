@@ -31,6 +31,11 @@ export class CloudflareMediaController {
   async fetch(request: Request): Promise<Response> {
     const path = new URL(request.url).pathname;
     if (path === '/status' && request.method === 'GET') return this.response({
+      revision: 'cloudflare-media-v3',
+      failureStage: await this.ctx.storage.get<string>('failureStage') ?? null,
+      failureType: await this.ctx.storage.get<string>('failureType') ?? null,
+      failureCode: await this.ctx.storage.get<string>('failureCode') ?? null,
+      httpStatus: await this.ctx.storage.get<number>('httpStatus') ?? null,
       configured: this.ready(), running: this.ctx.container?.running ?? false,
       phase: await this.ctx.storage.get<string>('phase') ?? 'idle',
       lastError: await this.ctx.storage.get<string>('lastError') ?? null,
@@ -45,11 +50,13 @@ export class CloudflareMediaController {
   }
   async alarm(): Promise<void> {
     const { storage, container } = this.ctx;
+    let stage = 'initialization';
     try {
       if (!this.ready() || !container) {
         if (container?.running) await container.destroy();
         await storage.deleteAlarm(); return;
       }
+      stage = 'monitor';
       const startedAt = await storage.get<number>('startedAt');
       if (startedAt !== undefined && container.running) {
         if (this.now() - startedAt >= MAX_RUN_MS) {
@@ -69,6 +76,7 @@ export class CloudflareMediaController {
         await container.setInactivityTimeout(MAX_RUN_MS);
         await storage.setAlarm(this.now() + 15_000); return;
       }
+      stage = 'poll';
       const endpoint = new URL('/rest/v1/media_processing_jobs', this.url());
       endpoint.searchParams.set('select', 'status,available_at,lease_until');
       endpoint.searchParams.set('status', 'in.(queued,processing)');
@@ -77,7 +85,9 @@ export class CloudflareMediaController {
       const key = this.env.SUPABASE_SERVICE_KEY!;
       const response = await this.fetcher.call(globalThis, endpoint, { headers: { apikey: key, Authorization: `Bearer ${key}` },
         redirect: 'error', signal: AbortSignal.timeout(10_000), cache: 'no-store' });
+      await storage.put('httpStatus', response.status);
       if (!response.ok) throw new Error('File indisponible.');
+      stage = 'decode';
       const jobs: unknown = await response.json();
       if (!Array.isArray(jobs)) throw new Error('File invalide.');
       let available = false, next = Infinity;
@@ -97,6 +107,7 @@ export class CloudflareMediaController {
         else await storage.deleteAlarm();
         return;
       }
+      stage = 'budget';
       const hour = Math.floor(this.now() / 3_600_000);
       const saved = await storage.get<{ hour: number; count: number }>('budget');
       const count = saved?.hour === hour ? saved.count : 0;
@@ -109,11 +120,26 @@ export class CloudflareMediaController {
       await storage.put('startedAt', this.now());
       await storage.put('phase', 'running');
       await storage.setAlarm(this.now() + 15_000);
+      stage = 'start';
       container.start({ enableInternet: true,
         env: { MEDIA_RUNNER_ENABLED: 'true', MEDIA_RUNNER_ONCE: 'true', MEDIA_RUNNER_WORK_ROOT: '/work',
           SUPABASE_URL: this.url(), SUPABASE_SERVICE_KEY: key, OPENAI_PAUSED: 'true', BILLING_ENABLED: 'false' } });
+      stage = 'timeout';
       await container.setInactivityTimeout(MAX_RUN_MS);
-    } catch {
+    } catch (error) {
+      await storage.put('failureStage', stage);
+      const name = error instanceof Error ? error.name : '';
+      const message = error instanceof Error ? error.message : '';
+      const categories: Array<[RegExp,string]> = [
+        [/illegal invocation/i,'NATIVE_CONTEXT'],[/billing|paid plan|credit/i,'PLAN_ACCESS'],
+        [/not supported|unsupported|not implemented/i,'RUNTIME_UNSUPPORTED'],
+        [/image.*(not found|missing|pull)/i,'IMAGE_UNAVAILABLE'],
+        [/already running|needs to be running|not running/i,'CONTAINER_STATE'],
+        [/not configured|not bound|no container|not found/i,'CONTAINER_NOT_READY'],
+        [/timeout|aborted/i,'TIMEOUT'],[/network|connection|fetch failed/i,'NETWORK'],
+      ];
+      await storage.put('failureCode', categories.find(([pattern]) => pattern.test(message))?.[1] ?? 'UNKNOWN');
+      await storage.put('failureType', ['Error','TypeError','SyntaxError','RangeError'].includes(name) ? name : 'Error');
       const count = (await storage.get<number>('failures') ?? 0) + 1;
       await storage.put('failures', count); await storage.put('lastError', 'RUNNER_UNAVAILABLE');
       await storage.put('phase', 'error');

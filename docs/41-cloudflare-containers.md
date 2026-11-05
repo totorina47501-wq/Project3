@@ -102,3 +102,6 @@ méthode recevait le contrôleur comme `this`. Le runtime workerd reproduit
 L’appel fixe explicitement `globalThis` comme receveur ; une régression teste
 cette frontière runtime. Les jobs en attente restent réutilisables sans upload
 supplémentaire. Aucun résultat partiel n’est annoncé comme une extraction réussie.
+
+Le statut inclut une révision, l’étape d’échec, son type, un statut HTTP et un
+code classé sur liste fermée. Les messages d’erreur bruts et clés sont exclus.
