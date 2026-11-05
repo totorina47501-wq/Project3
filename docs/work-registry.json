@@ -25,7 +25,7 @@
         "supabase/migrations/202611032002_rls_and_functions.sql"
       ],
       "next": [
-        "Valider Auth et E2E en environnement authentifié."
+        "Connexion réelle validée le 5 novembre 2026 sur le Worker via compte technique isolé, ensuite désactivé. Les parcours locaux restent couverts par Playwright ; voir docs/37-real-openai-validation.md."
       ]
     },
     {
@@ -48,7 +48,7 @@
       ],
       "migrations": [],
       "next": [
-        "Tests E2E réels encore à fournir ; vidéo non analysée."
+        "Texte, réécriture et Vision validés réellement en mode complet sur 0d8aec2 ; tests E2E locaux passants. Vidéo/carrousel distants non actifs ; voir docs/37-real-openai-validation.md."
       ]
     },
     {
@@ -72,7 +72,7 @@
         "supabase/migrations/20261105003500_ai_usage_ownership.sql"
       ],
       "next": [
-        "La clé existante reste dans le Worker. Recette réelle via compte technique et contenus fictifs, sans clé locale ni rotation.",
+        "Clé existante conservée dans le Worker ; GPT-4o texte, réécriture, Vision et embeddings validés réellement le 5 novembre 2026 sur 0d8aec2, sans rotation ni clé locale.",
         "Sorties structurées strictes et coût conservé pour les réponses invalides ; propriété des métriques et RLS vérifiées.",
         "Adaptateur audio inchangé, désactivé par défaut et non raccordé au flux distant."
       ]
@@ -104,7 +104,7 @@
       ],
       "next": [
         "Corpus distant déjà indexé 5/5 ; invalidation appliquée (version 20261104212312). Ne pas relancer une indexation initiale.",
-        "Valider la conversation réelle et ses coûts par compte, puis surveiller le cron opt-in sans le recréer."
+        "Conversation réelle validée : citation Légifrance, embedding et réponse journalisés par compte ; question hors corpus sans citation. Surveiller le cron opt-in sans recréer le corpus ; voir docs/37-real-openai-validation.md."
       ]
     },
     {
@@ -132,8 +132,7 @@
         "supabase/migrations/202611042005_media_asset_sha256.sql"
       ],
       "next": [
-        "Correctif runtime Cloudflare pour upload navigateur : valider un vrai transfert puis confirmation SHA-256 sur production.",
-        "Valider 50 MiB Cloudflare memory, Storage immutability, authenticated concurrent E2E."
+        "Transfert privé PNG réel via client HTTP, confirmation serveur et SHA-256 persisté validés le 5 novembre 2026. Restent les limites mémoire Cloudflare à 50 MiB, l’immuabilité Storage et les parcours navigateur concurrents authentifiés ; voir docs/37-real-openai-validation.md."
       ]
     },
     {

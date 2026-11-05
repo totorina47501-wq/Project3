@@ -1,0 +1,167 @@
+{
+  "project": "MentionCheck",
+  "date": "2026-11-05",
+  "branch": "main",
+  "commit": "0d8aec2822ef7d50fed4028f7af66ba3421bfc45",
+  "appUrl": "https://mentioncheck.toto-rina47501.workers.dev",
+  "validation": {
+    "authentication": true,
+    "privateImageUpload": true,
+    "imageDigestPersisted": true,
+    "text": {
+      "analysisMode": "full",
+      "rewritePresent": true,
+      "disclosurePrefix": "Publicité"
+    },
+    "vision": {
+      "analysisMode": "full",
+      "warnings": [],
+      "promoCodeDetected": true
+    },
+    "mia": {
+      "answer": true,
+      "officialSource": "https://www.legifrance.gouv.fr/loda/id/LEGITEXT000047665795/",
+      "articleRef": "L2023-451-ART5-2",
+      "embeddingModel": "text-embedding-3-small",
+      "outOfCorpusSources": 0
+    },
+    "privacyExport": {
+      "status": 200,
+      "metrics": 9,
+      "ownerScoped": true,
+      "secretsAbsent": true
+    },
+    "testAccountDisabled": true,
+    "testSessionsExpired": 2,
+    "noProductionDeletion": true,
+    "noStripeCalls": true,
+    "noRealEmails": true
+  },
+  "tests": {
+    "unit": 249,
+    "unitFiles": 59,
+    "media": 60,
+    "sqlSuites": 6,
+    "fixtures": 6,
+    "privacy": 7,
+    "training": 22,
+    "playwrightPassed": 21,
+    "playwrightSkipped": 1,
+    "typecheck": "passed",
+    "lint": "passed",
+    "nextBuild": "passed",
+    "cloudflareBundle": "passed"
+  },
+  "ci": [
+    {
+      "name": "Workers Builds: mentioncheck-media-retention",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/totorina47501-wq/Project3/runs/126973132832"
+    },
+    {
+      "name": "Workers Builds: mentioncheck",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/totorina47501-wq/Project3/runs/126972311574"
+    },
+    {
+      "name": "quality",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/totorina47501-wq/Project3/actions/runs/41943838417/job/126971002644"
+    }
+  ],
+  "migrations": [
+    {
+      "name": "media_processing_queue",
+      "version": "20261105000826"
+    },
+    {
+      "name": "ai_usage_ownership",
+      "version": "20261105003303"
+    }
+  ],
+  "metrics": [
+    {
+      "stage": "text",
+      "model_used": "gpt-4o",
+      "prompt_tokens": 223,
+      "completion_tokens": 79,
+      "cost_usd": "0.00134750",
+      "created_at": "2026-11-05 00:22:09.101073+00"
+    },
+    {
+      "stage": "text",
+      "model_used": "gpt-4o",
+      "prompt_tokens": 212,
+      "completion_tokens": 95,
+      "cost_usd": "0.00148000",
+      "created_at": "2026-11-05 00:28:07.794635+00"
+    },
+    {
+      "stage": "text",
+      "model_used": "gpt-4o",
+      "prompt_tokens": 281,
+      "completion_tokens": 75,
+      "cost_usd": "0.00145250",
+      "created_at": "2026-11-05 00:51:20.642863+00"
+    },
+    {
+      "stage": "rewrite",
+      "model_used": "gpt-4o",
+      "prompt_tokens": 469,
+      "completion_tokens": 151,
+      "cost_usd": "0.00268250",
+      "created_at": "2026-11-05 00:51:23.141794+00"
+    },
+    {
+      "stage": "text",
+      "model_used": "gpt-4o",
+      "prompt_tokens": 270,
+      "completion_tokens": 98,
+      "cost_usd": "0.00165500",
+      "created_at": "2026-11-05 00:51:28.610791+00"
+    },
+    {
+      "stage": "vision",
+      "model_used": "gpt-4o",
+      "prompt_tokens": 281,
+      "completion_tokens": 92,
+      "cost_usd": "0.00162250",
+      "created_at": "2026-11-05 00:51:28.783559+00"
+    },
+    {
+      "stage": "embedding",
+      "model_used": "text-embedding-3-small",
+      "prompt_tokens": 20,
+      "completion_tokens": 0,
+      "cost_usd": "0.00000040",
+      "created_at": "2026-11-05 00:51:31.699034+00"
+    },
+    {
+      "stage": "assistant",
+      "model_used": "gpt-4o",
+      "prompt_tokens": 487,
+      "completion_tokens": 110,
+      "cost_usd": "0.00231750",
+      "created_at": "2026-11-05 00:51:34.218277+00"
+    },
+    {
+      "stage": "embedding",
+      "model_used": "text-embedding-3-small",
+      "prompt_tokens": 11,
+      "completion_tokens": 0,
+      "cost_usd": "0.00000022",
+      "created_at": "2026-11-05 00:52:11.77871+00"
+    }
+  ],
+  "recordedEstimatedUsd": 0.01255812,
+  "costNote": "Estimation applicative sur les tokens enregistrés, pas une facture. Les premiers échecs avant correctif peuvent avoir consommé des tokens non journalisés.",
+  "remaining": [
+    "Hébergement et transport distant du runner vidéo/carrousel, non activé ; extraction et reprise validées hors ligne.",
+    "Audio non validé par appel réel.",
+    "OAuth sociaux, emails transactionnels et paiements réels non activés.",
+    "Finalisation des coordonnées légales de l’éditeur et des accords prestataires pour la mise en production commerciale."
+  ]
+}

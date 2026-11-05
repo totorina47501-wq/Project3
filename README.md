@@ -5,6 +5,10 @@
 
 SaaS français d'analyse de publications sponsorisées pour créateurs et agences.
 
+## Reprendre le projet
+
+Lire [REPRISE.md](REPRISE.md), puis le [registre anti-doublons](docs/work-registry.json). Le [bilan réel OpenAI](docs/37-real-openai-validation.md) distingue les validations effectuées des intégrations encore désactivées.
+
 ## Stack
 
 Cloudflare Workers + Next.js App Router + TypeScript strict + Supabase Auth/PostgreSQL/Storage + GPT-4o + OpenNext.
@@ -46,9 +50,9 @@ Les versions exactes et leurs dépendances transitives sont verrouillées dans p
 
 ## Environnements
 
-Le Worker de fondation a été publié sur https://mentioncheck.toto-rina47501.workers.dev ; cela ne valide pas encore les nouvelles routes privées.
+Application déployée : https://mentioncheck.toto-rina47501.workers.dev. Connexion, upload privé, texte/réécriture, Vision, Mia et export RGPD ont été validés réellement le 5 novembre 2026 sur le commit `0d8aec2` ; cela ne valide pas tous les parcours en production.
 
-Créer et connecter Supabase, appliquer les migrations, ajouter les variables Cloudflare puis effectuer les tests d'accès. Aucune clé ne doit être poussée sur GitHub.
+Supabase et les identifiants serveur sont déjà raccordés. Comparer les migrations distantes avant toute application ; ne pas recréer les services ou leurs clés. Aucune clé ne doit être poussée sur GitHub.
 
 
 ### Consolidation sans consommation d'IA — novembre 2026
@@ -60,7 +64,7 @@ Préparation FFmpeg/FFprobe des vidéos et Sharp des carrousels **hors ligne**, 
 
 ### OpenAI : configuration et budget
 
-Les modèles OpenAI texte/image historiques sont déjà câblés. Transcription `gpt-transcribe` et embeddings `text-embedding-3-small` sont préparés côté serveur mais **non activés**. Pas de nouvelles requêtes API pour la préparation ; une mise en pause générale est disponible via `OPENAI_PAUSED=true`. Voir `docs/06-openai-setup.md`.
+Les modèles OpenAI texte/image historiques sont déjà câblés. Les embeddings `text-embedding-3-small` de Mia ont été validés réellement le 5 novembre 2026. La transcription reste préparée, désactivée par défaut et non validée par appel réel. Une mise en pause générale est disponible via `OPENAI_PAUSED=true`. La CI désactive les fournisseurs ; elle ne consomme pas de crédits OpenAI. Voir `docs/06-openai-setup.md`.
 
 ## Stratégie anti-doublons
 

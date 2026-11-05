@@ -39,7 +39,7 @@ contenu. Les métriques d’une réponse invalide restent disponibles pour la
 journalisation du coût ; les événements SSE renvoient seulement une catégorie
 d’erreur contrôlée. Aucun retry potentiellement facturé n’est ajouté.
 
-Les recettes après déploiement doivent vérifier `analysisMode=full`, une
+Les critères de recette après déploiement exigent `analysisMode=full`, une
 réécriture non vide pour le cas sponsorisé, un journal Vision réel et des
 citations Mia issues du corpus. Un HTTP 200 avec mode dégradé ne suffit pas.
 
@@ -87,3 +87,55 @@ retournés. Les anciens essais échoués avant ce correctif peuvent ne pas avoir
 de métriques complètes ; ils ne permettent pas de reconstituer une facture.
 Le relevé OpenAI reste la référence de facturation. Le compte technique et
 les preuves sont conservés sans effacement de production.
+
+## Résultat après déploiement — validé
+
+Commit applicatif contrôlé : `0d8aec2822ef7d50fed4028f7af66ba3421bfc45`.
+
+| Contrôle réel | Résultat constaté |
+|---|---|
+| Connexion Supabase | HTTP 200, session authentifiée |
+| PNG fictif en bucket privé | Upload confirmé et SHA-256 persisté |
+| Texte et réécriture GPT-4o | `analysisMode=full`, mention « Publicité » ajoutée, diff non vide |
+| Vision GPT-4o | `analysisMode=full`, aucun avertissement, code promotionnel détecté |
+| Mia avec RAG | Réponse, embedding réel et citation `L2023-451-ART5-2` vers Légifrance |
+| Mia hors corpus | Réponse de non-couverture, aucune citation ; pas d’appel chat supplémentaire |
+| Export RGPD réel | HTTP 200, 9 métriques du seul compte, sans secrets d’authentification |
+
+Les coûts des stages texte, réécriture, Vision, assistant et embedding sont
+rattachés au propriétaire en base. Total estimé des **métriques enregistrées**
+pendant la recette : **0,01255812 USD**. Ce total inclut les métriques disponibles
+des premiers essais partiels, mais pas les éventuels tokens non journalisés
+avant correctif ; il ne constitue pas une facture exhaustive.
+
+Le compte technique a été désactivé et ses deux sessions expirées. Les preuves
+et le média ont été conservés ; aucune suppression de production n’a eu lieu.
+Aucun paiement, email, entraînement ou démarrage de runner média n’a été déclenché.
+
+### Contrôles automatiques du commit applicatif
+
+- TypeScript et lint : réussis.
+- Unitaires : 249 tests dans 59 fichiers.
+- Médias hors ligne : 60 tests ; SQL local : 6 suites.
+- Fixtures : 6 tests ; RGPD local : 7 tests ; préparation IA : 22 tests.
+- Playwright : 21 réussis, 1 ignoré (Storage réel hors CI ; upload vérifié séparément ci-dessus).
+- Build Next.js et bundle OpenNext/Cloudflare : réussis.
+- CI GitHub et deux contrôles de déploiement Cloudflare : réussis sur ce SHA.
+
+Ces résultats sont datés et rattachés au SHA ci-dessus ; ils ne préjugent pas
+d’un futur déploiement. Le lot documentaire de reprise ne modifie pas le code.
+
+Relevé minimisé versionné : [2026-11-05-openai.json](receipts/2026-11-05-openai.json).
+Aucun identifiant de compte technique, cookie, clé, URL signée, mot de passe
+ou contenu privé n’y est conservé.
+
+## Restes à traiter à la reprise
+
+1. Raccorder le transport privé et héberger le runner vidéo/carrousel continu ;
+   l’extraction, la file et la reprise hors ligne existent déjà. Ne pas les recréer.
+2. Valider séparément la transcription audio avant toute activation distante.
+3. Préparer puis recetter les intégrations OAuth sociaux, emails et paiements
+   selon l’autorisation du moment ; elles n’ont pas été activées dans ce lot.
+4. Finaliser les coordonnées légales de l’éditeur et les accords prestataires.
+5. Vérifier l’option de protection Supabase contre les mots de passe compromis,
+   signalée désactivée lors de l’audit ; ne pas confondre cela avec un échec RLS.
