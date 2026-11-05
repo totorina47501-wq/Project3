@@ -31,7 +31,7 @@ describe('Export personnel complet dans le périmètre annoncé',()=>{
     expect(result.auth.user_metadata).toEqual({name:'Person'});
     for(const call of calls){
       if(call.table==='users') expect(call.filters).toContainEqual(['id','owner']);
-      else if(call.table==='ai_analyses') expect(call.filters).toContainEqual(['verifications.user_id','owner']);
+      else if(call.table==='ai_analyses') expect(call.filters).toContainEqual(['user_id','owner']);
       else expect(call.filters.some(([key,value])=>['user_id','owner_id','created_by','accepted_by','email'].includes(key)&&['owner','owner@test'].includes(String(value)))).toBe(true);
       expect(call.fields).not.toContain('token_hash');
       expect(call.fields).not.toContain('access_token_vault_id');

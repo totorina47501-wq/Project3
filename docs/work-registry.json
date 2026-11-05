@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updated": "2026-11-04",
+  "updated": "2026-11-05",
   "scope": "Code de la branche, non preuve de déploiement ni de commercialisation.",
   "features": [
     {
@@ -68,9 +68,13 @@
         "embeddings"
       ],
       "routes": [],
-      "migrations": [],
+      "migrations": [
+        "supabase/migrations/20261105003500_ai_usage_ownership.sql"
+      ],
       "next": [
-        "Générateur embeddings réutilisé en mode opt-in par Mia ; aucune indexation ou dépense automatisée. Audio non raccordé."
+        "La clé existante reste dans le Worker. Recette réelle via compte technique et contenus fictifs, sans clé locale ni rotation.",
+        "Sorties structurées strictes et coût conservé pour les réponses invalides ; propriété des métriques et RLS vérifiées.",
+        "Adaptateur audio inchangé, désactivé par défaut et non raccordé au flux distant."
       ]
     },
     {
@@ -99,8 +103,8 @@
         "supabase/migrations/20261104211500_mia_invalidate_changed_content.sql"
       ],
       "next": [
-        "Cron quotidien opt-in sur Worker de rétention : MIA_DAILY_INDEX_ENABLED=true et MIA_INDEX_TOKEN (secret séparé).",
-        "Appliquer la migration d'invalidation des embeddings après changement de contenu, valider 5/5 puis activer le cron ; surveiller les logs et pertinence."
+        "Corpus distant déjà indexé 5/5 ; invalidation appliquée (version 20261104212312). Ne pas relancer une indexation initiale.",
+        "Valider la conversation réelle et ses coûts par compte, puis surveiller le cron opt-in sans le recréer."
       ]
     },
     {
@@ -149,8 +153,8 @@
       "routes": [],
       "migrations": [],
       "next": [
-        "Exécuteur local vérifié ; raccordement distant non activé.",
-        "Contrat vidéo avec bail par tentative conservé ; intégration atomique à la base et exécuteur distant non activés."
+        "Sharp/FFmpeg, file SQL atomique, baux et archivage existent.",
+        "Transport distant des sources/sorties et exploitation d’un runner continu restent à raccorder ; aucune activation dans ce lot."
       ]
     },
     {
@@ -194,7 +198,8 @@
       ],
       "migrations": [],
       "next": [
-        "Appliquer séparément la migration finale ; export des fichiers sous forme de manifeste privé, prestataires exclus."
+        "Schéma interne et ownership des coûts appliqués ; exporter aussi les métriques Mia sans vérification liée.",
+        "Les octets privés, sauvegardes et données des prestataires restent hors du JSON structuré."
       ]
     },
     {
@@ -263,7 +268,8 @@
         "supabase/migrations/202611042003_stripe_event_inbox.sql"
       ],
       "next": [
-        "Sandbox à valider ; BILLING_ENABLED désactivé."
+        "Les trois offres sont raccordées dans le code de test, dont Solo ; tarif validé avant création d’un client.",
+        "Le mode live reste refusé ; aucune activation ni requête de paiement réelle."
       ]
     },
     {
@@ -323,7 +329,7 @@
       "routes": [],
       "migrations": [],
       "next": [
-        "Quatre templates HTML/texte testés ; aucun envoi ni expéditeur activé."
+        "Sept variantes HTML/texte et simulation locale idempotente disponibles ; transport réel non activé."
       ]
     },
     {
@@ -478,7 +484,8 @@
         "supabase/migrations/20261104225500_media_processing_queue.sql"
       ],
       "next": [
-        "Migration uniquement validée localement, non appliquée à distance. API désactivée par défaut. Runner Sharp/FFmpeg et archivage SQL testés hors ligne."
+        "Migration distante appliquée le 5 novembre : media_processing_queue, version 20261105000826. Ne pas la réappliquer.",
+        "Exécution et flags applicatifs restent désactivés jusqu’à recette du runner."
       ]
     }
   ]

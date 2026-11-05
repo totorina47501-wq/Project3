@@ -7,6 +7,9 @@ import { miaQuestionSchema, miaMessageSchema, type MiaMessage } from '@/lib/mia/
 import { answerMia } from '@/lib/mia/assistant';
 import { consumeQuota, refundQuota } from '@/lib/security/quota';
 import { checkRateLimit } from '@/lib/security/rate-limit';
+import { OPENAI_MODELS } from '@/lib/openai/config';
+import { ModelOutputError } from '@/lib/openai/errors';
+import type { ModelTelemetry } from '@/lib/ai/schemas';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -59,7 +62,26 @@ export async function POST(request: Request) {
     await checkRateLimit(user.id, profile.plan);
     await consumeQuota(user.id, 'mia');
     charged = true;
-    const output = await answerMia(parsed.data.question, history, context);
+    const logEmbedding = async (usage: ModelTelemetry) => {
+      const { error } = await admin.from('ai_analyses').insert({
+        user_id: user.id, verification_id: verificationId ?? null, stage: 'embedding',
+        model_used: usage.model, prompt_tokens: usage.promptTokens, completion_tokens: usage.completionTokens,
+        latency_ms: usage.latencyMs, cost_usd: usage.estimatedCostUsd, raw_response: { source: 'mia_retrieval' },
+      });
+      if (error) throw new Error('Journalisation embedding indisponible.');
+    };
+    const output = await answerMia(parsed.data.question, history, context, logEmbedding);
+    const usageRows = [];
+    if (output.usage.promptTokens || output.usage.completionTokens) usageRows.push({
+      user_id: user.id, verification_id: verificationId ?? null, stage: 'assistant',
+      model_used: OPENAI_MODELS.text, prompt_tokens: output.usage.promptTokens, completion_tokens: output.usage.completionTokens,
+      latency_ms: 'latencyMs' in output.usage ? output.usage.latencyMs : 0,
+      cost_usd: output.usage.estimatedCostUsd, raw_response: { source: 'mia_response' },
+    });
+    if (usageRows.length) {
+      const { error: usageError } = await admin.from('ai_analyses').insert(usageRows);
+      if (usageError) throw new Error('Journalisation Mia indisponible.');
+    }
     const exchange: MiaMessage[] = [
       { role: 'user', content: parsed.data.question },
       { role: 'assistant', content: output.answer, sources: output.sources },
@@ -91,6 +113,14 @@ export async function POST(request: Request) {
       conversationId, answer: output.answer, sources: output.sources,
     }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
+    if (error instanceof ModelOutputError && userId) {
+      await createAdminSupabase().from('ai_analyses').insert({
+        user_id: userId, verification_id: null, stage: 'assistant', model_used: error.usage.model,
+        prompt_tokens: error.usage.promptTokens, completion_tokens: error.usage.completionTokens,
+        latency_ms: error.usage.latencyMs, cost_usd: error.usage.estimatedCostUsd,
+        raw_response: { status: 'invalid_output', kind: error.kind },
+      });
+    }
     if (charged && userId) await refundQuota(userId, 'mia');
     const { status, message } = publicError(error);
     return Response.json({ error: message }, { status,

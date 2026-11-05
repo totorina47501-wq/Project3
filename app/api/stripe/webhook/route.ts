@@ -19,7 +19,7 @@ async function syncSubscription(subscription: Stripe.Subscription) {
   const gate = billingGate(process.env);
   const priceIds = subscription.items.data.map((item) => item.price.id);
   const paidPlan = paidPlanFromPrices(priceIds, {
-    pro: gate.pricePro, studio: gate.priceStudio,
+    solo: gate.priceSolo, pro: gate.pricePro, studio: gate.priceStudio,
   });
   if (!paidPlan) throw new Error('Unexpected Stripe plan price.');
   const status = stripeStatus(subscription.status);

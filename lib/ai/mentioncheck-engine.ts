@@ -10,7 +10,8 @@ import type {
   AnalysisResult, MediaType, Platform, Violation, ModelTelemetry,
 } from '@/lib/ai/schemas';
 import { HttpError } from '@/lib/security/auth';
-import { reportAiFailure } from '@/lib/ai/failure';
+import { reportAiFailure, aiFailureDetails } from '@/lib/ai/failure';
+import { ModelOutputError } from '@/lib/openai/errors';
 import { readRewriteTone } from '@/lib/social/preferences';
 
 type Input = {
@@ -64,6 +65,13 @@ async function recordUsage(verificationId: string, stage: string, usage: ModelTe
   if (error) throw new Error('Échec de journalisation IA.');
 }
 
+async function recordOutputFailure(verificationId: string, stage: string, error: unknown) {
+  if (error instanceof ModelOutputError) {
+    // Un rejet de format peut avoir consommé des tokens ; ils restent comptabilisés.
+    await recordUsage(verificationId, stage, error.usage, { status: 'invalid_output', kind: error.kind });
+  }
+}
+
 export async function runCheck(input: Input, emit: Emit = () => {}): Promise<AnalysisResult> {
   const admin = createAdminSupabase();
   const mediaType = input.mediaType ?? 'none';
@@ -115,16 +123,18 @@ export async function runCheck(input: Input, emit: Emit = () => {}): Promise<Ana
     let analysisMode: AnalysisResult['analysisMode'] = 'full';
     const warnings: string[] = [];
     if (textOutcome.status === 'rejected') {
+      await recordOutputFailure(verificationId, 'text', textOutcome.reason);
       reportAiFailure('text', textOutcome.reason);
       analysisMode = 'rules_only';
       warnings.push('Le service IA est indisponible : seuls les contrôles automatisés des mentions ont été effectués.');
-      emit('scan_text', { status: 'unavailable' });
+      emit('scan_text', { status: 'unavailable', ...aiFailureDetails(textOutcome.reason) });
     }
     if (signedUrl && visualOutcome.status === 'rejected') {
+      await recordOutputFailure(verificationId, 'vision', visualOutcome.reason);
       reportAiFailure('vision', visualOutcome.reason);
       if (analysisMode !== 'rules_only') analysisMode = 'partial';
       warnings.push("L'analyse du visuel est momentanément indisponible.");
-      emit('scan_visual', { status: 'unavailable' });
+      emit('scan_visual', { status: 'unavailable', ...aiFailureDetails(visualOutcome.reason) });
     }
     if (text) {
       await recordUsage(verificationId, 'text', text.usage,
@@ -174,13 +184,14 @@ export async function runCheck(input: Input, emit: Emit = () => {}): Promise<Ana
             { changes: suggested.changes.length, confidence: suggested.confidence });
           emit('rewriting', { status: 'complete' });
         } catch (error) {
+          await recordOutputFailure(verificationId, 'rewrite', error);
           reportAiFailure('rewrite', error);
           await admin.rpc('refund_usage_quota', {
             p_user_id: input.userId, p_action: 'rewrite',
           });
           if (analysisMode === 'full') analysisMode = 'partial';
           warnings.push("La réécriture IA n'a pas pu être générée.");
-          emit('rewriting', { status: 'unavailable' });
+          emit('rewriting', { status: 'unavailable', ...aiFailureDetails(error) });
         }
       } else {
         emit('rewriting', { status: 'quota_exceeded' });

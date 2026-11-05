@@ -4,6 +4,8 @@ import type OpenAI from 'openai';
 import { openaiClient } from '@/lib/openai/client';
 import { estimateChatCostUsd, MAX_CHAT_COMPLETION_TOKENS, OPENAI_MODELS, type OpenAICapability } from '@/lib/openai/config';
 import { z } from 'zod';
+import { zodResponseFormat } from 'openai/helpers/zod';
+import { ModelOutputError } from '@/lib/openai/errors';
 import type { ModelTelemetry } from '@/lib/ai/schemas';
 
 const MODEL = OPENAI_MODELS.text;
@@ -36,17 +38,26 @@ async function complete<T>(
     store: false,
     temperature: 0.1,
     max_completion_tokens: MAX_CHAT_COMPLETION_TOKENS,
-    response_format: { type: 'json_object' },
+    response_format: zodResponseFormat(schema, 'mentioncheck_result'),
     messages: [
       { role: 'system', content: system },
       { role: 'user', content: user },
     ],
   });
-  const raw = completion.choices[0]?.message.content;
-  if (!raw) throw new Error('Réponse OpenAI vide.');
+  const usage = telemetry(completion.usage, started);
+  const choice = completion.choices[0];
+  if (choice?.finish_reason === 'length') throw new ModelOutputError('token_limit', usage);
+  if (choice?.message.refusal) throw new ModelOutputError('refusal', usage);
+  const raw = choice?.message.content;
+  if (!raw) throw new ModelOutputError('empty', usage);
+  let parsed: unknown;
+  try { parsed = JSON.parse(raw); }
+  catch { throw new ModelOutputError('invalid_json', usage); }
+  const validated = schema.safeParse(parsed);
+  if (!validated.success) throw new ModelOutputError('schema_mismatch', usage);
   return {
-    value: schema.parse(JSON.parse(raw)),
-    usage: telemetry(completion.usage, started),
+    value: validated.data,
+    usage,
   };
 }
 

@@ -4,6 +4,7 @@ import { chatText } from '@/lib/openai';
 import { miaModelSchema, type MiaMessage } from '@/lib/mia/schemas';
 import { retrieveLawSources } from '@/lib/mia/retrieval';
 import { sourcesForCitations } from '@/lib/mia/ranking';
+import type { ModelTelemetry } from '@/lib/ai/schemas';
 
 const SYSTEM = [
   'Tu es Mia, assistante de préparation des publications commerciales en France.',
@@ -23,14 +24,20 @@ export async function answerMia(
   question: string,
   history: MiaMessage[],
   context: { caption?: string | undefined; status?: string | undefined } = {},
+  onEmbeddingUsage?: (usage: ModelTelemetry) => void | Promise<void>,
 ) {
-  const sources = await retrieveLawSources(question);
+  const auxiliaryUsage: ModelTelemetry[] = [];
+  const sources = await retrieveLawSources(question, async usage => {
+    auxiliaryUsage.push(usage);
+    await onEmbeddingUsage?.(usage);
+  });
   // Sans document pertinent, ne pas facturer d'appel IA et ne pas inventer de base légale.
   if (sources.length === 0) {
     return {
       answer: 'Je ne dispose pas de source juridique pertinente dans mon corpus pour répondre à cette question. Consulte les textes officiels sur Légifrance ou demande un avis juridique adapté.',
       sources: [],
       usage: { promptTokens: 0, completionTokens: 0, estimatedCostUsd: 0 },
+      auxiliaryUsage,
     };
   }
   const input = JSON.stringify({
@@ -50,5 +57,5 @@ export async function answerMia(
   });
   const result = await chatText(SYSTEM, input, miaModelSchema);
   const usedSources = sourcesForCitations(result.value.citations,sources);
-  return { answer: result.value.answer, sources: usedSources, usage: result.usage };
+  return { answer: result.value.answer, sources: usedSources, usage: result.usage, auxiliaryUsage };
 }

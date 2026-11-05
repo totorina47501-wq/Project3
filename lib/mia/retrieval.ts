@@ -3,8 +3,9 @@ import { createAdminSupabase } from '@/lib/supabase/admin';
 import { openaiCapabilityEnabled, OPENAI_MODELS } from '@/lib/openai/config';
 import { chooseLawSources, validatedLawSource, type LawSource } from '@/lib/mia/ranking';
 import { hasCompleteLawIndex, MIA_MIN_VECTOR_SIMILARITY, rankHybridLawSources } from '@/lib/mia/hybrid';
+import type { ModelTelemetry } from '@/lib/ai/schemas';
 
-export async function retrieveLawSources(question: string): Promise<LawSource[]> {
+export async function retrieveLawSources(question: string, onEmbeddingUsage?: (usage: ModelTelemetry) => void | Promise<void>): Promise<LawSource[]> {
   const vectorEnabled = process.env.MIA_VECTOR_SEARCH_ENABLED === 'true' &&
     openaiCapabilityEnabled('embeddings', process.env) &&
     Boolean(process.env.OPENAI_API_KEY?.trim());
@@ -32,7 +33,11 @@ export async function retrieveLawSources(question: string): Promise<LawSource[]>
 
   try {
     const { generateLegalEmbedding } = await import('@/lib/openai/embeddings');
+    const started = Date.now();
     const generated = await generateLegalEmbedding(question);
+    // L’embedding est facturable même si la RPC suivante échoue : tracer avant.
+    await onEmbeddingUsage?.({ model: generated.model, promptTokens: generated.tokens,
+      completionTokens: 0, estimatedCostUsd: generated.estimatedCostUsd, latencyMs: Date.now() - started });
     const { data: matches, error: rpcError } = await admin.rpc('match_law_documents', {
       query_embedding: '[' + generated.vector.join(',') + ']',
       match_count: 5,

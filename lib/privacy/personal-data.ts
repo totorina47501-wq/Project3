@@ -15,7 +15,7 @@ export const PERSONAL_COLLECTIONS = [
   ['usage','usage_monthly','period_start,checks_used,rewrites_used,mia_messages_used,updated_at','user_id','period_start'],
   ['feedback','rewrite_feedback','id,verification_id,original_caption,accepted_caption,prompt_version,training_consent_snapshot,accepted_at','user_id','id'],
   ['media','media_assets','id,group_id,kind,status,storage_path,mime_type,declared_bytes,actual_bytes,duration_seconds,created_at,completed_at,expires_at','user_id','id'],
-  ['metrics','ai_analyses','id,verification_id,stage,model_used,prompt_tokens,completion_tokens,latency_ms,cost_usd,raw_response,created_at,verifications!inner(user_id)','verifications.user_id','id'],
+  ['metrics','ai_analyses','id,user_id,verification_id,stage,model_used,prompt_tokens,completion_tokens,latency_ms,cost_usd,raw_response,created_at','user_id','id'],
   ['erasureRequests','privacy_erasure_requests','id,status,requested_at,updated_at,cancelled_at','user_id','id'],
   ['consentEvents','privacy_consent_events','id,ai_training_opt_in,source,recorded_at','user_id','id'],
   ['erasureRuns','privacy_erasure_runs','id,request_id,mode,status,summary,created_at','user_id','id'],

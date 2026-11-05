@@ -27,6 +27,7 @@ export async function createLocalErasureLab() {
       await db.query('insert into local_erasure.sessions values($1,$2)', [randomUUID(), id]);
       await db.query('insert into local_erasure.files values($1,$2,$3)', [randomUUID(), id, new Uint8Array([1,2,3])]);
       await db.query("insert into public.verifications(user_id,platform,content_text) values($1,'instagram','Fixture privée locale')", [id]);
+      await db.query("insert into public.ai_analyses(user_id,stage,model_used,prompt_tokens) values($1,'assistant','gpt-4o',1)", [id]);
       if (options.ownedWorkspace) await db.query("insert into public.workspaces(owner_id,name) values($1,'Équipe locale')", [id]);
       if (options.retained) await db.query('insert into local_erasure.retention values($1)', [id]);
     },
@@ -48,6 +49,7 @@ export async function createLocalErasureLab() {
         (select count(*)::integer from local_erasure.sessions where user_id=$1) as sessions,
         (select count(*)::integer from local_erasure.files where user_id=$1) as "privateFiles",
         (select count(*)::integer from public.verifications where user_id=$1) as verifications,
+        (select count(*)::integer from public.ai_analyses where user_id=$1) as metrics,
         (select count(*)::integer from public.api_keys where created_by=$1 and revoked_at is null) as "activeKeys"`, [id])).rows[0];
     },
     async close() { await context.tail; context.closed = true; await db.close(); },

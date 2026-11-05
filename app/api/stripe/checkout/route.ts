@@ -6,7 +6,7 @@ import { billingGate, paidPriceId } from '@/lib/billing/config';
 import { getStripe } from '@/lib/billing/stripe';
 
 export const runtime = 'nodejs';
-const schema = z.object({ plan: z.enum(['pro','studio']) }).strict();
+const schema = z.object({ plan: z.enum(['solo','pro','studio']) }).strict();
 export async function POST(request: Request) {
   try {
     const gate = billingGate(process.env);
@@ -19,6 +19,8 @@ export async function POST(request: Request) {
     catch { throw new HttpError(400, 'JSON incorrect.'); }
     const parsed = schema.safeParse(body);
     if (!parsed.success) throw new HttpError(422, 'Offre inconnue.');
+    // Valider le prix avant toute création de client ou session fournisseur.
+    const price = paidPriceId(parsed.data.plan, gate);
     const admin = createAdminSupabase();
     const { data: profile, error } = await admin.from('users')
       .select('stripe_customer_id').eq('id', user.id).single();
@@ -36,7 +38,7 @@ export async function POST(request: Request) {
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
-      line_items: [{ price: paidPriceId(parsed.data.plan, gate), quantity:1 }],
+      line_items: [{ price, quantity:1 }],
       success_url: base + '/dashboard/settings?checkout=return',
       cancel_url: base + '/tarifs?checkout=cancel',
       metadata: { user_id: user.id, selected_plan: parsed.data.plan },

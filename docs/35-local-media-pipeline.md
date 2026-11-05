@@ -33,11 +33,12 @@ Les tests synthétisent de vraies images Sharp et une vidéo FFmpeg, contrôlent
 ## Persistance et accès applicatif
 
 La migration additive `20261104225500_media_processing_queue.sql` ajoute les
-jobs et leurs sources référencées. Elle n’a été appliquée que dans les bases
-locales jetables. Le CLI Supabase n’a pas pu créer le fichier automatiquement
+jobs et leurs sources référencées. Elle a été validée dans les bases locales jetables, puis appliquée le
+5 novembre 2026 à la base distante (version `20261105000826`). Le CLI Supabase n’a pas pu créer le fichier automatiquement
 dans cet environnement (son répertoire utilisateur est en lecture seule) ;
 le fichier versionné a donc été créé localement puis exercé par le harnais.
-Aucune migration distante ni fonction planifiée n’a été exécutée.
+Aucune fonction planifiée n’a été exécutée. Voir `docs/37-real-openai-validation.md`
+pour le relevé de déploiement du schéma.
 
 Le serveur déduit les sources depuis des lignes `media_assets` confirmées,
 possédées et non expirées avec SHA-256 persisté. Une vidéo ou 2–5 images du
@@ -61,7 +62,7 @@ d’un carrousel, pas seulement sa première image. Les gardes de suppression et
 de rétention consultent aussi ces références quand le schéma est déclaré prêt.
 
 `MEDIA_JOBS_SCHEMA_READY=false` et `MEDIA_PROCESSING_ENABLED=false` restent
-les défauts. Avant une activation future : appliquer et vérifier la migration,
+les défauts. Avant une activation future : vérifier la migration déjà appliquée,
 la persistance des hashes, puis valider l’hôte d’exécution isolé. Déclarer le
 schéma prêt seulement après cette recette. Conserver `SCHEMA_READY=true` si le
 traitement est ensuite désactivé, pour protéger les sources déjà référencées.

@@ -36,6 +36,7 @@ test('effacement local : dry-run, refus distant, reprise, isolation et journal s
       assert.equal(result.status, 'completed_local'); assert.equal(result.deleted, true);
       assert.deepEqual(result.steps, ['revoke_sessions','revoke_api_keys','withdraw_training_consent','private_storage','external_processors','database','auth_user']);
       const empty = await lab.inspect(subject); assert.equal(empty.auth, 0); assert.equal(empty.profile, 0);
+      assert.equal(empty.metrics, 0); assert.equal((await lab.inspect(other)).metrics, 1);
       assert.equal((await lab.inspect(other)).profile, 1); assert.equal((await lab.inspect(other)).privateFiles, 1);
       assert.ok(!JSON.stringify(result).includes(subject)); assert.ok(!JSON.stringify(result).includes('example.test'));
       assert.deepEqual(await runLocalErasure(lab, options), result);

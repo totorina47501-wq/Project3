@@ -3,12 +3,12 @@
 const categories = new Set([
   'missing_runtime_config', 'invalid_credentials', 'rate_limited', 'provider_unavailable',
   'configuration_error', 'unknown', 'missing_key', 'authentication', 'permission',
-  'credit', 'rate_limit', 'request', 'provider', 'network', 'disabled',
+  'credit', 'rate_limit', 'request', 'provider', 'network', 'disabled', 'invalid_output',
 ]);
 const errorTypes = new Set([
   'Error', 'TypeError', 'SyntaxError', 'HttpError', 'AbortError',
   'AuthApiError', 'AuthRetryableFetchError', 'APIConnectionError', 'APITimeoutError',
-  'MissingOpenAIKeyError', 'OpenAICapabilityDisabledError',
+  'MissingOpenAIKeyError', 'OpenAICapabilityDisabledError', 'ModelOutputError',
 ]);
 const configNames = new Set(['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY']);
 

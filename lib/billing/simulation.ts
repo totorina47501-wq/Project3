@@ -36,10 +36,7 @@ export function createBillingSimulation(options:{accountId:string;customerId:str
     const event=eventSchema.parse(input);
     if(event.customerId!==state.customerId)throw new Error('Client sans correspondance locale.');
     if(new Set(event.priceIds).size!==1)throw new Error('Prix de souscription ambigu.');
-    const solo=prices.solo!==undefined&&event.priceIds.includes(prices.solo);
-    const other=paidPlanFromPrices(event.priceIds,prices);
-    if(solo&&other)throw new Error('Prix de souscription ambigu.');
-    const paidPlan=solo?'solo':other;
+    const paidPlan=paidPlanFromPrices(event.priceIds,prices);
     if(!paidPlan)throw new Error('Prix de souscription inconnu ou ambigu.');
     const fingerprint=JSON.stringify(event);
     const receipt=receipts.get(event.id);

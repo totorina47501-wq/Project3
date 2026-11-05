@@ -7,6 +7,13 @@ const testEnv = {
   STRIPE_PRICE_PRO:'price_A1', STRIPE_PRICE_STUDIO:'price_B2',
 };
 describe('Facturation Stripe désactivée par défaut', () => {
+  it('prépare Solo sans créer de client si son tarif est absent ou ambigu',()=>{
+    expect(()=>paidPriceId('solo',billingGate(testEnv))).toThrow();
+    const gate=billingGate({...testEnv,STRIPE_PRICE_SOLO:'price_C3'});
+    expect(paidPriceId('solo',gate)).toBe('price_C3');
+    expect(billingGate({...testEnv,STRIPE_PRICE_SOLO:'price_A1'}).enabled).toBe(false);
+    expect(()=>paidPriceId('admin' as 'solo',gate)).toThrow();
+  });
   it('n active jamais un checkout sans opt-in',()=>{
     expect(billingGate({}).enabled).toBe(false);
     expect(billingGate({STRIPE_SECRET_KEY:'sk_test_demo'}).enabled).toBe(false);

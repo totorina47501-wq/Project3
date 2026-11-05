@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { paidPlanFromPrices, effectivePlan, stripeStatus } from '../../lib/billing/events';
 const config={pro:'price_PRO',studio:'price_STUDIO'};
 describe('Droits Stripe test — sans appel API',()=>{
+  it('reconnaît Solo configuré et refuse une collision de tarifs',()=>{
+    expect(paidPlanFromPrices(['price_SOLO'],{...config,solo:'price_SOLO'})).toBe('solo');
+    expect(paidPlanFromPrices(['price_PRO'],{...config,solo:'price_PRO'})).toBeNull();
+  });
   it('ne déduit jamais le plan de metadata client arbitraire',()=>{
     expect(paidPlanFromPrices(['price_unknown'],config)).toBe(null);
     expect(paidPlanFromPrices(['price_PRO','price_STUDIO'],config)).toBe(null);

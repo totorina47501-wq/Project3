@@ -3,13 +3,12 @@ import type { PaidPlan } from './config';
 import { isBillableStatus } from './config';
 
 export function paidPlanFromPrices(priceIds: string[], config: {
-  pro?: string | undefined; studio?: string | undefined;
+  solo?: string | undefined; pro?: string | undefined; studio?: string | undefined;
 }): PaidPlan | null {
   const match = new Set(priceIds);
   if (match.size !== 1) return null;
-  if (config.pro && match.has(config.pro)) return 'pro';
-  if (config.studio && match.has(config.studio)) return 'studio';
-  return null;
+  const matched = (['solo','pro','studio'] as const).filter(plan => config[plan] && match.has(config[plan]!));
+  return matched.length === 1 ? matched[0]! : null;
 }
 export function effectivePlan(status: string, paidPlan: PaidPlan | null):
   'solo' | PaidPlan {
