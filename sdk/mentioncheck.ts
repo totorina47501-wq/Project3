@@ -58,7 +58,7 @@ export class MentionCheckClient {
           Accept: 'application/json',
           ...(payload ? { 'Content-Type': 'application/json' } : {}),
         },
-        body: payload ? JSON.stringify(payload) : undefined,
+        ...(payload ? { body: JSON.stringify(payload) } : {}),
         signal: controller.signal,
       });
       const body: unknown = await response.json().catch(() => null);
