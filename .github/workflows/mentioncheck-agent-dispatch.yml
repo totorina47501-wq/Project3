@@ -1,0 +1,94 @@
+name: MentionCheck agent dispatch
+
+# Scheduled checks use only the trusted default branch workflow.
+# No PR checkout, no execution of untrusted code, no deployment and no external services.
+on:
+  schedule:
+    - cron: '0,30 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Only inspect the queue; do not assign an issue'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: mentioncheck-agent-dispatch
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+      MAX_ACTIVE: '2'
+    steps:
+      - name: Inspect approved issues and assign at most one Copilot mission
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Only work in MentionCheck. Never dispatch SaaS Factory tasks here.
+          [ "$REPO" = "totorina47501-wq/Project3" ] || exit 1
+
+          issues="$(gh api --paginate "repos/$REPO/issues?state=open&per_page=100")"
+          active="$(jq '[.[] | select(.pull_request == null) |
+            select(any(.assignees[]?; .login == "Copilot" or .login == "copilot-swe-agent[bot]"))] | length' <<< "$issues")"
+          echo "Open issues currently assigned to Copilot: $active / $MAX_ACTIVE"
+          echo "Active Copilot issues: $active / $MAX_ACTIVE" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$active" -ge "$MAX_ACTIVE" ]; then
+            echo "Capacity reached. No new assignment." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Only explicit human-approved issues are eligible. Never use a task
+          # merely because it is P0 or because a CI failed.
+          candidates="$(jq -r '[.[] | select(.pull_request == null and .state == "open") |
+            select(any(.labels[]?; .name == "agent:approved")) |
+            select((.assignees // [] | map(.login) | index("Copilot")) == null) |
+            select((.assignees // [] | map(.login) | index("copilot-swe-agent[bot]")) == null)
+            ] | sort_by(.number) | .[].number' <<< "$issues")"
+          if [ -z "$candidates" ]; then
+            echo "No new agent:approved issue. No action." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # All open PRs are considered to avoid accidentally duplicating
+          # a task that already has an explicit 'Closes #N' reference.
+          prs="$(gh api --paginate "repos/$REPO/pulls?state=open&per_page=100")"
+
+          while read -r number; do
+            [ -n "$number" ] || continue
+            details="$(gh api "repos/$REPO/issues/$number")"
+            [ "$(jq -r .state <<< "$details")" = open ] || continue
+            jq -e '[.labels[].name] | index("agent:approved") != null' <<< "$details" >/dev/null || continue
+            if jq -e --arg num "$number" '
+              any(.[]; ((.body // "") + " " + (.title // "")) |
+                test("(?i)(close[sd]?|fix(e[sd])?|resolve[sd]?)\\s+#" + $num + "\\b"))' <<< "$prs" >/dev/null; then
+              echo "Issue #$number already linked to an open PR; skipping." >> "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "Dry-run: would assign Copilot to #$number." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+
+            # REST assignment is used, not a personal token. Fail visibly if
+            # the GitHub Copilot agent cannot be assigned by GITHUB_TOKEN.
+            gh api --method POST "repos/$REPO/issues/$number/assignees" \
+              -f 'assignees[]=copilot-swe-agent[bot]' >/dev/null
+            checked="$(gh api "repos/$REPO/issues/$number")"
+            jq -e 'any(.assignees[]?; .login == "Copilot" or .login == "copilot-swe-agent[bot]")' <<< "$checked" >/dev/null
+            echo "Assigned Copilot to approved issue #$number." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          done <<< "$candidates"
+
+          echo "No eligible issue remained after checks." >> "$GITHUB_STEP_SUMMARY"
