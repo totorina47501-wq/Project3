@@ -3,8 +3,9 @@
 ## Point de départ
 
 - Dépôt : `totorina47501-wq/Project3` ; travailler sur `main`.
-- Dernier commit applicatif validé : `0d8aec2822ef7d50fed4028f7af66ba3421bfc45`.
-- Le présent lot documentaire est postérieur à ce commit et ne modifie pas le code.
+- Dernier commit avec recette OpenAI réelle : `0d8aec2822ef7d50fed4028f7af66ba3421bfc45`.
+- Les commits tarifs/SEO jusqu’à `7f08d39` sont intégrés. Le correctif de fiabilité suivant est décrit dans [docs/39-technical-reliability.md](docs/39-technical-reliability.md).
+- Les résultats OpenAI réels ci-dessous restent attachés à `0d8aec2` ; aucun appel payant supplémentaire pour ce correctif.
 - Application : https://mentioncheck.toto-rina47501.workers.dev.
 - Stack réelle : Next.js **15.5.28**, React 19, TypeScript strict, Supabase,
   OpenNext et Cloudflare Workers. Ne pas rétrograder vers Next.js 14 sur la
@@ -13,11 +14,11 @@
 ## Lire avant toute modification
 
 1. [Registre anti-doublons](docs/work-registry.json) : 21 domaines,
-   35 routes et 13 fichiers de migration référencés au moment de la livraison.
+   35 routes et 14 fichiers de migration référencés au moment de la livraison.
 2. [Bilan réel OpenAI](docs/37-real-openai-validation.md) et son
    [relevé minimisé](docs/receipts/2026-11-05-openai.json).
 3. [Livraison interne précédente](docs/36-internal-delivery-validation.md),
-   puis le document du domaine à modifier indiqué par le registre.
+   puis le [correctif technique](docs/39-technical-reliability.md) et le document du domaine à modifier indiqué par le registre.
 
 Le registre décrit le code ; le bilan daté décrit les validations distantes.
 Ne pas considérer une ancienne phrase « à valider » comme une tâche manquante
@@ -45,6 +46,10 @@ Projet Supabase : `zcztvberuihphqklhjsr`.
 |---|---|---|
 | `20261104225500_media_processing_queue.sql` | `media_processing_queue` | `20261105000826` |
 | `20261105003500_ai_usage_ownership.sql` | `ai_usage_ownership` | `20261105003303` |
+| `20261105082000_quota_reservation_period.sql` | `quota_reservation_period` | `20261105081854` |
+
+La réservation renvoie sa période UTC ; chaque remboursement réutilise cette période.
+Les anciennes signatures sont conservées pour le déploiement progressif.
 
 Les noms de version locaux et distants diffèrent : comparer les contenus et
 les empreintes du bilan avant d’appliquer une migration. La migration
@@ -111,6 +116,7 @@ npm run test:sql:offline
 npm run test:privacy:offline
 npm run test:training:offline
 npm run test:fixtures
+# Si Chromium est fourni par le système : PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium npm run test:e2e
 npm run test:e2e
 OPENAI_PAUSED=true BILLING_ENABLED=false NEXT_TELEMETRY_DISABLED=1 npm run build
 OPENAI_PAUSED=true BILLING_ENABLED=false NEXT_TELEMETRY_DISABLED=1 npm run test:cloudflare:bundle
@@ -121,7 +127,11 @@ ne jamais envoyer leurs fixtures au projet Supabase de production. FFmpeg,
 FFprobe et Chromium sont nécessaires aux tests concernés. Exécuter Playwright
 avant le build, sans écritures concurrentes dans `.next`.
 
-Dernier résultat applicatif : **249 unitaires**, **60 médias**, **6 suites SQL**,
+Résultat historique de la recette OpenAI (`0d8aec2`) : **249 unitaires**, **60 médias**, **6 suites SQL**,
 **6 fixtures**, **7 RGPD**, **22 préparation IA**, **21 Playwright réussis et
 1 ignoré** ; TypeScript, lint, build, bundle, CI et déploiements Cloudflare réussis.
 Ces chiffres sont attachés au commit applicatif ci-dessus, pas à un futur travail.
+
+Le correctif suivant couvre la journalisation embedding, les périodes de quota et le
+CTA Solo de test. Il conserve les tarifs, le SEO et les contraintes de production.
+Consulter son bilan dans [docs/39-technical-reliability.md](docs/39-technical-reliability.md).

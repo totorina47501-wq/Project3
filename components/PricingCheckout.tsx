@@ -1,7 +1,7 @@
 // CTA uniquement pour le bac à sable Stripe.
 'use client';
 import { useState } from 'react';
-export function PricingCheckout({plan}: {plan:'pro'|'studio'}) {
+export function PricingCheckout({plan}: {plan:'solo'|'pro'|'studio'}) {
   const [pending,setPending]=useState(false);
   const [message,setMessage]=useState('');
   async function start() {

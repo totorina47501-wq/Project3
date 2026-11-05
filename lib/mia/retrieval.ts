@@ -31,13 +31,17 @@ export async function retrieveLawSources(question: string, onEmbeddingUsage?: (u
       !indexRows.every((row) => references.has(row.article_ref)) ||
       !hasCompleteLawIndex(indexRows, OPENAI_MODELS.embeddings)) return lexical;
 
+  let recordingUsage = false;
   try {
     const { generateLegalEmbedding } = await import('@/lib/openai/embeddings');
     const started = Date.now();
     const generated = await generateLegalEmbedding(question);
     // L’embedding est facturable même si la RPC suivante échoue : tracer avant.
+    // La journalisation ne doit pas être absorbée par le repli de recherche.
+    recordingUsage = Boolean(onEmbeddingUsage);
     await onEmbeddingUsage?.({ model: generated.model, promptTokens: generated.tokens,
       completionTokens: 0, estimatedCostUsd: generated.estimatedCostUsd, latencyMs: Date.now() - started });
+    recordingUsage = false;
     const { data: matches, error: rpcError } = await admin.rpc('match_law_documents', {
       query_embedding: '[' + generated.vector.join(',') + ']',
       match_count: 5,
@@ -45,7 +49,8 @@ export async function retrieveLawSources(question: string, onEmbeddingUsage?: (u
     });
     if (rpcError) throw new Error('Recherche vectorielle indisponible.');
     return rankHybridLawSources(question, sources, matches);
-  } catch {
+  } catch (error) {
+    if (recordingUsage) throw error;
     // Aucun texte personnel ni référence de conversation n'est journalisé.
     console.warn('[mentioncheck][mia_vector_fallback]');
     return lexical;

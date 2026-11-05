@@ -16,6 +16,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   let charged = false;
+  let quotaPeriod: string | null = null;
   let userId: string | null = null;
   try {
     if (!isSameOrigin(request)) return Response.json({ error: 'Origine interdite.' }, { status: 403 });
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
       context = { caption: check.content_text, status: check.status };
     }
     await checkRateLimit(user.id, profile.plan);
-    await consumeQuota(user.id, 'mia');
+    quotaPeriod = await consumeQuota(user.id, 'mia');
     charged = true;
     const logEmbedding = async (usage: ModelTelemetry) => {
       const { error } = await admin.from('ai_analyses').insert({
@@ -121,7 +122,7 @@ export async function POST(request: Request) {
         raw_response: { status: 'invalid_output', kind: error.kind },
       });
     }
-    if (charged && userId) await refundQuota(userId, 'mia');
+    if (charged && userId && quotaPeriod) await refundQuota(userId, 'mia', quotaPeriod);
     const { status, message } = publicError(error);
     return Response.json({ error: message }, { status,
       headers: { 'Cache-Control': 'no-store' } });

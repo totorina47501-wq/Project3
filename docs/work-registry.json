@@ -104,7 +104,8 @@
       ],
       "next": [
         "Corpus distant déjà indexé 5/5 ; invalidation appliquée (version 20261104212312). Ne pas relancer une indexation initiale.",
-        "Conversation réelle validée : citation Légifrance, embedding et réponse journalisés par compte ; question hors corpus sans citation. Surveiller le cron opt-in sans recréer le corpus ; voir docs/37-real-openai-validation.md."
+        "Conversation réelle validée : citation Légifrance, embedding et réponse journalisés par compte ; question hors corpus sans citation. Surveiller le cron opt-in sans recréer le corpus ; voir docs/37-real-openai-validation.md.",
+        "Un échec du journal embedding interrompt désormais la réponse au lieu d’être masqué par le repli lexical ; voir docs/39-technical-reliability.md."
       ]
     },
     {
@@ -269,7 +270,8 @@
       "next": [
         "Les trois offres sont raccordées dans le code de test, dont Solo ; tarif validé avant création d’un client.",
         "Le mode live reste refusé ; aucune activation ni requête de paiement réelle.",
-        "Page /tarifs améliorée : cartes responsives, comparaison accessible, FAQ et positionnement Pro ; prix et quotas restent indicatifs, Stripe live désactivé."
+        "Page /tarifs améliorée : cartes responsives, comparaison accessible, FAQ et positionnement Pro ; prix et quotas restent indicatifs, Stripe live désactivé.",
+        "CTA de test Solo disponible uniquement avec prix Solo configuré ; aucun service de paiement activé. Voir docs/39-technical-reliability.md."
       ]
     },
     {
@@ -308,10 +310,12 @@
       ],
       "routes": [],
       "migrations": [
-        "supabase/migrations/202611032004_quotas.sql"
+        "supabase/migrations/202611032004_quotas.sql",
+        "supabase/migrations/20261105082000_quota_reservation_period.sql"
       ],
       "next": [
-        "Tests de charge et E2E production à compléter."
+        "Réservations et remboursements liés à la même période UTC, y compris au changement de mois. Migration quota_reservation_period appliquée, version distante 20261105081854 ; anciennes signatures conservées.",
+        "Tests de charge et E2E production à compléter ; régression SQL locale dédiée dans tests/sql/quota_period_security.sql."
       ]
     },
     {

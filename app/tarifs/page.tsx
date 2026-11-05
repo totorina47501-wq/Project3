@@ -62,7 +62,7 @@ export default function PricingPage() {
           {plan.highlights.map(item => <li key={item} className="flex gap-2"><span aria-hidden="true" className="font-bold text-emerald-700">✓</span><span>{item}</span></li>)}
         </ul>
         <div className="mt-8">
-          {stripe.enabled && plan.id !== 'solo' ? <PricingCheckout plan={plan.id} /> :
+          {stripe.enabled && (plan.id !== 'solo' || Boolean(stripe.priceSolo)) ? <PricingCheckout plan={plan.id} /> :
             <p className="rounded-xl bg-slate-100 px-4 py-3 text-center text-sm font-medium text-slate-700">
               {plan.id === 'solo' ? 'Démonstration gratuite disponible' : 'Abonnement bientôt disponible'}
             </p>}

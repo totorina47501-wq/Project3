@@ -20,6 +20,7 @@ type Input = {
   mediaUrl?: string | undefined;
   mediaType?: MediaType;
   userId: string;
+  quotaPeriod: string;
 };
 type Emit = (event: string, data: unknown) => void;
 
@@ -166,7 +167,7 @@ export async function runCheck(input: Input, emit: Emit = () => {}): Promise<Ana
     let rewrite: AnalysisResult['rewrite'] = null;
     if (score < 60 && text) {
       // La génération automatique consomme le quota de réécritures du plan.
-      const { data: allowed, error: quotaError } = await admin.rpc('consume_usage_quota', {
+      const { data: allowed, error: quotaError } = await admin.rpc('reserve_usage_quota', {
         p_user_id: input.userId, p_action: 'rewrite',
       });
       if (quotaError) throw new Error('Quota de réécriture indisponible.');
@@ -187,7 +188,7 @@ export async function runCheck(input: Input, emit: Emit = () => {}): Promise<Ana
           await recordOutputFailure(verificationId, 'rewrite', error);
           reportAiFailure('rewrite', error);
           await admin.rpc('refund_usage_quota', {
-            p_user_id: input.userId, p_action: 'rewrite',
+            p_user_id: input.userId, p_action: 'rewrite', p_period_start: allowed,
           });
           if (analysisMode === 'full') analysisMode = 'partial';
           warnings.push("La réécriture IA n'a pas pu être générée.");
@@ -221,7 +222,7 @@ export async function runCheck(input: Input, emit: Emit = () => {}): Promise<Ana
     if (analysisMode === 'rules_only') {
       // Aucun appel IA réussi : cette vérification n'épuise pas le quota payant.
       const { error: refundError } = await admin.rpc('refund_usage_quota', {
-        p_user_id: input.userId, p_action: 'check',
+        p_user_id: input.userId, p_action: 'check', p_period_start: input.quotaPeriod,
       });
       if (refundError) console.error('[mentioncheck][quota_refund_failed]');
     }

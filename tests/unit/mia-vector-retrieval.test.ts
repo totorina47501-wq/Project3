@@ -56,3 +56,17 @@ describe('RAG existant et activation hors ligne contrôlée',()=>{
     expect(JSON.stringify(result)).not.toContain('Publicité');
   });
 });
+
+it('interrompt la réponse si le coût embedding ne peut pas être enregistré',async()=>{
+  enable();mocks.limit.mockResolvedValueOnce(corpus()).mockResolvedValueOnce(indexed());
+  const failure=new Error('Journal indisponible');
+  await expect(retrieveLawSources('Publicité',async()=>{throw failure;})).rejects.toBe(failure);
+  expect(mocks.rpc).not.toHaveBeenCalled();
+});
+it('conserve la métrique embedding même si la recherche vectorielle doit se replier',async()=>{
+  enable();mocks.limit.mockResolvedValueOnce(corpus()).mockResolvedValueOnce(indexed());
+  mocks.rpc.mockResolvedValueOnce({data:null,error:{message:'Indisponible'}});
+  const recorded:unknown[]=[];
+  const sources=await retrieveLawSources('Publicité',async usage=>{recorded.push(usage);});
+  expect(sources[0]?.articleRef).toBe('A2');expect(recorded).toHaveLength(1);
+});

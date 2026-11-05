@@ -5,12 +5,12 @@ vi.mock('@/lib/supabase/admin',()=>({createAdminSupabase:mocks.admin}));
 vi.mock('@/lib/ai/text-analyzer',()=>({analyzeText:mocks.text}));
 vi.mock('@/lib/ai/vision-analyzer',()=>({analyzeVisual:vi.fn()}));
 vi.mock('@/lib/ai/rewriter',()=>({rewriteCompliant:mocks.rewrite}));
-vi.mock('@/lib/ai/failure',()=>({reportAiFailure:vi.fn()}));
+vi.mock('@/lib/ai/failure',async original=>({...await original<typeof import('../../lib/ai/failure')>(),reportAiFailure:vi.fn()}));
 import { runCheck } from '../../lib/ai/mentioncheck-engine';
 import { readRewriteTone } from '../../lib/social/preferences';
 const telemetry={model:'fixture',promptTokens:0,completionTokens:0,latencyMs:1,estimatedCostUsd:0};
 beforeEach(()=>{
-  vi.clearAllMocks();mocks.rpc.mockResolvedValue({data:true,error:null});
+  vi.clearAllMocks();mocks.rpc.mockResolvedValue({data:'2026-10-01',error:null});
   mocks.preference.mockResolvedValue({data:{rewrite_tone:'créatif'},error:null});
   mocks.text.mockResolvedValue({aiFlags:[],ruleViolations:[],usage:telemetry});
   mocks.rewrite.mockResolvedValue({rewrittenCaption:'Publicité — Offre',changes:[],confidence:1,usage:telemetry});
@@ -23,7 +23,7 @@ beforeEach(()=>{
 });
 describe('Préférence de ton dans le moteur existant',()=>{
   it('transmet le ton personnel uniquement à la réécriture déjà prévue',async()=>{
-    await runCheck({caption:'Mon code promo X économise 30 %, merci @marque !',platform:'instagram',userId:'owner'});
+    await runCheck({caption:'Mon code promo X économise 30 %, merci @marque !',platform:'instagram',userId:'owner',quotaPeriod:'2026-11-01'});
     expect(mocks.rewrite).toHaveBeenCalledOnce();
     expect(mocks.rewrite.mock.calls[0]?.[2]).toBe('créatif');
     expect(mocks.eq).toHaveBeenCalledWith('user_id','owner');
@@ -37,7 +37,14 @@ describe('Préférence de ton dans le moteur existant',()=>{
     }
   });
   it('ne lance aucune réécriture ou lecture supplémentaire si le score est bon',async()=>{
-    await runCheck({caption:'Publicité : partenariat rémunéré avec Marque. #publicité',platform:'instagram',userId:'owner'});
+    await runCheck({caption:'Publicité : partenariat rémunéré avec Marque. #publicité',platform:'instagram',userId:'owner',quotaPeriod:'2026-11-01'});
     expect(mocks.rewrite).not.toHaveBeenCalled();expect(mocks.preference).not.toHaveBeenCalled();
   });
+});
+
+it('rembourse une réécriture dans sa propre période de réservation',async()=>{
+ mocks.rewrite.mockRejectedValueOnce(new Error('Fournisseur indisponible'));
+ const result=await runCheck({caption:'Mon code promo X économise 30 %, merci @marque !',platform:'instagram',userId:'owner',quotaPeriod:'2026-11-01'});
+ expect(result.analysisMode).toBe('partial');
+ expect(mocks.rpc).toHaveBeenCalledWith('refund_usage_quota',{p_user_id:'owner',p_action:'rewrite',p_period_start:'2026-10-01'});
 });

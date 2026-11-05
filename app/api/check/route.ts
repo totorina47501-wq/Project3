@@ -34,17 +34,18 @@ export async function POST(request: Request) {
       .select('plan').eq('id', user.id).single();
     if (error || !profile) throw new HttpError(503, 'Profil Supabase indisponible.');
     await checkRateLimit(user.id, profile.plan);
-    if (payload.data.execution === 'ai') await consumeQuota(user.id, 'check');
+    const quotaPeriod = payload.data.execution === 'ai'
+      ? await consumeQuota(user.id, 'check') : null;
 
     const stream = createEventStream(async (emit) => {
       try {
-        const result = payload.data.execution === 'ai'
-          ? await runCheck({ ...payload.data, userId: user.id }, emit)
+        const result = quotaPeriod
+          ? await runCheck({ ...payload.data, userId: user.id, quotaPeriod }, emit)
           : await runRulesOnlyCheck({ caption: payload.data.caption, platform: payload.data.platform,
               userId: user.id }, emit);
         emit('done', result);
       } catch {
-        if (payload.data.execution === 'ai') await refundQuota(user.id, 'check');
+        if (quotaPeriod) await refundQuota(user.id, 'check', quotaPeriod);
         emit('error', { message: 'La vérification a échoué. Le quota a été restitué.' });
       }
     });
