@@ -29,6 +29,7 @@
     "test:training:offline": "node --test --experimental-test-isolation=none scripts/training/*.test.mjs",
     "test:privacy:offline": "node --test --experimental-test-isolation=none scripts/privacy/*.test.mjs",
     "training:revoke": "node scripts/training/revoke.mjs",
+    "mia:discover": "node scripts/mia/run-official-discovery.mjs",
     "media:runner": "node workers/media-jobs/src/remote-run.mjs"
   },
   "engines": {

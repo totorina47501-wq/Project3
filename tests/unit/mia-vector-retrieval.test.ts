@@ -70,3 +70,31 @@ it('conserve la métrique embedding même si la recherche vectorielle doit se re
   const sources=await retrieveLawSources('Publicité',async usage=>{recorded.push(usage);});
   expect(sources[0]?.articleRef).toBe('A2');expect(recorded).toHaveLength(1);
 });
+
+it('lit les pages supplémentaires au-delà de 30 documents sans appeler OpenAI',async()=>{
+  const many=Array.from({length:35},(_,i)=>({
+    article_ref:'DOC-'+String(i).padStart(3,'0'),
+    content:i===34?'Concours et tirage au sort publicitaire':'Transparence commerciale',
+    source_url:'https://www.legifrance.gouv.fr/loda/id/TEST',
+    effective_on:null,checked_at:null,
+  }));
+  const range=vi.fn().mockResolvedValue({data:many.slice(30),error:null,count:35});
+  mocks.create.mockImplementation(()=>({from:()=>({select:()=>({
+    order:()=>({limit:vi.fn().mockResolvedValue({data:many.slice(0,30),error:null,count:35}),range}),
+  })}),rpc:mocks.rpc}));
+  const found=await retrieveLawSources('Concours et tirage au sort');
+  expect(found[0]?.articleRef).toBe('DOC-034');
+  expect(range).toHaveBeenCalledWith(30,59);
+  expect(mocks.embed).not.toHaveBeenCalled();
+});
+
+it('échoue explicitement quand le corpus change pendant la pagination',async()=>{
+  const many=Array.from({length:30},(_,i)=>({
+    article_ref:'DOC-'+i,content:'Publicité',source_url:'https://www.legifrance.gouv.fr/loda/id/TEST',
+  }));
+  mocks.create.mockImplementation(()=>({from:()=>({select:()=>({
+    order:()=>({limit:vi.fn().mockResolvedValue({data:many,error:null,count:35}),
+      range:vi.fn().mockResolvedValue({data:many.slice(0,5),error:null,count:36})}),
+  })}),rpc:mocks.rpc}));
+  await expect(retrieveLawSources('Publicité')).rejects.toThrow('Corpus modifié');
+});

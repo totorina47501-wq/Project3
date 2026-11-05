@@ -5,29 +5,48 @@ import { chooseLawSources, validatedLawSource, type LawSource } from '@/lib/mia/
 import { hasCompleteLawIndex, MIA_MIN_VECTOR_SIMILARITY, rankHybridLawSources } from '@/lib/mia/hybrid';
 import type { ModelTelemetry } from '@/lib/ai/schemas';
 
+const CORPUS_PAGE_SIZE = 30;
+const MAX_CORPUS_ROWS = 1000;
+
+// Lecture bornée et paginée : aucune suppression silencieuse au-delà des 30 premières sources.
+async function readLawCorpus(admin: ReturnType<typeof createAdminSupabase>) {
+  const rows: Array<{ article_ref: unknown; content: unknown; source_url: unknown; effective_on?: unknown; checked_at?: unknown }> = [];
+  let total = 0;
+  for (let offset = 0; offset < MAX_CORPUS_ROWS; offset += CORPUS_PAGE_SIZE) {
+    const query = admin.from('law_documents')
+      .select('article_ref,content,source_url,effective_on,checked_at', { count: 'exact' })
+      .order('article_ref', { ascending: true });
+    const { data, error, count } = offset === 0
+      ? await query.limit(CORPUS_PAGE_SIZE)
+      : await query.range(offset, offset + CORPUS_PAGE_SIZE - 1);
+    if (error || !data || count === null) throw new Error('Corpus de référence indisponible.');
+    if (offset === 0) total = count;
+    if (count !== total) throw new Error('Corpus modifié pendant la lecture.');
+    rows.push(...data);
+    if (rows.length >= total) return { rows, total };
+  }
+  throw new Error('Corpus juridique trop volumineux pour cette stratégie de recherche.');
+}
+
 export async function retrieveLawSources(question: string, onEmbeddingUsage?: (usage: ModelTelemetry) => void | Promise<void>): Promise<LawSource[]> {
   const vectorEnabled = process.env.MIA_VECTOR_SEARCH_ENABLED === 'true' &&
     openaiCapabilityEnabled('embeddings', process.env) &&
     Boolean(process.env.OPENAI_API_KEY?.trim());
   const admin = createAdminSupabase();
-  const { data, error, count } = await admin.from('law_documents')
-    .select('article_ref,content,source_url,effective_on,checked_at', { count: 'exact' })
-    .order('article_ref', { ascending: true }).limit(30);
-  if (error || !data) throw new Error('Corpus de référence indisponible.');
-
-  const sources: LawSource[] = data.flatMap((item) => {
+  const { rows, total } = await readLawCorpus(admin);
+  const sources: LawSource[] = rows.flatMap((item) => {
     const validated = validatedLawSource(item);
     return validated ? [validated] : [];
   });
   const lexical = chooseLawSources(question, sources);
   // Les appels embeddings ne sont jamais tentés si l'index est partiel, le modèle
   // diverge, la lecture est tronquée ou une référence a échoué au contrôle.
-  if (!vectorEnabled || count !== data.length || sources.length !== data.length) return lexical;
+  if (!vectorEnabled || total !== rows.length || sources.length !== rows.length || total > CORPUS_PAGE_SIZE) return lexical;
   const { data: indexRows, error: indexError, count: indexCount } =
     await admin.from('law_documents')
       .select('article_ref,embedding_model,embedding', { count: 'exact' }).limit(30);
   const references = new Set(sources.map((source) => source.articleRef));
-  if (indexError || !indexRows || indexCount !== data.length ||
+  if (indexError || !indexRows || indexCount !== rows.length ||
       !indexRows.every((row) => references.has(row.article_ref)) ||
       !hasCompleteLawIndex(indexRows, OPENAI_MODELS.embeddings)) return lexical;
 
