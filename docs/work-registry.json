@@ -362,7 +362,7 @@
       "status": "partial",
       "anchor": "app/legal/mentions-legales/page.tsx",
       "test": "tests/e2e/landing.spec.ts",
-      "doc": "docs/01-architecture.md",
+      "doc": "docs/19-seo-release-plan.md",
       "aliases": [
         "seo",
         "mentions",
@@ -372,7 +372,8 @@
       "routes": [],
       "migrations": [],
       "next": [
-        "Identité juridique et contenu final non validés."
+        "Identité juridique et contenu final non validés.",
+        "Accueil SEO éditorial, canonical et liaison vers tarifs indicatifs ; tests Playwright mis à jour, sans indexer les tarifs. Voir docs/19-seo-release-plan.md."
       ]
     },
     {

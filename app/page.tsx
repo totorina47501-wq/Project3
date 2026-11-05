@@ -52,6 +52,35 @@ export default function Home() {
             </article>
           ))}
         </section>
+        <section aria-labelledby="pour-qui" className="pb-20">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 id="pour-qui" className="font-heading text-3xl font-bold text-primary sm:text-4xl">Pour qui est fait MentionCheck ?</h2>
+            <p className="mt-4 leading-7 text-slate-600">
+              Que vous soyez créateur de contenu, influenceur ou freelance, préparez vos publications
+              sponsorisées avec davantage de clarté sur les mentions commerciales à afficher.
+            </p>
+          </div>
+          <div className="mt-8 grid gap-5 md:grid-cols-3">
+            {[
+              { title: 'Créateurs de contenu', text: 'Relisez les légendes de vos collaborations avant de publier.' },
+              { title: 'Influenceurs', text: 'Repérez les formulations commerciales ambiguës et les mentions à clarifier.' },
+              { title: 'Freelances et studios', text: 'Préparez les textes de vos campagnes et gardez la validation finale.' },
+            ].map(item => <article key={item.title} className="rounded-3xl border border-slate-200 bg-white p-7">
+              <h3 className="font-heading text-xl font-bold text-primary">{item.title}</h3>
+              <p className="mt-3 leading-7 text-slate-600">{item.text}</p>
+            </article>)}
+          </div>
+        </section>
+        <section aria-labelledby="offres" className="mb-16 rounded-3xl bg-indigo-50 px-6 py-10 text-center sm:px-10">
+          <h2 id="offres" className="font-heading text-3xl font-bold text-primary">Des offres selon votre rythme</h2>
+          <p className="mx-auto mt-4 max-w-2xl leading-7 text-slate-600">
+            Découvrez les formules Solo, Pro et Studio. Les tarifs sont indicatifs et les abonnements
+            payants ne sont pas encore ouverts.
+          </p>
+          <Link href="/tarifs" className="mt-6 inline-flex rounded-xl bg-primary px-6 py-3 font-semibold text-white hover:bg-slate-800">
+            Comparer les tarifs indicatifs
+          </Link>
+        </section>
         <footer className="border-t border-slate-200 py-7 text-center text-sm text-slate-500">
           <nav aria-label="Informations publiques" className="mb-4 flex flex-wrap justify-center gap-5">
             <Link href="/tarifs" className="underline hover:text-accent">Tarifs indicatifs</Link>

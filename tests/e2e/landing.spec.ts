@@ -6,6 +6,9 @@ test('accueil public MentionCheck', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 }))
     .toContainText("L'IA qui check vos mentions légales");
   await expect(page.getByRole('link', { name: 'Créer un compte' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pour qui est fait MentionCheck ?' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Comparer les tarifs indicatifs' })).toHaveAttribute('href', '/tarifs');
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /mentioncheck\\.toto-rina47501\\.workers\\.dev\\/$/);
 });
 
 test('formulaire de connexion disponible sur mobile', async ({ page }) => {
