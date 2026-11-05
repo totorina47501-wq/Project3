@@ -153,8 +153,8 @@
       "routes": [],
       "migrations": [],
       "next": [
-        "Le transport privé et le conteneur testés en CI sont réutilisés par le mode one-shot Cloudflare. Aucun appel OpenAI ni transcription.",
-        "Déploiement via le Workers Builds connecté à main ; contrôler le dernier déploiement et la recette réelle dans docs/41-cloudflare-containers.md."
+        "Préparation Cloudflare réelle validée sur carrousel et vidéo avec 8 artefacts privés, SHA-256 et arrêt à vide ; voir docs/41-cloudflare-containers.md.",
+        "Les anciens guides hors ligne restent utiles aux processeurs ; aucun autre hôte à créer. Analyse IA vidéo et transcription non implémentées par ce runner."
       ]
     },
     {
@@ -490,8 +490,8 @@
         "supabase/migrations/20261105084500_private_media_outputs.sql"
       ],
       "next": [
-        "Baux et bucket privé déjà appliqués. La configuration Cloudflare autorisée active la préparation et réveille un Durable Object interne à chaque enqueue authentifié.",
-        "Une instance basic maximum, UE, arrêt one-shot, watchdog 270 s, plafond de 60 démarrages/heure ; MEDIA_RUNNER_PAUSED=true sert de coupe-circuit. Voir docs/41-cloudflare-containers.md."
+        "File et runner Cloudflare opérationnels ; deux jobs synthétiques completed en une tentative, contrôles de propriété et finalisation CAS conservés.",
+        "Une instance basic maximum en UE ; suivre le budget et le coupe-circuit MEDIA_RUNNER_PAUSED. Compte de recette désactivé ; voir docs/receipts/2026-11-05-cloudflare-media.json."
       ]
     }
   ]

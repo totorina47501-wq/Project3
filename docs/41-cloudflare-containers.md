@@ -111,3 +111,30 @@ le fetch natif Cloudflare (reproduit sous workerd avec `nodejs_compat`). Le
 contrôleur utilise `manual` et refuse toute réponse HTTP non réussie, y compris
 une redirection. Les identifiants ne sont donc pas suivis vers une autre adresse.
 Le client Node du conteneur conserve son mode `error`, valide dans Node.
+
+## Recette réelle réussie
+
+Code applicatif validé : `8091ce0aec24e8d4e4b6481ee2d7a4d0b810581c`.
+Les deux jobs synthétiques ont terminé en une seule tentative :
+
+- Carrousel : 2 WebP + manifeste, terminé le 5 novembre à 11:47:32 UTC.
+- Vidéo : 3 JPEG + WAV mono + manifeste, terminé à 11:48:01 UTC.
+- Les 8 objets sont présents dans le bucket privé avec les tailles attendues.
+  Le runner les a relus et a vérifié leurs SHA-256 avant finalisation SQL.
+- Les deux vérifications ont une preuve SHA-256 et `analysisMode=rules_only`.
+  `aiCalls=0` et aucune ligne de coût IA liée à ces vérifications.
+- Statut final : `configured=true`, `running=false`, `phase=idle`, lecture HTTP 200.
+- La trace `lastError` conserve les erreurs des essais initiaux corrigés ; elle
+  n’est pas effacée automatiquement après succès. Ce champ ne décrit pas à lui
+  seul une panne active : le rapprocher de phase, statut HTTP et résultats des jobs.
+- Compte technique désactivé, 4 sessions expirées ; fichiers/preuves conservés.
+  Aucune suppression de production, aucun appel OpenAI ni abonnement ajouté.
+
+Les 268 tests unitaires et les autres contrôles passent. CI qualité, recette
+Docker et deux déploiements Workers Builds sont verts sur le SHA applicatif.
+Le [relevé minimisé](receipts/2026-11-05-cloudflare-media.json) conserve hashes,
+tailles, modèles de statut et liens des checks sans clé, cookie ou identité du compte.
+
+Le runner est opérationnel dans Cloudflare : ne pas demander un nouvel hôte
+ou recopier des secrets pour refaire ce raccordement. Il prépare les médias ;
+l’analyse IA vidéo et la transcription restent des développements distincts.

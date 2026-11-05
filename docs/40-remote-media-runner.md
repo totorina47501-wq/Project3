@@ -1,5 +1,9 @@
 # Runner média distant — raccordement du 5 novembre 2026
 
+**Mise à jour :** l’exécution Cloudflare Containers est désormais validée réellement.
+Lire [le bilan actuel](41-cloudflare-containers.md) avant d’envisager un nouvel hôte.
+Les limites d’accès Docker ci-dessous décrivent l’environnement de développement.
+
 ## État livré
 
 Le runner Node récupère un job par les RPC SQL déjà présentes. Il utilise les

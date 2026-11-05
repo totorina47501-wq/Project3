@@ -11,7 +11,7 @@ Lire [REPRISE.md](REPRISE.md), puis le [registre anti-doublons](docs/work-regist
 
 ## Stack
 
-Cloudflare Workers + Next.js App Router + TypeScript strict + Supabase Auth/PostgreSQL/Storage + GPT-4o + OpenNext.
+Cloudflare Workers + Containers à la demande + Next.js App Router + TypeScript strict + Supabase Auth/PostgreSQL/Storage + GPT-4o + OpenNext.
 
 ## Développement
 
@@ -79,3 +79,12 @@ La migration `supabase/migrations/20261104200500_internal_completion.sql` est li
 Commandes : `npm run work:check`, `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:video:offline`, `npm run test:carousel:offline`, `npm run test:media-jobs:offline`, `npm run test:sql-harness`, `npm run test:sql:offline`, `npm run test:e2e`, `npm run build`.
 
 Détails et limites : docs/12-internal-delivery.md, docs/13-sql-offline.md. Aucune activation OpenAI, Stripe, Resend, OAuth ou purge destructive n’est incluse.
+
+## Préparation média Cloudflare validée
+
+Le runner prépare réellement les carrousels et vidéos dans Cloudflare Containers,
+avec stockage privé Supabase, contrôle des hashes, baux SQL et arrêt à vide.
+La recette du 5 novembre 2026 sur `8091ce0` a produit 8 artefacts en deux jobs,
+sans appel OpenAI. Ce périmètre ne comprend pas l’analyse IA des frames ni la
+transcription. Voir [le bilan actuel](docs/41-cloudflare-containers.md) et
+[REPRISE.md](REPRISE.md) avant de refaire un raccordement.

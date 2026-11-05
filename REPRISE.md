@@ -31,8 +31,8 @@ sans comparer avec ces preuves plus récentes.
 - RGPD : préférences, consentements, export paginé et demandes d’effacement ;
   tests d’effacement uniquement sur base locale jetable.
 - Pipeline vidéo/carrousel, extraction FFmpeg/Sharp, file SQL, reprise et tests médias.
-  Transport Storage distant, commande opt-in et conteneur livrés ; hébergement
-  et démarrage non réalisés. Voir [docs/40-remote-media-runner.md](docs/40-remote-media-runner.md).
+  Transport Storage et exécution Cloudflare Containers désormais opérationnels,
+  validés réellement sur carrousel et vidéo. Voir [docs/41-cloudflare-containers.md](docs/41-cloudflare-containers.md).
 - Mia : corpus juridique déjà indexé **5/5**, recherche hybride, historique,
   citations et coûts par compte. Ne pas relancer l’indexation initiale.
 - GPT-4o texte, réécriture et Vision validés réellement en mode complet.
@@ -81,11 +81,11 @@ dans un autre environnement n’est pas garantie.
 
 1. Inspecter `workers/media-jobs`, `workers/video`, `workers/carousel` et
    [le pipeline média local](docs/35-local-media-pipeline.md).
-2. Réutiliser le transport privé livré et choisir/configurer l’hébergement du
-   runner : [procédure](docs/40-remote-media-runner.md). Le bucket dérivé est créé
-   privé et vide ; aucune activation. Docker est installé ici mais son démon est inaccessible.
-3. Recetter ce raccordement avant toute activation. L’analyse vidéo/carrousel
-   de bout en bout et la transcription audio ne sont pas validées en production.
+2. Le runner Cloudflare existe déjà : ne pas recréer un hébergement. Lire le
+   [bilan réel](docs/41-cloudflare-containers.md) et surveiller les limites de coût
+   et la file. Les médias synthétiques et leurs preuves sont conservés.
+3. Préparation média de bout en bout validée sur Cloudflare ; analyse IA des
+   frames et transcription audio restent à développer/valider séparément.
 4. Traiter ensuite OAuth, email et paiement selon l’autorisation et les accès
    disponibles, puis les coordonnées légales et accords prestataires.
 
@@ -160,3 +160,17 @@ intentionnellement pour ce déploiement ; les autres secrets restent préservés
 Le coupe-circuit runtime est `MEDIA_RUNNER_PAUSED=true`. Aucun appel IA ajouté.
 Le statut réel doit être contrôlé sur le dernier SHA et via la route média
 avec un compte authentifié ; un build réussi seul ne prouve pas une extraction.
+
+## Dernier état opérationnel — à lire en priorité
+
+Le runner Cloudflare est validé réellement sur le code `8091ce0` : carrousel et
+vidéo terminés en une tentative, 8 artefacts privés, preuves SQL, zéro appel IA.
+Le conteneur est arrêté à vide (`idle`), le compte de recette est désactivé et
+ses 4 sessions sont expirées. Les checks qualité/Docker et deux déploiements
+Cloudflare sont verts sur ce SHA. Les commits documentaires suivants ne changent
+pas cette recette. Relevé : [docs/receipts/2026-11-05-cloudflare-media.json](docs/receipts/2026-11-05-cloudflare-media.json).
+
+Le dernier `lastError` de l’objet est historique ; ne pas conclure à une panne
+si phase=idle et les jobs sont completed. Deux incompatibilités fetch natives
+ont été reproduites et corrigées. Ne pas retester en consommant des médias
+réels ou des appels OpenAI sans nécessité.

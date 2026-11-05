@@ -1,0 +1,146 @@
+{
+  "project": "MentionCheck",
+  "date": "2026-11-05",
+  "validatedCodeCommit": "8091ce0aec24e8d4e4b6481ee2d7a4d0b810581c",
+  "provider": "Cloudflare Containers",
+  "appUrl": "https://mentioncheck.toto-rina47501.workers.dev",
+  "results": [
+    {
+      "kind": "carousel",
+      "status": "completed",
+      "attempts": 1,
+      "failure_code": null,
+      "completed_at": "2026-11-05 11:47:32.288758+00",
+      "ai_calls": "0",
+      "artifacts": [
+        {
+          "name": "slide-01.webp",
+          "bytes": 11114,
+          "sha256": "ffdf0614b05d352bc13262164731aa30cfbe57237e1fa0f80863b808d356898b"
+        },
+        {
+          "name": "slide-02.webp",
+          "bytes": 200,
+          "sha256": "b836bd20ba2469ffa1d792df63693082d8b76a69c0114ccc4f2b71ffb1d6e436"
+        },
+        {
+          "name": "manifest.json",
+          "bytes": 832,
+          "sha256": "86faf5c8ab1a2efe0bf43740827f341fdebd2d8900128fcab2bede32c5b6ff6d"
+        }
+      ],
+      "output_bucket": "verification-media-derived",
+      "analysis_mode": "rules_only",
+      "hash_sha256": "98833d4f2502714bdf159a1f2daf21907595a2454ce99942eef5b81ad80610a1",
+      "ai_ledger_rows": 0,
+      "stored_artifacts": 3
+    },
+    {
+      "kind": "video",
+      "status": "completed",
+      "attempts": 1,
+      "failure_code": null,
+      "completed_at": "2026-11-05 11:48:01.751468+00",
+      "ai_calls": "0",
+      "artifacts": [
+        {
+          "name": "frame-01.jpg",
+          "bytes": 2026,
+          "sha256": "05ad2c48c77dd8df0c13430807a1b440f5c88908bd433e3d1223bf1d658646ad"
+        },
+        {
+          "name": "frame-02.jpg",
+          "bytes": 2026,
+          "sha256": "05ad2c48c77dd8df0c13430807a1b440f5c88908bd433e3d1223bf1d658646ad"
+        },
+        {
+          "name": "frame-03.jpg",
+          "bytes": 2026,
+          "sha256": "05ad2c48c77dd8df0c13430807a1b440f5c88908bd433e3d1223bf1d658646ad"
+        },
+        {
+          "name": "audio-mono.wav",
+          "bytes": 32078,
+          "sha256": "a1c05b09f834664cb8abaab54e46e86c60d8abdac8fd52601858874d3c01b2e7"
+        },
+        {
+          "name": "manifest.json",
+          "bytes": 999,
+          "sha256": "648fbae291a956290238e1c7c89856b1db329eeb493d7e39e65ad6479966a48b"
+        }
+      ],
+      "output_bucket": "verification-media-derived",
+      "analysis_mode": "rules_only",
+      "hash_sha256": "37860f71db456af385b4e2a1224f6a72b2fc0a0498589dae2c7e011f4166b496",
+      "ai_ledger_rows": 0,
+      "stored_artifacts": 5
+    }
+  ],
+  "runner": {
+    "revision": "cloudflare-media-v4",
+    "configured": true,
+    "running": false,
+    "phase": "idle",
+    "httpStatus": 200,
+    "historicalError": "RUNNER_UNAVAILABLE",
+    "historicalErrorNote": "Trace des premiers essais avant correction du contexte fetch et du mode redirect ; les deux jobs ont ensuite réussi en une tentative."
+  },
+  "tests": {
+    "unit": 268,
+    "unitFiles": 62,
+    "media": 72,
+    "sqlSuites": 8,
+    "sqlHarness": 4,
+    "privacy": 7,
+    "training": 22,
+    "fixtures": 6,
+    "playwrightPassed": 21,
+    "playwrightSkipped": 1,
+    "typecheck": "passed",
+    "lint": "passed",
+    "nextBuild": "passed",
+    "openNextBundle": "passed",
+    "wranglerDryRun": "passed"
+  },
+  "checks": [
+    {
+      "name": "Workers Builds: mentioncheck",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/totorina47501-wq/Project3/runs/127225066953"
+    },
+    {
+      "name": "Workers Builds: mentioncheck-media-retention",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/totorina47501-wq/Project3/runs/127224175875"
+    },
+    {
+      "name": "Image du runner média (sans fournisseur)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/totorina47501-wq/Project3/actions/runs/42021057209/job/127223641431"
+    },
+    {
+      "name": "quality",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/totorina47501-wq/Project3/actions/runs/42021057209/job/127223640977"
+    }
+  ],
+  "cleanup": {
+    "technicalAccountDisabled": true,
+    "technicalSessionsExpired": 4,
+    "productionDeletions": 0,
+    "sourceAndOutputFilesPreserved": true
+  },
+  "openaiCalls": 0,
+  "newSubscriptions": 0,
+  "costNote": "Utilisation du forfait Cloudflare existant ; aucun relevé de facturation Containers n’a été consulté. Les quotas et dépassements éventuels s’appliquent.",
+  "limits": [
+    "Préparation technique vidéo/carrousel et contrôle de légende par règles seulement.",
+    "Aucune analyse IA des frames ni transcription ajoutée.",
+    "Les diagnostics conservent l’historique du dernier échec, même après retour à idle.",
+    "Rétention et effacement destructif restent désactivés."
+  ]
+}
