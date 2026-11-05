@@ -3,9 +3,10 @@ name: Copilot docs trusted validation
 # PRs authored by Copilot may be blocked with action_required before normal CI
 # can start. This trusted event runs the *default branch* workflow without
 # checking out or executing any untrusted PR content.
+# Only explicitly opted-in documentation PRs run this check; code PRs skip it.
 on:
   pull_request_target:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
 
 permissions:
   contents: read
@@ -17,7 +18,7 @@ concurrency:
 
 jobs:
   validate:
-    if: ${{ github.event.pull_request.user.login == 'Copilot' && github.event.pull_request.base.ref == 'main' }}
+    if: ${{ github.event.pull_request.user.login == 'Copilot' && github.event.pull_request.base.ref == 'main' && contains(github.event.pull_request.labels.*.name, 'factory:auto-merge-safe') }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
