@@ -41,3 +41,12 @@ it('borne les démarrages horaires et les reprises après panne de file',async()
  await f.runner.alarm();expect(f.container.start).not.toHaveBeenCalled();expect(f.alarm()).toBeGreaterThan(now);
  const g=fixture();g.fetcher.mockRejectedValue(new Error('message privé'));for(let i=0;i<5;i++)await g.runner.alarm();expect(g.alarm()).toBeNull();
 });
+it('appelle fetch avec le contexte global exigé par le runtime Cloudflare',async()=>{
+ const f=fixture();
+ const nativeLike=vi.fn(function(this:unknown){
+  if(this!==globalThis)throw new TypeError('Illegal invocation');
+  return Promise.resolve(Response.json([{status:'queued',available_at:new Date(now-1).toISOString()}]));
+ });
+ const controller=new CloudflareMediaController({storage:f.storage,container:f.container},f.env,nativeLike,()=>now);
+ await controller.alarm();expect(f.container.start).toHaveBeenCalledOnce();
+});

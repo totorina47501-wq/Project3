@@ -92,3 +92,13 @@ Playwright : 21 réussis et 1 ignoré. TypeScript, lint, build Next.js,
 bundle OpenNext et `wrangler deploy --dry-run --containers-rollout=none`
 réussis. Ce dry-run confirme le bundle et les bindings, pas le déploiement
 ou l’extraction réelle ; leur résultat doit être contrôlé après publication.
+
+## Correctif observé pendant la recette réelle
+
+Le premier déploiement et la reconnaissance du runner ont réussi. La recette
+réelle a ensuite révélé une erreur avant claim : l’appel `fetch` conservé comme
+méthode recevait le contrôleur comme `this`. Le runtime workerd reproduit
+`Illegal invocation`, alors que les mocks Node initiaux l’acceptaient.
+L’appel fixe explicitement `globalThis` comme receveur ; une régression teste
+cette frontière runtime. Les jobs en attente restent réutilisables sans upload
+supplémentaire. Aucun résultat partiel n’est annoncé comme une extraction réussie.

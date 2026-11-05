@@ -75,7 +75,7 @@ export class CloudflareMediaController {
       endpoint.searchParams.set('order', 'available_at.asc');
       endpoint.searchParams.set('limit', '100');
       const key = this.env.SUPABASE_SERVICE_KEY!;
-      const response = await this.fetcher(endpoint, { headers: { apikey: key, Authorization: `Bearer ${key}` },
+      const response = await this.fetcher.call(globalThis, endpoint, { headers: { apikey: key, Authorization: `Bearer ${key}` },
         redirect: 'error', signal: AbortSignal.timeout(10_000), cache: 'no-store' });
       if (!response.ok) throw new Error('File indisponible.');
       const jobs: unknown = await response.json();
