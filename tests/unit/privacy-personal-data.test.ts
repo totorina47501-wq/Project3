@@ -48,3 +48,11 @@ it('signale explicitement un export trop volumineux sans livrer un JSON partiel'
   expect(response.status).toBe(413);
   expect(await response.text()).toContain('extraction accompagnée');
 });
+
+it('inclut les artefacts dérivés privés du seul propriétaire dans le manifeste RGPD',async()=>{
+ const client=mocks.admin();
+ client.storage.from=(bucket:string)=>({list:async(prefix:string,options:{offset:number})=>({data:bucket==='verification-media-derived'&&prefix==='owner'&&options.offset===0?[{id:'derived-file',name:'slide-01.webp',metadata:{size:100}}]:[],error:null})});
+ const response=await GET();expect(response.status).toBe(200);
+ const result=await response.json();
+ expect(result.privateFiles).toContainEqual({bucket:'verification-media-derived',path:'owner/slide-01.webp',id:'derived-file',metadata:{size:100}});
+});

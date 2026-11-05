@@ -1,0 +1,25 @@
+# Hôte Linux avec Docker Compose ; aucun port réseau entrant.
+services:
+  media-runner:
+    build:
+      context: ../..
+      dockerfile: workers/media-jobs/Dockerfile
+    environment:
+      MEDIA_RUNNER_ENABLED: ${MEDIA_RUNNER_ENABLED:-false}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY:-}
+      MEDIA_RUNNER_WORK_ROOT: /work
+      MEDIA_RUNNER_POLL_MS: ${MEDIA_RUNNER_POLL_MS:-5000}
+    user: "1000:1000"
+    read_only: true
+    init: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /work:uid=1000,gid=1000,mode=0700,size=512m
+      - /tmp:uid=1000,gid=1000,mode=0700,size=64m
+    mem_limit: 1g
+    cpus: 1.5
+    pids_limit: 128
+    stop_grace_period: 40s
+    restart: "no"

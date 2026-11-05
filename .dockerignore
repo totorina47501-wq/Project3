@@ -1,0 +1,16 @@
+.git
+node_modules
+.next
+.open-next
+.wrangler
+.env
+.env.*
+**/.env
+**/.env.*
+.dev.vars*
+**/.dev.vars*
+.local-training
+playwright-report
+test-results
+coverage
+*.log

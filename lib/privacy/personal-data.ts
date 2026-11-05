@@ -58,7 +58,7 @@ export async function readPersonalData(user: ExportUser) {
         .eq('email',user.email!.toLowerCase()).order('id',{ascending:true}).range(offset,offset+size-1));
   }
   const privateFiles = [];
-  for (const bucket of ['verification-media','deal-contracts']) {
+  for (const bucket of ['verification-media','deal-contracts','verification-media-derived']) {
     privateFiles.push(...await listPrivateFiles(bucket,user.id,(prefix,offset)=>
       admin.storage.from(bucket).list(prefix,{limit:1000,offset,sortBy:{column:'name',order:'asc'}})));
   }

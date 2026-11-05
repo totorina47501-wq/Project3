@@ -1,6 +1,6 @@
 # Jobs média locaux MentionCheck
 
-Cet exécuteur termine la préparation **hors ligne** des jobs vidéo et carrousel.
+La commande locale termine la préparation **hors ligne** des jobs vidéo et carrousel.
 Il appelle exclusivement `workers/video/src/process.mjs` et
 `workers/carousel/src/process.mjs` : aucune seconde implémentation du décodage.
 Il ne contacte ni fournisseur, ni Supabase, ni file distante et ne s'active pas
@@ -94,3 +94,14 @@ observée avec le runtime Node de cet environnement ; aucun test n'est skippé.
 Ce pipeline ne réalise ni OCR, ni analyse IA de conformité, ni transcription.
 L'intégration au site et aux prestataires reste désactivée. Aucun résultat local
 ne prouve un déploiement, une analyse vidéo ou un traitement de médias de production.
+
+## Adaptateur distant opt-in
+
+`src/remote-queue.mjs` réutilise ces processeurs et les RPC de baux existantes.
+`src/remote-run.mjs` fournit la commande `npm run media:runner` : désactivée par
+défaut, sans serveur entrant, sans appel IA et sans suppression Storage.
+Le guide [../../docs/40-remote-media-runner.md](../../docs/40-remote-media-runner.md)
+décrit les secrets serveur, le bucket privé, les limites et le conteneur.
+Les tests `remote-queue.test.mjs` transportent des fichiers synthétiques avec
+Storage simulé et Sharp/FFmpeg réels, dont une finalisation via PostgreSQL local.
+Cela ne constitue pas une recette de Storage réel ni une exécution distante.

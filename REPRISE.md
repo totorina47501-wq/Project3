@@ -14,7 +14,7 @@
 ## Lire avant toute modification
 
 1. [Registre anti-doublons](docs/work-registry.json) : 21 domaines,
-   35 routes et 14 fichiers de migration référencés au moment de la livraison.
+   35 routes et 15 fichiers de migration référencés au moment de la livraison.
 2. [Bilan réel OpenAI](docs/37-real-openai-validation.md) et son
    [relevé minimisé](docs/receipts/2026-11-05-openai.json).
 3. [Livraison interne précédente](docs/36-internal-delivery-validation.md),
@@ -30,8 +30,9 @@ sans comparer avec ces preuves plus récentes.
 - Studio : espaces, rôles, invitations et clés API, avec tests locaux SQL/HTTP.
 - RGPD : préférences, consentements, export paginé et demandes d’effacement ;
   tests d’effacement uniquement sur base locale jetable.
-- Pipeline vidéo/carrousel hors ligne, extraction FFmpeg/Sharp, file SQL,
-  reprise et tests médias. Son exploitation distante reste à raccorder.
+- Pipeline vidéo/carrousel, extraction FFmpeg/Sharp, file SQL, reprise et tests médias.
+  Transport Storage distant, commande opt-in et conteneur livrés ; hébergement
+  et démarrage non réalisés. Voir [docs/40-remote-media-runner.md](docs/40-remote-media-runner.md).
 - Mia : corpus juridique déjà indexé **5/5**, recherche hybride, historique,
   citations et coûts par compte. Ne pas relancer l’indexation initiale.
 - GPT-4o texte, réécriture et Vision validés réellement en mode complet.
@@ -47,6 +48,7 @@ Projet Supabase : `zcztvberuihphqklhjsr`.
 | `20261104225500_media_processing_queue.sql` | `media_processing_queue` | `20261105000826` |
 | `20261105003500_ai_usage_ownership.sql` | `ai_usage_ownership` | `20261105003303` |
 | `20261105082000_quota_reservation_period.sql` | `quota_reservation_period` | `20261105081854` |
+| `20261105084500_private_media_outputs.sql` | `private_media_outputs` | `20261105083555` |
 
 La réservation renvoie sa période UTC ; chaque remboursement réutilise cette période.
 Les anciennes signatures sont conservées pour le déploiement progressif.
@@ -79,8 +81,9 @@ dans un autre environnement n’est pas garantie.
 
 1. Inspecter `workers/media-jobs`, `workers/video`, `workers/carousel` et
    [le pipeline média local](docs/35-local-media-pipeline.md).
-2. Définir le transport privé des sources/sorties et l’hébergement du runner
-   continu en réutilisant les baux, reprises et permissions existants.
+2. Réutiliser le transport privé livré et choisir/configurer l’hébergement du
+   runner : [procédure](docs/40-remote-media-runner.md). Le bucket dérivé est créé
+   privé et vide ; aucune activation. Docker est installé ici mais son démon est inaccessible.
 3. Recetter ce raccordement avant toute activation. L’analyse vidéo/carrousel
    de bout en bout et la transcription audio ne sont pas validées en production.
 4. Traiter ensuite OAuth, email et paiement selon l’autorisation et les accès
@@ -135,3 +138,6 @@ Ces chiffres sont attachés au commit applicatif ci-dessus, pas à un futur trav
 Le correctif suivant couvre la journalisation embedding, les périodes de quota et le
 CTA Solo de test. Il conserve les tarifs, le SEO et les contraintes de production.
 Consulter son bilan dans [docs/39-technical-reliability.md](docs/39-technical-reliability.md).
+
+Le raccordement Storage est livré séparément du démarrage distant. Aucun appel IA
+ni transcription n’est ajouté au runner. Son guide est [docs/40-remote-media-runner.md](docs/40-remote-media-runner.md).

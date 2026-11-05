@@ -153,8 +153,8 @@
       "routes": [],
       "migrations": [],
       "next": [
-        "Sharp/FFmpeg, file SQL atomique, baux et archivage existent.",
-        "Transport distant des sources/sorties et exploitation d’un runner continu restent à raccorder ; aucune activation dans ce lot."
+        "Sharp/FFmpeg, baux SQL et reprise existants réutilisés par le transport distant. Sources et sorties SHA-256 vérifiées ; publication privée relue avant finalisation CAS.",
+        "Commande et conteneur opt-in livrés ; aucun runner hébergé ou démarré. Image Docker non construite ici (accès démon refusé) ; voir docs/40-remote-media-runner.md."
       ]
     },
     {
@@ -486,11 +486,12 @@
         "app/api/media/jobs/route.ts"
       ],
       "migrations": [
-        "supabase/migrations/20261104225500_media_processing_queue.sql"
+        "supabase/migrations/20261104225500_media_processing_queue.sql",
+        "supabase/migrations/20261105084500_private_media_outputs.sql"
       ],
       "next": [
-        "Migration distante appliquée le 5 novembre : media_processing_queue, version 20261105000826. Ne pas la réappliquer.",
-        "Exécution et flags applicatifs restent désactivés jusqu’à recette du runner."
+        "File et bucket dérivé privés appliqués ; bucket vide après migration private_media_outputs, version distante 20261105083555.",
+        "Adaptateur distant réutilisant les RPC existantes livré ; hébergement et secrets du runner à configurer. Flags applicatifs non activés ; voir docs/40-remote-media-runner.md."
       ]
     }
   ]
