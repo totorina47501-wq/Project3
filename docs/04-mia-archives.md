@@ -247,3 +247,7 @@ de la migration. Vérifier la CI, l'état 5/5 et les logs Cloudflare.
 ## Interface de conversation Mia
 
 L'interface présente désormais les messages sous forme de bulles différenciées, un avatar Mia, une saisie compacte, des suggestions de questions et un historique accessible. Sur mobile, les bulles s'adaptent à la largeur et les liens juridiques longs ne provoquent pas de débordement. L'accueil utilise le prénom public Supabase si disponible, sinon le préfixe de l'email, après validation stricte de la longueur et des caractères. Cette personnalisation est purement visuelle : ni le prompt, ni les sources, ni les quotas ne sont modifiés. Ne jamais exposer d'email complet dans le message de bienvenue.
+
+## Extension du corpus — préparation
+
+La lecture lexicale est paginée par 30 entrées, bornée à 1 000 références, avec contrôle du total pendant la lecture. Un corpus dépassant cette limite échoue explicitement, sans prétendre avoir parcouru toutes les sources. Le chemin vectoriel reste conservateur : au-delà de 30 références il est désactivé jusqu'à la mise en place d'une recherche RPC paginée côté PostgreSQL et d'une validation de la couverture des embeddings. Aucun document supplémentaire n'est importé automatiquement par ce lot ; ne pas confondre capacité de lecture et couverture juridique. L'import de textes officiels, leurs versions, l'indexation incrémentale et le contrôle de pertinence restent à réaliser avant activation d'un grand corpus en production.
