@@ -1,0 +1,48 @@
+name: Copilot docs trusted validation
+
+# PRs authored by Copilot may be blocked with action_required before normal CI
+# can start. This trusted event runs the *default branch* workflow without
+# checking out or executing any untrusted PR content.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: copilot-docs-validation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: ${{ github.event.pull_request.user.login == 'Copilot' && github.event.pull_request.base.ref == 'main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate PR metadata and Markdown paths (no PR checkout)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          pr="$(gh api "repos/$REPO/pulls/$NUMBER")"
+          [ "$(jq -r '.state' <<< "$pr")" = open ]
+          [ "$(jq -r '.base.ref' <<< "$pr")" = main ]
+          [ "$(jq -r '.head.sha' <<< "$pr")" = "$EXPECTED_SHA" ]
+          [ "$(jq -r '.head.repo.full_name' <<< "$pr")" = "$REPO" ]
+          [ "$(jq -r '.user.login' <<< "$pr")" = Copilot ]
+          # This is a restricted, documentation-only check. It does not validate
+          # application code, and cannot authorize the existing auto-merge gate.
+          mapfile -t files < <(gh api --paginate "repos/$REPO/pulls/$NUMBER/files?per_page=100" --jq '.[].filename')
+          [ "${#files[@]}" -gt 0 ]
+          for file in "${files[@]}"; do
+            case "$file" in
+              docs/factory/*.md) ;;
+              *) echo "::error::Not an approved factory documentation path: $file"; exit 1 ;;
+            esac
+          done
+          echo "Validated paths and head SHA for Copilot PR #$NUMBER."
