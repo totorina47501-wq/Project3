@@ -6,12 +6,25 @@ import { GET } from '../../app/api/account/export/route';
 
 type Call={table:string;fields:string;filters:Array<[string,unknown]>;offset:number};
 const calls:Call[]=[];
+const ownerScopedRows:Record<string,Record<string,unknown>[]>={
+  usage_monthly:[
+    {user_id:'owner',period_start:'2026-11-01',mia_messages_used:3},
+    {user_id:'other',period_start:'2026-11-01',mia_messages_used:99},
+  ],
+  ai_analyses:[
+    {id:'mia-owner',user_id:'owner',stage:'assistant',model_used:'gpt-4o',cost_usd:.01},
+    {id:'mia-other',user_id:'other',stage:'assistant',model_used:'gpt-4o',cost_usd:9.99},
+  ],
+};
 beforeEach(()=>{
   calls.length=0;
   const from=(table:string)=>{
     const call:Call={table,fields:'',filters:[],offset:0};calls.push(call);
     const query={select:(fields:string)=>{call.fields=fields;return query;},eq:(key:string,value:unknown)=>{call.filters.push([key,value]);return query;},order:()=>query,
-      range:async(offset:number)=>{call.offset=offset;return {data:table==='verifications'?Array.from({length:Math.min(200,1205-offset)},(_,i)=>({id:`v${offset+i}`})):[],count:table==='verifications'?1205:0,error:null};},
+      range:async(offset:number,end:number)=>{call.offset=offset;
+        if(table==='verifications')return {data:Array.from({length:Math.min(200,1205-offset)},(_,i)=>({id:`v${offset+i}`})),count:1205,error:null};
+        const rows=(ownerScopedRows[table]??[]).filter(row=>call.filters.every(([key,value])=>row[key]===value));
+        return {data:rows.slice(offset,end+1),count:rows.length,error:null};},
       single:async()=>({data:{id:'owner',email:'owner@test',ai_training_opt_in:false},error:null})};
     return query;
   };
@@ -38,6 +51,20 @@ describe('Export personnel complet dans le périmètre annoncé',()=>{
     }
     expect(calls.find(call=>call.table==='rewrite_feedback')?.fields).toContain('accepted_caption');
     expect(calls.find(call=>call.table==='ai_analyses')?.fields).toContain('raw_response');
+  });
+  it('exporte les métriques Mia et compteurs de quota du seul propriétaire',async()=>{
+    const response=await GET();
+    expect(response.status).toBe(200);
+    const result=await response.json();
+    expect(result.collections.metrics).toEqual([
+      expect.objectContaining({id:'mia-owner',user_id:'owner',stage:'assistant'}),
+    ]);
+    expect(result.collections.usage).toEqual([
+      expect.objectContaining({user_id:'owner',mia_messages_used:3}),
+    ]);
+    expect(JSON.stringify([result.collections.metrics,result.collections.usage])).not.toContain('other');
+    expect(calls.find(call=>call.table==='ai_analyses')?.filters).toContainEqual(['user_id','owner']);
+    expect(calls.find(call=>call.table==='usage_monthly')?.filters).toContainEqual(['user_id','owner']);
   });
 });
 
