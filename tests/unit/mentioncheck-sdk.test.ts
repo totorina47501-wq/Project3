@@ -13,7 +13,9 @@ describe('MentionCheck SDK', () => {
       new Response(JSON.stringify({ verification: { id: 'ok' } }), { status: 201 }));
     const client = new MentionCheckClient({ apiKey: key, fetchImpl: fetchImpl as typeof fetch });
     expect(await client.check({ caption: 'Publicité', platform: 'instagram' })).toEqual({ verification: { id: 'ok' } });
-    const [url, init] = fetchImpl.mock.calls[0];
+    const call = fetchImpl.mock.calls[0];
+    expect(call).toBeDefined();
+    const [url, init] = call!;
     expect(url).toContain('/api/v1/check');
     expect(init?.method).toBe('POST');
     expect(init?.headers).toMatchObject({ Authorization: 'Bearer ' + key });
