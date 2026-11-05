@@ -1,0 +1,101 @@
+openapi: 3.1.0
+info:
+  title: MentionCheck Studio API
+  version: 1.0.0
+  description: API B2B de vérification textuelle sans IA. Requiert un espace Studio actif et une clé serveur.
+servers:
+  - url: https://mentioncheck.toto-rina47501.workers.dev
+security:
+  - StudioBearer: []
+paths:
+  /api/v1/check:
+    post:
+      operationId: createVerification
+      summary: Contrôler un texte partagé
+      description: Requiert le scope checks:write. N'effectue aucun appel IA.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckInput'
+            example:
+              caption: "Publicité : partenariat rémunéré."
+              platform: instagram
+      responses:
+        '201':
+          description: Vérification créée
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [verification]
+                properties:
+                  verification:
+                    type: object
+                    additionalProperties: true
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '413': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /api/v1/verifications:
+    get:
+      operationId: listVerifications
+      summary: Consulter les dernières vérifications partagées
+      description: Requiert le scope checks:read. Retourne au plus 100 éléments.
+      responses:
+        '200':
+          description: Vérifications du seul espace autorisé
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, limit]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  limit:
+                    type: integer
+                    const: 100
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    StudioBearer:
+      type: http
+      scheme: bearer
+      description: Clé mc_studio_... créée dans Studio. Ne jamais utiliser dans le navigateur.
+  schemas:
+    CheckInput:
+      type: object
+      additionalProperties: false
+      required: [caption, platform]
+      properties:
+        caption:
+          type: string
+          minLength: 1
+          maxLength: 10000
+        platform:
+          type: string
+          enum: [instagram, tiktok, youtube, linkedin]
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+  responses:
+    Error:
+      description: Erreur API (le code HTTP précise la cause)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
