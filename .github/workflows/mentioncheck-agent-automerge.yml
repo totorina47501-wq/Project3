@@ -1,6 +1,9 @@
 name: Agent safe-code auto-merge
 # Trusted workflow only; never check out PR code with a write token.
 on:
+  schedule:
+    - cron: '10,40 * * * *'
+  workflow_dispatch:
   workflow_run:
     workflows: ["MentionCheck CI"]
     types: [completed]
@@ -8,6 +11,7 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
+  actions: read
 concurrency:
   group: mentioncheck-safe-agent-merge
   cancel-in-progress: false
@@ -78,3 +82,59 @@ jobs:
             -f merge_method=squash -f sha="$RUN_SHA" \
             -f commit_title="test: verified Copilot PR #$number"
           echo "Merged fully verified safe Copilot PR #$number." >> "$GITHUB_STEP_SUMMARY"
+
+  recovery:
+    # Fallback if CI finishes before the cloud agent does; no PR checkout.
+    if: ${{ github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/github-script@v7
+        name: Re-evaluate safe completed Copilot PRs
+        with:
+          script: |
+            const owner = context.repo.owner, repo = context.repo.repo;
+            if (context.ref !== 'refs/heads/main' || owner !== 'totorina47501-wq' || repo !== 'Project3') throw Error('Untrusted context');
+            const prs = await github.paginate(github.rest.pulls.list,{owner,repo,state:'open',per_page:100});
+            let checked=0;
+            for (const pr of prs.sort((a,b)=>a.number-b.number)) {
+              if (checked >= 10) break;
+              if (pr.user?.login !== 'Copilot' || pr.base?.ref !== 'main' ||
+                  pr.head?.repo?.full_name !== owner+'/'+repo || !pr.head?.ref?.startsWith('copilot/') ||
+                  pr.labels?.some(l=>l.name==='factory:auto-merge-safe')) continue;
+              checked++;
+              const files=await github.paginate(github.rest.pulls.listFiles,{owner,repo,pull_number:pr.number,per_page:100});
+              const safe=files.length>0 && files.length<=30 && files.every(f=>
+                ['added','modified'].includes(f.status) && f.additions<=500 && f.deletions<=500 &&
+                (/^tests\//.test(f.filename) || /^docs\/.+\.md$/.test(f.filename) || f.filename==='docs/work-registry.json') &&
+                !/^docs\/(12-privacy-security|08-studio|04-mia-archives|42-copilot-mobile-workflow)\.md$/.test(f.filename) &&
+                !/^docs\/(security|contracts|legal)\//.test(f.filename));
+              if (!safe) continue;
+              const sha=pr.head.sha;
+              const runs=await github.paginate(github.rest.actions.listWorkflowRunsForRepo,{owner,repo,branch:pr.head.ref,per_page:100});
+              const ci=runs.filter(r=>r.name==='MentionCheck CI' && r.path==='.github/workflows/ci.yml' &&
+                r.event==='pull_request' && r.head_sha===sha && r.pull_requests?.some(p=>p.number===pr.number))
+                .sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at))[0];
+              if (!ci || ci.conclusion!=='success' || ci.status!=='completed') continue;
+              const agent=runs.filter(r=>r.name==='Running Copilot cloud agent')
+                .sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at))[0];
+              if (!agent || agent.conclusion!=='success' || agent.status!=='completed') continue;
+              const jobs=await github.paginate(github.rest.actions.listJobsForWorkflowRun,
+                {owner,repo,run_id:ci.id,filter:'latest',per_page:100});
+              if (!['quality','Image du runner média (sans fournisseur)'].every(name=>
+                jobs.some(j=>j.name===name && j.conclusion==='success'))) continue;
+              if (pr.draft) await github.graphql(
+                'mutation($id: ID!){markPullRequestReadyForReview(input:{pullRequestId:$id}){pullRequest{isDraft}}}',
+                {id:pr.node_id});
+              const latest=(await github.rest.pulls.get({owner,repo,pull_number:pr.number})).data;
+              if (latest.state!=='open' || latest.draft || latest.head.sha!==sha || latest.base.ref!=='main') continue;
+              try {
+                const merged=await github.rest.pulls.merge({owner,repo,pull_number:pr.number,
+                  merge_method:'squash',sha,commit_title:'test: verified safe Copilot PR #'+pr.number});
+                core.notice('Merged safe Copilot PR #'+pr.number+' at '+merged.data.sha);
+              } catch(e) {
+                core.warning('GitHub refused safe merge for PR #'+pr.number+' (HTTP '+(e.status||'unknown')+')');
+              }
+              return; // main may advance; next pass must revalidate from the new main
+            }
+            core.summary.addRaw('Safe Copilot recovery checked '+checked+' PRs; no eligible merge.');

@@ -30,3 +30,7 @@ Si de nouvelles PR Copilot restent à `action_required`, vérifier l'option admi
 5. Production verte sur le SHA effectivement déployé et possibilité de rollback.
 
 Ne pas confondre automatisation des tâches, fusion sur main et déploiement en production.
+
+## Reprise des fusions sûres
+
+Le workflow existant d'auto-merge conserve ses gardes `workflow_run` et gagne une récupération planifiée à :10/:40 sur `main`, sans checkout de PR. Celle-ci ne fusionne qu'une PR Copilot documentaire/de tests par passage, si l'agent a terminé, que la CI exacte SHA est verte (deux jobs obligatoires) et si GitHub autorise effectivement la fusion. Une CI peut se terminer avant l'agent : cela ne doit plus immobiliser les PR autorisées. Aucun code applicatif, workflow, dépendance ou script n'est fusionné automatiquement. La réussite réelle d'un run planifié et d'une fusion reste à constater avant de déclarer cette partie validée.
