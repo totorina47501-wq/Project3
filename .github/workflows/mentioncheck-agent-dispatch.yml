@@ -31,6 +31,9 @@ jobs:
     timeout-minutes: 5
     env:
       GH_TOKEN: ${{ github.token }}
+      # GITHUB_TOKEN cannot launch a cloud-agent session via an issue assignment.
+      # Use a fine-grained user token held only in GitHub Actions secrets.
+      COPILOT_DISPATCH_TOKEN: ${{ secrets.COPILOT_DISPATCH_TOKEN || secrets.GH_AW_AGENT_TOKEN }}
       REPO: ${{ github.repository }}
       DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
       MAX_ACTIVE: '2'
@@ -85,21 +88,28 @@ jobs:
               exit 0
             fi
 
-            # REST assignment is used, not a personal token. Fail visibly if
-            # the GitHub Copilot agent cannot be assigned by GITHUB_TOKEN.
-            # GitHub exposes the coding agent as the assignable user "Copilot".
-            # "copilot-swe-agent[bot]" is an Actions identity and is not a
-            # reliable issue assignee. Fail closed if this token lacks permission.
-            if ! response="$(gh api --method POST "repos/$REPO/issues/$number/assignees" \
-              -f 'assignees[]=Copilot' 2>&1)"; then
-              echo "::error::Copilot assignment rejected for issue #$number. Check GitHub Actions permissions and Copilot agent availability."
-              echo "Assignment rejected for #$number; inspect this run's error. No assignment claimed." >> "$GITHUB_STEP_SUMMARY"
+            # Copilot issue-assignment REST API requires a user token rather than
+            # the built-in GITHUB_TOKEN. This is a one-time GitHub secret setup.
+            # Never echo the credential, include it in job output, or fall back
+            # to a token incapable of triggering the cloud agent.
+            if [ -z "${COPILOT_DISPATCH_TOKEN:-}" ]; then
+              echo "::error::Missing GitHub secret COPILOT_DISPATCH_TOKEN (or GH_AW_AGENT_TOKEN). Cloud-agent dispatch is NOT fully operational."
+              echo "BLOCKED: no authorized Copilot assignment token configured." >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+            assignment="$(jq -n --arg repo "$REPO" '{assignees:["copilot-swe-agent[bot]"],agent_assignment:{target_repo:$repo,base_branch:"main"}}')"
+            if ! response="$(GH_TOKEN="$COPILOT_DISPATCH_TOKEN" gh api --method POST \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "repos/$REPO/issues/$number/assignees" --input - <<< "$assignment" 2>&1)"; then
+              echo "::error::Copilot API rejected issue assignment #$number; check token permissions and agent access."
+              echo "BLOCKED: Copilot assignment rejected for #$number; no task launch verified." >> "$GITHUB_STEP_SUMMARY"
               exit 1
             fi
             checked="$(gh api "repos/$REPO/issues/$number")"
-            if ! jq -e 'any(.assignees[]?; .login == "Copilot")' <<< "$checked" >/dev/null; then
-              echo "::error::GitHub did not persist Copilot as assignee of issue #$number."
-              echo "Assignment not persisted for #$number. Check Copilot availability and token permissions." >> "$GITHUB_STEP_SUMMARY"
+            if ! jq -e 'any(.assignees[]?; .login == "Copilot" or .login == "copilot-swe-agent[bot]")' <<< "$checked" >/dev/null; then
+              echo "::error::Copilot issue assignment did not persist for #$number."
+              echo "BLOCKED: Copilot assignee missing on issue #$number." >> "$GITHUB_STEP_SUMMARY"
               exit 1
             fi
             echo "Verified Copilot assignee on approved issue #$number." >> "$GITHUB_STEP_SUMMARY"
