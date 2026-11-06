@@ -7,6 +7,9 @@ on:
     branches: [main, feat/mentioncheck-bloc-1-fondations]
 
 # Une seule CI par commit de branche avec PR, et une CI par push sur main.
+permissions:
+  contents: read
+
 concurrency:
   group: mentioncheck-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
