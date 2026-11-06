@@ -53,7 +53,7 @@ jobs:
             [ "$status" != removed ] || exit 0
             [ "$status" != renamed ] || exit 0
             case "$file" in
-              tests/*|docs/*.md|docs/*/*.md|docs/work-registry.json)
+              tests/*|workers/media-jobs/tests/*.test.mjs|docs/*.md|docs/*/*.md|docs/work-registry.json)
                 ;;
               *)
                 echo "Not eligible for trusted auto-merge: $file"
@@ -106,7 +106,7 @@ jobs:
               const files=await github.paginate(github.rest.pulls.listFiles,{owner,repo,pull_number:pr.number,per_page:100});
               const safe=files.length>0 && files.length<=30 && files.every(f=>
                 ['added','modified'].includes(f.status) && f.additions<=500 && f.deletions<=500 &&
-                (/^tests\//.test(f.filename) || /^docs\/.+\.md$/.test(f.filename) || f.filename==='docs/work-registry.json') &&
+                (/^tests\//.test(f.filename) || /^workers\/media-jobs\/tests\/[^/]+\.test\.mjs$/.test(f.filename) || /^docs\/.+\.md$/.test(f.filename) || f.filename==='docs/work-registry.json') &&
                 !/^docs\/(12-privacy-security|08-studio|04-mia-archives|42-copilot-mobile-workflow)\.md$/.test(f.filename) &&
                 !/^docs\/(security|contracts|legal)\//.test(f.filename));
               if (!safe) continue;

@@ -49,7 +49,8 @@ describe('Contrats statiques des workflows agents', () => {
     expect(agentMerge).toContain('index("factory:auto-merge-safe") == null');
     expect(agentMerge).toContain('[ "$(jq -r .head.sha <<< "$pr")" = "$RUN_SHA" ]');
     expect(agentMerge).toContain('[ "$(gh api "repos/$REPO/pulls/$number" --jq \'.head.sha\')" = "$RUN_SHA" ]');
-    expect(agentMerge).toContain('tests/*|docs/*.md|docs/*/*.md|docs/work-registry.json');
+    expect(agentMerge).toContain('tests/*|workers/media-jobs/tests/*.test.mjs|docs/*.md|docs/*/*.md|docs/work-registry.json');
+    expect(agentMerge).toContain('workers\\/media-jobs\\/tests\\/[^/]+\\.test\\.mjs');
     expect(agentMerge).toContain('[ "$count" -gt 0 ] && [ "$count" -le 30 ]');
     expect(agentMerge).toContain('[ "$status" != removed ]');
     expect(agentMerge).toContain('[ "$status" != renamed ]');
