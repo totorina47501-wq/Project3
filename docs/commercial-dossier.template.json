@@ -1,0 +1,32 @@
+{
+  "publisher": {
+    "legalName": "",
+    "legalForm": "",
+    "registeredOffice": "",
+    "registration": "",
+    "contactEmail": "",
+    "publicationDirector": ""
+  },
+  "terms": {
+    "version": "",
+    "taxDisplay": "",
+    "cancellationPolicy": "",
+    "withdrawalPolicy": "",
+    "disputeResolution": ""
+  },
+  "privacy": {
+    "version": "",
+    "contactEmail": "",
+    "retentionSchedule": "",
+    "erasureProcedure": "",
+    "processingRegister": ""
+  },
+  "reviews": {
+    "legal": "",
+    "cloudflareDpa": "",
+    "supabaseDpa": "",
+    "openaiDpa": "",
+    "transfers": "",
+    "billingSandbox": ""
+  }
+}

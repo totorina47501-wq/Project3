@@ -1,6 +1,7 @@
 // WAV privé préparé et validé ; aucun appel sans activation et demande explicites.
 import 'server-only';
 import { toFile } from 'openai';
+import {ModelOutputError} from '@/lib/openai/errors';
 import { openaiClient } from '@/lib/openai/client';
 import { validatePreparedAudio, type AudioPreparation } from '@/lib/openai/validation';
 import {
@@ -18,14 +19,17 @@ export async function transcribePreparedAudio(input: AudioPreparation) {
     file,
   });
   const reported=result.usage?.type==='tokens'?result.usage:null;
+  const usage={model:OPENAI_MODELS.audio,promptTokens:reported?.input_tokens??0,
+    completionTokens:reported?.output_tokens??0,latencyMs:Math.round(performance.now()-started),
+    estimatedCostUsd:estimateAudioCostUsd(input.durationSeconds)};
+  if(typeof result.text!=='string')throw new ModelOutputError('schema_mismatch',usage);
   return {
     text: result.text.trim().slice(0, 12_000),
+    truncated:result.text.trim().length>12_000,
     model: OPENAI_MODELS.audio,
     durationSeconds: input.durationSeconds,
     estimatedCostUsd: estimateAudioCostUsd(input.durationSeconds),
     tokenCountsReported:Boolean(reported),
-    usage:{model:OPENAI_MODELS.audio,promptTokens:reported?.input_tokens??0,
-      completionTokens:reported?.output_tokens??0,latencyMs:Math.round(performance.now()-started),
-      estimatedCostUsd:estimateAudioCostUsd(input.durationSeconds)},
+    usage,
   };
 }

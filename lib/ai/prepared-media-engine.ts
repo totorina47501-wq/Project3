@@ -57,7 +57,11 @@ export async function analyzePreparedMedia(input:Input):Promise<PreparedMediaRes
    durationSeconds:value.durationSeconds,characters:value.text.length,tokenCountsReported:value.tokenCountsReported,
   }));
   coverage.audio=audio?'transcribed':'unavailable';
-  if(audio) transcript=audio.text;
+  if(audio){
+   transcript=audio.text;
+   if(!transcript) warnings.push("Aucune parole exploitable n’a été transcrite dans la piste audio.");
+   if(audio.truncated) warnings.push("La transcription est tronquée ; les paroles restantes n’ont pas été contrôlées.");
+  }
  }
  const observations:Array<{name:string;analysis:string}>=[];
  const aiFlags:AiFlag[]=[];

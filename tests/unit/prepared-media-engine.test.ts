@@ -65,3 +65,15 @@ it('échoue si le journal de coûts ne peut pas être enregistré',async()=>{
  await expect(analyzePreparedMedia(input)).rejects.toThrow('Journal');
  expect(m.text).not.toHaveBeenCalled();
 });
+it('indique explicitement une transcription vide sans prétendre avoir compris des paroles',async()=>{
+ m.load.mockResolvedValue({images:[{name:'frame-01.jpg',dataUrl:'data:one'}],audio:{bytes:new Uint8Array(64),durationSeconds:2},evidence:[],warnings:[]});
+ m.audio.mockResolvedValue({text:'',usage:{...usage,model:'gpt-transcribe'},durationSeconds:2});
+ const result=await analyzePreparedMedia({...input,includeAudio:true});
+ expect(result.coverage.audio).toBe('transcribed');expect(result.warnings.join(' ')).toContain('Aucune parole exploitable');
+});
+it('reste partiel lorsque la transcription demandée échoue',async()=>{
+ m.load.mockResolvedValue({images:[{name:'frame-01.jpg',dataUrl:'data:one'}],audio:{bytes:new Uint8Array(64),durationSeconds:2},evidence:[],warnings:[]});
+ m.audio.mockRejectedValue(new Error('provider secret'));
+ const result=await analyzePreparedMedia({...input,includeAudio:true});
+ expect(result.analysisMode).toBe('partial');expect(result.coverage.audio).toBe('unavailable');expect(JSON.stringify(result)).not.toContain('provider secret');
+});

@@ -42,6 +42,8 @@ jobs:
         run: npm run lint
       - name: Corpus juridique et import contrôlé hors ligne
         run: npm run test:mia:offline
+      - name: Diagnostic commercial hors ligne (sans fournisseur)
+        run: node --test --experimental-test-isolation=none scripts/commercial/*.test.mjs
       - name: Tests unitaires
         run: npm test
       - name: Installer FFmpeg pour les tests médias réels

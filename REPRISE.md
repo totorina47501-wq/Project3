@@ -1,4 +1,10 @@
-# Reprise MentionCheck — 5 novembre 2026
+# Reprise MentionCheck — 6 novembre 2026
+
+## Audio et exploitation — lot suivant du 6 novembre
+
+Lire [docs/48-audio-and-commercial-preflight.md](docs/48-audio-and-commercial-preflight.md). L’audio est explicitement activé dans Wrangler ; le choix du créateur et les autres interrupteurs restent obligatoires. Le contrôle signale les transcriptions vides ou tronquées et comptabilise les réponses audio mal formées.
+
+Un diagnostic commercial local réutilise le contrôle existant : `node scripts/commercial/check.mjs`. Modèle vierge : `docs/commercial-dossier.template.json` ; ne pas inventer les informations de l’exploitant. Les valeurs et secrets ne sont jamais reproduits dans le rapport. Aucun paiement, email ou OAuth activé. Le lot laisse `package.json` et les fichiers de la PR Copilot #34 intacts.
 
 ## Reprise prioritaire — lot intégré du 6 novembre
 

@@ -497,7 +497,7 @@
     {
       "id": "prepared-media-ai",
       "name": "Analyse IA explicite des médias préparés",
-      "status": "prepared_disabled",
+      "status": "implemented_code",
       "anchor": "lib/ai/prepared-media-engine.ts",
       "test": "tests/unit/media-ai-route.test.ts",
       "doc": "docs/45-prepared-media-ai.md",
@@ -513,7 +513,7 @@
         "supabase/migrations/20261105121000_prepared_media_ai.sql"
       ],
       "next": [
-        "Code et tests locaux ; migration distante et activation MEDIA_AI_ENABLED restent distinctes de la livraison."
+        "Carrousel et trois frames vidéo validés réellement le 6 novembre ; audio activé explicitement par le lot suivant, preuve de recette à lire dans docs/48-audio-and-commercial-preflight.md."
       ]
     },
     {
@@ -552,6 +552,24 @@
       ],
       "next": [
         "Facturation désactivée ; tests fournisseur simulés et SQL local. Aucun paiement réel."
+      ]
+    },
+    {
+      "id": "commercial-diagnostic",
+      "name": "Diagnostic commercial local sans fournisseur",
+      "status": "implemented_code",
+      "anchor": "scripts/commercial/check.mjs",
+      "test": "scripts/commercial/check.test.mjs",
+      "doc": "docs/48-audio-and-commercial-preflight.md",
+      "aliases": [
+        "diagnostic commercial",
+        "dossier prive",
+        "preflight commercial"
+      ],
+      "routes": [],
+      "migrations": [],
+      "next": [
+        "Ne remplace aucune revue juridique et n’active aucun paiement. Compléter le dossier privé avec l’identité réelle de l’exploitant."
       ]
     }
   ]

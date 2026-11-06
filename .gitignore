@@ -27,3 +27,7 @@ mia-candidates.pending-review.json
 mia-review.pending-approval.json
 mia-approvals.local.json
 mia-approved-manifest.local.json
+
+# Dossier opérateur privé : identité réelle et état commercial local
+commercial-dossier.local.json
+commercial-readiness.local.json
