@@ -55,6 +55,19 @@ peuvent subsister comme décrit dans le guide du transport.
 message SDK n’est retourné. La lecture peut renotifier un job du propriétaire
 encore actif si la notification initiale a échoué.
 
+## Diagnostics locaux sans prestataire
+
+`lib/security/logging.ts` ne conserve que les événements, types d’erreur et
+métadonnées explicitement autorisés ; `tests/unit/logging-ui.test.ts` vérifie
+l’exclusion des messages, causes, secrets et injections. Le worker média émet
+des lignes JSON avec l’état terminal, l’identifiant du job et, en cas d’échec,
+un code fermé ; les erreurs inattendues deviennent `PROCESS_FAILED` sans leur
+message (`workers/media-jobs/tests/remote-runtime.test.mjs`). Le contrôleur
+expose l’étape, le type et le code classé de l’échec avec le statut HTTP
+(`tests/unit/cloudflare-media-controller.test.ts`). `lastError` est historique :
+le rapprocher de `phase` et de l’état des jobs, il ne prouve pas une panne active.
+Ces diagnostics sont locaux, sans fournisseur de monitoring externe.
+
 Mettre `MEDIA_RUNNER_PAUSED=true` dans les variables runtime du Worker pour
 fermer les nouvelles préparations et arrêter le conteneur à l’alarme suivante.
 Ce flag n’est pas déclaré dans les vars Wrangler et est conservé au déploiement.

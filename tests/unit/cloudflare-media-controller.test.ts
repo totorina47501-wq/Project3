@@ -53,7 +53,8 @@ it('appelle fetch avec le contexte global exigé par le runtime Cloudflare',asyn
 it('diagnostique une erreur HTTP sans révéler le corps ni la clé',async()=>{
  const f=fixture();f.fetcher.mockResolvedValue(new Response('Donnée privée', {status:403}));await f.runner.alarm();
  const response=await f.runner.fetch(new Request('https://internal/status'));const data=await response.json();
- expect(data).toMatchObject({failureStage:'poll',httpStatus:403});expect(JSON.stringify(data)).not.toContain('Donnée privée');expect(JSON.stringify(data)).not.toContain('server-fixture');
+ expect(data).toMatchObject({failureStage:'poll',failureType:'Error',failureCode:'UNKNOWN',httpStatus:403,phase:'error',lastError:'RUNNER_UNAVAILABLE'});
+ expect(JSON.stringify(data)).not.toContain('Donnée privée');expect(JSON.stringify(data)).not.toContain('server-fixture');
 });
 it('utilise le mode redirect manual accepté à l’edge et refuse une réponse de redirection',async()=>{
  const f=fixture();

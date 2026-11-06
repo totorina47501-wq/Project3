@@ -22,6 +22,18 @@ it('la boucle cesse sans nouvelle réservation après arrêt et minimise les err
  await runRemoteLoop({signal:controller.signal,pollMs:1,runOnce:async()=>{calls++;controller.abort();throw Error('provider-private-sentinel');},log:entry=>logs.push(entry)});
  assert.equal(calls,1);assert.deepEqual(logs,[{state:'error',code:'PROCESS_FAILED'}]);
 });
+it('journalise les états terminaux avec l’identifiant du job en JSON structuré',async()=>{
+ const output=[];const log=console.log;console.log=entry=>output.push(entry);
+ const id='550e8400-e29b-41d4-a716-446655440000';
+ try{
+ await runRemoteLoop({once:true,runOnce:async()=>({state:'completed',id})});
+ await runRemoteLoop({once:true,runOnce:async()=>({state:'failed',id,code:'PROCESS_FAILED'})});
+ assert.deepEqual(output.map(entry=>JSON.parse(entry)),[
+  {state:'completed',id},
+  {state:'failed',id,code:'PROCESS_FAILED'},
+ ]);
+ }finally{console.log=log;}
+});
 it('le mode one-shot termine après un seul essai sans garder une boucle payante active',async()=>{
  const controller=new AbortController();let calls=0;
  await runRemoteLoop({once:true,signal:controller.signal,pollMs:1,log:()=>{},runOnce:async()=>{if(++calls>1)controller.abort();return {state:'idle'};}});
