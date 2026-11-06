@@ -198,3 +198,29 @@ it('le schéma rejette les identifiants non textuels avec une erreur exploitable
   await assert.rejects(run({...spec(),id:123},options),error=>error.code==='JOB_INVALID');
   assert.deepEqual(await readdir(options.outputRoot),[]);
 });
+it('le décodeur réel ne reçoit ni secrets fournisseurs ni identifiants du processus parent',async t=>{
+  if(process.platform!=='linux'){t.skip('Lecture de l’environnement du sous-processus via /proc sous Linux.');return;}
+  const options=await fixture(t),sentinel='mc-secret-sentinelle-uniquement-test';
+  const names=['OPENAI_API_KEY','SUPABASE_SERVICE_KEY','SUPABASE_SERVICE_ROLE_KEY','AWS_SECRET_ACCESS_KEY','STRIPE_SECRET_KEY','UPSTASH_REDIS_TOKEN'];
+  const previous=new Map(names.map(name=>[name,process.env[name]]));
+  for(const name of names)process.env[name]=sentinel;
+  t.after(()=>{for(const [name,value]of previous){if(value===undefined)delete process.env[name];else process.env[name]=value;}});
+  // Une vraie entrée augmente la fenêtre d’observation ; aucun décodeur de test ne remplace Sharp.
+  await sharp({create:{width:4000,height:4000,channels:3,background:'red'}}).png().toFile(join(options.inputRoot,'a.png'));
+  let evidence;
+  const timer=setInterval(async()=>{
+    if(evidence)return;
+    try{
+      const record=JSON.parse(await readFile(join(options.outputRoot,'.carousel-1.lock'),'utf8'));
+      if(record.workerPid){
+        const [env,args]=await Promise.all([readFile(`/proc/${record.workerPid}/environ`,'utf8'),readFile(`/proc/${record.workerPid}/cmdline`,'utf8')]);
+        evidence={env,args};
+      }
+    }catch{/* Le journal peut être absent avant le démarrage ou après la fin du décodeur. */}
+  },1);
+  try{assert.equal((await run(spec(),options)).state,'completed');}finally{clearInterval(timer);}
+  assert.ok(evidence,'Le processus enfant Sharp a été observé pendant son exécution.');
+  assert.ok(evidence.env.includes('PATH=/usr/bin:/bin\0'));
+  for(const name of names)assert.ok(!evidence.env.includes(name+'='),`${name} ne doit pas être transmis.`);
+  assert.ok(!evidence.env.includes(sentinel));assert.ok(!evidence.args.includes(sentinel));
+});

@@ -35,7 +35,7 @@ export function classifyAiFailure(error: unknown): AiFailureCategory {
   if (name === 'APIConnectionError' || name === 'APITimeoutError') return 'network';
   return 'unknown';
 }
-export function reportAiFailure(stage: 'text' | 'vision' | 'rewrite', error: unknown) {
+export function reportAiFailure(stage: 'text' | 'vision' | 'rewrite' | 'transcription', error: unknown) {
   const status = error && typeof error === 'object' && 'status' in error
     && typeof error.status === 'number' ? error.status : undefined;
   logServerError('ai_failure', error, {

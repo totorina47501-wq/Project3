@@ -24,7 +24,6 @@ export function MiaIndexAdmin() {
         body: JSON.stringify({ confirmation: 'INDEXER-5' }) });
       const data: { error?: string; verified?: boolean } = await res.json();
       if (!res.ok) throw new Error(data.error || 'Indexation impossible.');
-      if (!data.verified) throw new Error('Indexation non vérifiée.');
       await refresh();
     } catch (e) { setError(e instanceof Error ? e.message : 'Erreur inconnue.'); }
     finally { setBusy(false); }
@@ -36,8 +35,8 @@ export function MiaIndexAdmin() {
     {error && <p role="alert" className="mt-2 text-red-700">{error}</p>}
     <div className="mt-4 flex flex-wrap gap-3">
       <button type="button" disabled={busy} onClick={refresh} className="rounded-lg border px-4 py-2 disabled:opacity-50">Actualiser</button>
-      <button type="button" disabled={busy || !status?.enabled || status.total !== 5 || status.indexed === 5}
-        onClick={run} className="rounded-lg bg-slate-900 px-4 py-2 text-white disabled:opacity-50">Indexer les documents manquants</button>
+      <button type="button" disabled={busy || !status?.enabled || status.total === 0 || status.indexed >= status.total}
+        onClick={run} className="rounded-lg bg-slate-900 px-4 py-2 text-white disabled:opacity-50">Indexer le prochain lot (5 maximum)</button>
     </div>
   </section>;
 }

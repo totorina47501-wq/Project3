@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updated": "2026-11-05",
+  "updated": "2026-11-06",
   "scope": "Code de la branche, non preuve de déploiement ni de commercialisation.",
   "features": [
     {
@@ -492,6 +492,66 @@
       "next": [
         "File et runner Cloudflare opérationnels ; deux jobs synthétiques completed en une tentative, contrôles de propriété et finalisation CAS conservés.",
         "Une instance basic maximum en UE ; suivre le budget et le coupe-circuit MEDIA_RUNNER_PAUSED. Compte de recette désactivé ; voir docs/receipts/2026-11-05-cloudflare-media.json."
+      ]
+    },
+    {
+      "id": "prepared-media-ai",
+      "name": "Analyse IA explicite des médias préparés",
+      "status": "prepared_disabled",
+      "anchor": "lib/ai/prepared-media-engine.ts",
+      "test": "tests/unit/media-ai-route.test.ts",
+      "doc": "docs/45-prepared-media-ai.md",
+      "aliases": [
+        "video ia",
+        "carrousel ia",
+        "transcription"
+      ],
+      "routes": [
+        "app/api/media/jobs/[id]/analyze/route.ts"
+      ],
+      "migrations": [
+        "supabase/migrations/20261105121000_prepared_media_ai.sql"
+      ],
+      "next": [
+        "Code et tests locaux ; migration distante et activation MEDIA_AI_ENABLED restent distinctes de la livraison."
+      ]
+    },
+    {
+      "id": "law-controlled-import",
+      "name": "Import juridique approuvé et indexation par lots",
+      "status": "implemented_code",
+      "anchor": "scripts/mia/import-approved.mjs",
+      "test": "scripts/mia/import-approved.test.mjs",
+      "doc": "docs/46-law-controlled-import.md",
+      "aliases": [
+        "import juridique",
+        "corpus approuve"
+      ],
+      "routes": [],
+      "migrations": [
+        "supabase/migrations/20261105120000_law_controlled_import.sql"
+      ],
+      "next": [
+        "Aucun texte supplémentaire importé ; chaque exécution exige un manifeste approuvé et son empreinte."
+      ]
+    },
+    {
+      "id": "billing-atomic-sync",
+      "name": "Synchronisation atomique des droits Stripe",
+      "status": "prepared_disabled",
+      "anchor": "app/api/stripe/webhook/route.ts",
+      "test": "tests/sql/billing_sync_security.sql",
+      "doc": "docs/44-commercial-readiness.md",
+      "aliases": [
+        "abonnement atomique",
+        "webhook concurrent"
+      ],
+      "routes": [],
+      "migrations": [
+        "supabase/migrations/20261105122000_billing_atomic_sync.sql"
+      ],
+      "next": [
+        "Facturation désactivée ; tests fournisseur simulés et SQL local. Aucun paiement réel."
       ]
     }
   ]

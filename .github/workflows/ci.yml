@@ -40,6 +40,8 @@ jobs:
         run: npm run typecheck
       - name: Lint
         run: npm run lint
+      - name: Corpus juridique et import contrôlé hors ligne
+        run: npm run test:mia:offline
       - name: Tests unitaires
         run: npm test
       - name: Installer FFmpeg pour les tests médias réels
@@ -61,6 +63,10 @@ jobs:
       - name: Installer Chromium
         run: npx playwright install --with-deps chromium
       - name: Parcours Playwright locaux sans fournisseur
+        env:
+          MEDIA_PROCESSING_ENABLED: 'true'
+          MEDIA_JOBS_SCHEMA_READY: 'true'
+          MEDIA_AI_ENABLED: 'true'
         run: npm run test:e2e
       - name: Compilation Next.js
         run: npm run build

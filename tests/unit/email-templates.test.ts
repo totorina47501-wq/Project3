@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { renderEmail, emailPreviews } from '../../lib/email/templates';
 describe('Emails français préparés sans envoi',()=>{
-  it('rend les quatre messages en HTML et texte autonome',()=>{
+  it('rend les sept messages en HTML et texte autonome, sans envoyer de notification',()=>{
     const previews=emailPreviews('https://local.test');
-    expect(previews).toHaveLength(4);
+    expect(previews.map(preview=>preview.name)).toEqual(['welcome','report-ready','quota-warning','erasure-received','critical-compliance','monthly-report','subscription-confirmed']);
     for(const preview of previews){
       expect(preview.email.html).toContain('<html lang="fr">');
       expect(preview.email.subject).not.toMatch(/[\r\n]/);

@@ -40,7 +40,8 @@ export async function readPersonalData(user: ExportUser) {
   const collections: Record<string, unknown[]> = {};
   let bytes = 0;
   const collectionsToRead = [...PERSONAL_COLLECTIONS,
-    ...(process.env.MEDIA_JOBS_SCHEMA_READY === 'true' ? MEDIA_JOB_COLLECTIONS : [])];
+    ...(process.env.MEDIA_JOBS_SCHEMA_READY === 'true' ? MEDIA_JOB_COLLECTIONS : []),
+    ...(process.env.MEDIA_AI_SCHEMA_READY === 'true' ? [['mediaAiRuns','media_ai_runs','id,job_id,verification_id,include_audio,status,quota_period,result,created_at,expires_at,completed_at','user_id','id'] as const] : [])];
   for (const [name, table, fields, ownerColumn, orderColumns] of collectionsToRead) {
     collections[name] = await collectPages(async (offset, size) => {
       let query = admin.from(table).select(fields, {count:'exact'}).eq(ownerColumn,user.id);

@@ -1,6 +1,7 @@
 import {it} from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,mkdir,readFile,rm} from 'node:fs/promises';
+import {mkdtemp,mkdir,readFile,readdir,rm} from 'node:fs/promises';
+import {setTimeout as delay} from 'node:timers/promises';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {createHash} from 'node:crypto';
@@ -26,6 +27,19 @@ it('ne termine pas une réservation annulée ou périmée',async t=>{const f=awa
 it('respecte le rejet CAS après production et permet une nouvelle tentative idempotente',async t=>{const f=await fixture(t);const complete=f.queue.complete;f.queue.complete=async()=>false;assert.equal((await runQueuedMediaJob({...f,workerId:'worker-1'})).state,'stale');f.queue.complete=complete;assert.equal((await runQueuedMediaJob({...f,workerId:'worker-1'})).state,'completed');});
 it('annule un traitement actif dès le signal de file et libère le sous-processus',async t=>{const f=await fixture(t);let checks=0;f.queue.isCancelled=async()=>++checks>2;assert.equal((await runQueuedMediaJob({...f,workerId:'worker-1',pollMs:2})).state,'cancelled');assert.equal(f.completed(),undefined);});
 it('une file vide ne traite aucun média',async()=>{assert.deepEqual(await runQueuedMediaJob({queue:{claim:async()=>null},workerId:'w'}),{state:'idle'});});
+it('interrompt le décodeur si la surveillance du bail échoue sans publier de succès',async t=>{
+ const f=await fixture(t);let checks=0;
+ f.queue.isCancelled=async()=>{if(++checks>2)throw Error('Panne privée du fournisseur');return false;};
+ const result=await runQueuedMediaJob({...f,workerId:'worker-1',pollMs:2});
+ assert.equal(result.state,'failed');assert.equal(result.code,'PROCESS_FAILED');assert.equal(f.failed().code,'PROCESS_FAILED');
+ assert.equal(f.completed(),undefined);assert.deepEqual(await readdir(f.outputRoot),[]);
+});
+it('sérialise les contrôles de bail lents malgré plusieurs ticks de surveillance',async t=>{
+ const f=await fixture(t);let active=0,maxActive=0,checks=0;
+ f.queue.isCancelled=async()=>{active++;checks++;maxActive=Math.max(maxActive,active);try{await delay(8);return false;}finally{active--;}};
+ assert.equal((await runQueuedMediaJob({...f,workerId:'worker-1',pollMs:1})).state,'completed');
+ assert.ok(checks>2);assert.equal(maxActive,1);assert.equal(active,0);
+});
 it('adaptateur SQL transmet uniquement les paramètres et échoue fermé pour bail absent',async()=>{
  const {createLocalSqlMediaQueue}=await import('../src/sql-queue.mjs');const calls=[];
  const db={query:async(sql,args)=>{calls.push({sql,args});return {rows:sql.includes('media_job_claim')?[{id:'id',lease_token:'token',payload:{kind:'video'}}]:sql.includes('as active')?[]:[{accepted:true}]};}};

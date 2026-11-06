@@ -4,11 +4,12 @@ import { TEXT_SYSTEM } from '@/lib/ai/prompts';
 import { textModelSchema, type Platform } from '@/lib/ai/schemas';
 import { applyRules, riskFrom, levelFromRisk } from '@/lib/ai/rules';
 
-export async function analyzeText(caption: string, platform: Platform) {
+export async function analyzeText(caption: string, platform: Platform,
+  context?: {observations:Array<{name:string;analysis:string}>;transcript?:string}) {
   const ruleViolations = applyRules(caption, platform);
   const result = await chatText(
     TEXT_SYSTEM,
-    JSON.stringify({ plateforme: platform, légende: caption }),
+    JSON.stringify({ plateforme: platform, légende: caption, ...(context?{contexteMédia:context}:{}) }),
     textModelSchema,
   );
   const aiFlags = result.value.flags;

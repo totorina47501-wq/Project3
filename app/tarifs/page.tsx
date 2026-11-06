@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { billingGate } from '@/lib/billing/config';
+import { planEntitlements } from '@/lib/billing/plans';
 import { BRAND } from '@/lib/branding';
 import { PricingCheckout } from '@/components/PricingCheckout';
 
@@ -11,17 +12,14 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const plans = [
+const plans = ([
   { id: 'solo', name: 'Solo', audience: 'Pour débuter sereinement', price: BRAND.plans.solo.priceMonthlyEur,
-    checks: BRAND.plans.solo.checksMonthly, rewrites: BRAND.plans.solo.rewritesMonthly, mia: 20,
-    highlights: ['Pour les créateurs indépendants', 'Jusqu’à 3 comptes sociaux', 'Vérifications avant publication'] },
+    highlights: ['Pour les créateurs indépendants', 'Jusqu’à 3 comptes déclarés', 'Vérifications avant publication'] },
   { id: 'pro', name: 'Pro', audience: 'Pour publier régulièrement', price: BRAND.plans.pro.priceMonthlyEur,
-    checks: BRAND.plans.pro.fairUseChecksMonthly, rewrites: 500, mia: 300,
     highlights: ['Pour les créateurs actifs', 'Réécritures de contenus', 'Assistant Mia pour vos questions'] },
   { id: 'studio', name: 'Studio', audience: 'Pour les volumes importants', price: BRAND.plans.studio.priceMonthlyEur,
-    checks: BRAND.plans.studio.fairUseChecksMonthly, rewrites: 2000, mia: 1500,
-    highlights: ['Pour les équipes et studios', 'Volumes de vérification élevés', 'Accompagnement des workflows éditoriaux'] },
-] as const;
+    highlights: ['5 sièges, propriétaire compris', 'API de contrôle sans IA', 'Rapports sur les contrôles partagés'] },
+] as const).map(plan => ({ ...plan, rights: planEntitlements(plan.id) }));
 
 const faq = [
   { q: 'Puis-je souscrire maintenant ?', a: 'Non. Les offres sont présentées à titre indicatif. Aucun abonnement payant n’est commercialisé actuellement.' },
@@ -53,9 +51,9 @@ export default function PricingPage() {
         <div className="mt-6 border-t border-slate-200 pt-5">
           <p className="text-sm font-semibold">Quotas mensuels indicatifs</p>
           <dl className="mt-3 space-y-3 text-sm">
-            <div className="flex justify-between gap-3"><dt>Analyses IA</dt><dd className="font-semibold">{plan.checks.toLocaleString('fr-FR')}</dd></div>
-            <div className="flex justify-between gap-3"><dt>Réécritures</dt><dd className="font-semibold">{plan.rewrites.toLocaleString('fr-FR')}</dd></div>
-            <div className="flex justify-between gap-3"><dt>Questions Mia</dt><dd className="font-semibold">{plan.mia.toLocaleString('fr-FR')}</dd></div>
+            <div className="flex justify-between gap-3"><dt>Analyses IA</dt><dd className="font-semibold">{plan.rights.checksMonthly.toLocaleString('fr-FR')}</dd></div>
+            <div className="flex justify-between gap-3"><dt>Réécritures</dt><dd className="font-semibold">{plan.rights.rewritesMonthly.toLocaleString('fr-FR')}</dd></div>
+            <div className="flex justify-between gap-3"><dt>Questions Mia</dt><dd className="font-semibold">{plan.rights.miaMonthly.toLocaleString('fr-FR')}</dd></div>
           </dl>
         </div>
         <ul className="mt-6 flex-1 space-y-3 text-sm text-slate-700">
@@ -76,9 +74,11 @@ export default function PricingPage() {
         <table className="w-full min-w-[520px] text-left text-sm">
           <thead><tr className="border-b border-slate-300"><th scope="col" className="py-3 pr-3">Fonctionnalité</th>{plans.map(p => <th scope="col" key={p.id} className="px-3 py-3">{p.name}</th>)}</tr></thead>
           <tbody>
-            <tr className="border-b border-slate-200"><th scope="row" className="py-3 pr-3 font-medium">Analyses IA</th>{plans.map(p => <td key={p.id} className="px-3 py-3">{p.checks.toLocaleString('fr-FR')}</td>)}</tr>
-            <tr className="border-b border-slate-200"><th scope="row" className="py-3 pr-3 font-medium">Réécritures</th>{plans.map(p => <td key={p.id} className="px-3 py-3">{p.rewrites.toLocaleString('fr-FR')}</td>)}</tr>
-            <tr><th scope="row" className="py-3 pr-3 font-medium">Questions Mia</th>{plans.map(p => <td key={p.id} className="px-3 py-3">{p.mia.toLocaleString('fr-FR')}</td>)}</tr>
+            <tr className="border-b border-slate-200"><th scope="row" className="py-3 pr-3 font-medium">Analyses IA</th>{plans.map(p => <td key={p.id} className="px-3 py-3">{p.rights.checksMonthly.toLocaleString('fr-FR')}</td>)}</tr>
+            <tr className="border-b border-slate-200"><th scope="row" className="py-3 pr-3 font-medium">Réécritures</th>{plans.map(p => <td key={p.id} className="px-3 py-3">{p.rights.rewritesMonthly.toLocaleString('fr-FR')}</td>)}</tr>
+            <tr className="border-b border-slate-200"><th scope="row" className="py-3 pr-3 font-medium">Questions Mia</th>{plans.map(p => <td key={p.id} className="px-3 py-3">{p.rights.miaMonthly.toLocaleString('fr-FR')}</td>)}</tr>
+            <tr className="border-b border-slate-200"><th scope="row" className="py-3 pr-3 font-medium">Comptes déclarés manuellement</th>{plans.map(p => <td key={p.id} className="px-3 py-3">{p.rights.socialAccounts === null ? 'Sans plafond de déclarations' : p.rights.socialAccounts}</td>)}</tr>
+            <tr><th scope="row" className="py-3 pr-3 font-medium">Espace partagé</th>{plans.map(p => <td key={p.id} className="px-3 py-3">{p.rights.studioSeats ? `${p.rights.studioSeats} sièges, propriétaire compris` : 'Espace individuel'}</td>)}</tr>
           </tbody>
         </table>
       </div>

@@ -24,3 +24,19 @@ export function stripeStatus(status: string):
     default: return 'incomplete';
   }
 }
+
+type SubscriptionPeriods = {
+  current_period_end?: number;
+  items?: { data: ReadonlyArray<{ current_period_end?: number }> };
+};
+// Les versions récentes de Stripe portent la période sur chaque item.
+// Plusieurs périodes => échéance la plus proche ; ancien format en repli.
+export function subscriptionPeriodEnd(subscription: SubscriptionPeriods): string | null {
+  const items = subscription.items?.data ?? [];
+  const periods = items.length
+    ? items.map(item => item.current_period_end ?? subscription.current_period_end)
+    : [subscription.current_period_end];
+  if (!periods.every((value): value is number =>
+    typeof value === 'number' && Number.isSafeInteger(value) && value > 0 && value <= 253402300799)) return null;
+  return new Date(Math.min(...periods) * 1000).toISOString();
+}

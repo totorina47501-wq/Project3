@@ -32,7 +32,8 @@
     "mia:approve": "node scripts/mia/run-approved-manifest.mjs",
     "mia:review": "node scripts/mia/run-official-review.mjs",
     "mia:discover": "node scripts/mia/run-official-discovery.mjs",
-    "media:runner": "node workers/media-jobs/src/remote-run.mjs"
+    "media:runner": "node workers/media-jobs/src/remote-run.mjs",
+    "test:mia:offline": "node --test --experimental-test-isolation=none scripts/mia/*.test.mjs"
   },
   "engines": {
     "node": ">=22.12.0 <27"

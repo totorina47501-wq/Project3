@@ -6,7 +6,7 @@ describe('Configuration Cloudflare sécurisée',()=>{
     const config=JSON.parse(readFileSync(resolve(process.cwd(),'wrangler.jsonc'),'utf8')) as Record<string,unknown>;
     expect(config.name).toBe('mentioncheck');
     expect(config.keep_vars).toBe(true);
-    expect(config.vars).toEqual({MEDIA_JOBS_SCHEMA_READY:'true',MEDIA_PROCESSING_ENABLED:'true',MEDIA_CLOUDFLARE_RUNNER_ENABLED:'true'});
+    expect(config.vars).toEqual({MEDIA_JOBS_SCHEMA_READY:'true',MEDIA_PROCESSING_ENABLED:'true',MEDIA_CLOUDFLARE_RUNNER_ENABLED:'true',MEDIA_AI_ENABLED:'true',MEDIA_AI_SCHEMA_READY:'true'});
     // Seuls ces flags d'activation sont déclarés : les secrets runtime sont préservés.
   });
   it('génère le dossier standalone nécessaire au packaging OpenNext',()=>{

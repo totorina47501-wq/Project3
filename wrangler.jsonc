@@ -64,7 +64,9 @@
   "vars": {
     "MEDIA_JOBS_SCHEMA_READY": "true",
     "MEDIA_PROCESSING_ENABLED": "true",
-    "MEDIA_CLOUDFLARE_RUNNER_ENABLED": "true"
+    "MEDIA_CLOUDFLARE_RUNNER_ENABLED": "true",
+    "MEDIA_AI_ENABLED": "true",
+    "MEDIA_AI_SCHEMA_READY": "true"
   },
   "dev": {
     "enable_containers": false

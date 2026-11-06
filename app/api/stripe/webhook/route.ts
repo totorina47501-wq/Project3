@@ -3,38 +3,25 @@
 import type Stripe from 'stripe';
 import { billingGate } from '@/lib/billing/config';
 import { getStripe } from '@/lib/billing/stripe';
-import { paidPlanFromPrices, effectivePlan, stripeStatus } from '@/lib/billing/events';
+import { paidPlanFromPrices, stripeStatus, subscriptionPeriodEnd } from '@/lib/billing/events';
 import { createAdminSupabase } from '@/lib/supabase/admin';
 
 export const runtime='nodejs';
 
-async function syncSubscription(subscription: Stripe.Subscription) {
-  const customerId = typeof subscription.customer === 'string'
-    ? subscription.customer : subscription.customer.id;
-  const admin = createAdminSupabase();
-  const { data: user, error } = await admin.from('users')
-    .select('id').eq('stripe_customer_id',customerId).maybeSingle();
-  if (error || !user) throw new Error('Stripe customer not mapped to an account.');
-
-  const gate = billingGate(process.env);
-  const priceIds = subscription.items.data.map((item) => item.price.id);
-  const paidPlan = paidPlanFromPrices(priceIds, {
-    solo: gate.priceSolo, pro: gate.pricePro, studio: gate.priceStudio,
+async function syncSubscription(subscription: Stripe.Subscription, eventAt:number, deleted = false) {
+  const gate=billingGate(process.env);
+  const plan=paidPlanFromPrices(subscription.items.data.map(item=>item.price.id),{
+    solo:gate.priceSolo,pro:gate.pricePro,studio:gate.priceStudio,
   });
-  if (!paidPlan) throw new Error('Unexpected Stripe plan price.');
-  const status = stripeStatus(subscription.status);
-  const period = subscription as unknown as { current_period_end?: number };
-  const currentPeriodEnd = typeof period.current_period_end === 'number'
-    ? new Date(period.current_period_end*1000).toISOString() : null;
-  const { error: subError } = await admin.from('subscriptions').upsert({
-    user_id: user.id,
-    stripe_subscription_id: subscription.id,
-    plan: paidPlan, status, current_period_end: currentPeriodEnd,
-  }, { onConflict:'user_id' });
-  if (subError) throw new Error('Stripe subscription sync unavailable.');
-  const { error: profileError } = await admin.from('users')
-    .update({plan:effectivePlan(status,paidPlan)}).eq('id',user.id);
-  if (profileError) throw new Error('Account entitlements sync unavailable.');
+  if(!plan) throw new Error('Unexpected Stripe plan price.');
+  const {error}=await createAdminSupabase().rpc('sync_stripe_subscription',{
+    p_customer:typeof subscription.customer==='string'?subscription.customer:subscription.customer.id,
+    p_subscription:subscription.id,p_created:new Date(subscription.created*1000).toISOString(),
+    p_event_at:new Date(eventAt*1000).toISOString(),p_plan:plan,
+    p_status:deleted?'canceled':stripeStatus(subscription.status),
+    p_period_end:subscriptionPeriodEnd(subscription),
+  });
+  if(error) throw new Error('Atomic subscription sync unavailable.');
 }
 
 async function handleEvent(event: Stripe.Event) {
@@ -43,10 +30,10 @@ async function handleEvent(event: Stripe.Event) {
     const source = event.data.object as Stripe.Subscription;
     // Relecture de l'état actuel pour éviter qu'un ancien événement rétrograde l'abonnement.
     const current = await getStripe().subscriptions.retrieve(source.id);
-    await syncSubscription(current);
+    await syncSubscription(current,event.created);
   } else if (event.type === 'customer.subscription.deleted') {
     const deleted = event.data.object as Stripe.Subscription;
-    await syncSubscription(deleted);
+    await syncSubscription(deleted,event.created,true);
   }
   // checkout.session.completed seul n'active jamais un plan :
   // attendre une notification subscription vérifiée.
@@ -66,6 +53,7 @@ export async function POST(request: Request) {
   } catch {
     return Response.json({error:'Signature invalide.'},{status:400});
   }
+  if (event.livemode) return Response.json({error:'Événement Stripe de production refusé.'},{status:400});
   const admin = createAdminSupabase();
   const { data: existing, error: existingError } = await admin.from('stripe_webhook_events')
     .select('status').eq('event_id',event.id).maybeSingle();

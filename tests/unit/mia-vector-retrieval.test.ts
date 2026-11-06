@@ -18,7 +18,7 @@ beforeEach(()=>{
   vi.clearAllMocks();
   vi.stubEnv('MIA_VECTOR_SEARCH_ENABLED','false');vi.stubEnv('OPENAI_EMBEDDINGS_ENABLED','false');vi.stubEnv('OPENAI_PAUSED','true');vi.stubEnv('OPENAI_API_KEY','');
   mocks.limit.mockReset().mockResolvedValue(corpus());
-  mocks.create.mockImplementation(()=>({from:()=>({select:()=>({order:()=>({limit:mocks.limit}),limit:mocks.limit})}),rpc:mocks.rpc}));
+  mocks.create.mockImplementation(()=>({from:()=>({select:()=>{const query={order:()=>query,not:()=>query,eq:()=>query,limit:mocks.limit};return query;}}),rpc:mocks.rpc}));
   mocks.embed.mockResolvedValue({vector,model:'text-embedding-3-small',tokens:0,estimatedCostUsd:0});
   mocks.rpc.mockResolvedValue({data:[{article_ref:'A1',source_url:records[0]!.source_url,similarity:.99,content:'Texte RPC ignoré'}],error:null});
   vi.spyOn(console,'warn').mockImplementation(()=>{});
@@ -97,4 +97,14 @@ it('échoue explicitement quand le corpus change pendant la pagination',async()=
       range:vi.fn().mockResolvedValue({data:many.slice(0,5),error:null,count:36})}),
   })}),rpc:mocks.rpc}));
   await expect(retrieveLawSources('Publicité')).rejects.toThrow('Corpus modifié');
+});
+it('utilise aussi le vecteur au-delà de trente sources si toute la couverture est validée',async()=>{
+ enable();const many=Array.from({length:35},(_,i)=>({...records[0],article_ref:'D'+i}));
+ const indexes=many.map(row=>({article_ref:row.article_ref,embedding_model:'text-embedding-3-small'}));
+ mocks.create.mockImplementation(()=>({from:()=>({select:(fields:string)=>{
+  const rows=fields.includes('content')?many:indexes;
+  const query={not:()=>query,eq:()=>query,order:()=>query,limit:async(n:number)=>({data:rows.slice(0,n),count:35,error:null}),range:async(a:number,b:number)=>({data:rows.slice(a,b+1),count:35,error:null})};return query;
+ }}),rpc:mocks.rpc}));
+ mocks.rpc.mockResolvedValue({data:[{article_ref:'D34',source_url:many[34]!.source_url,similarity:.99}],error:null});
+ expect((await retrieveLawSources('Inconnue'))[0]?.articleRef).toBe('D34');expect(mocks.embed).toHaveBeenCalledOnce();
 });

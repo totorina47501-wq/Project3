@@ -67,6 +67,14 @@ export function renderEmail(input:EmailInput):RenderedEmail {
 }
 export function emailPreviews(siteOrigin:string):{name:EmailInput['kind'];email:RenderedEmail}[]{
   const id='3a83817f-dadc-478c-889e-2a3721525a76';
-  const examples:EmailInput[]=[{kind:'welcome',name:'Camille',siteOrigin},{kind:'report-ready',verificationId:id,siteOrigin},{kind:'quota-warning',used:18,limit:20,periodEnd:'2026-12-01',siteOrigin},{kind:'erasure-received',requestId:id,siteOrigin}];
+  const examples:EmailInput[]=[
+    {kind:'welcome',name:'Camille',siteOrigin},
+    {kind:'report-ready',verificationId:id,siteOrigin},
+    {kind:'quota-warning',used:18,limit:20,periodEnd:'2026-12-01',siteOrigin},
+    {kind:'erasure-received',requestId:id,siteOrigin},
+    {kind:'critical-compliance',verificationId:id,signals:3,siteOrigin},
+    {kind:'monthly-report',period:'11/2026',checks:30,risks:5,siteOrigin},
+    {kind:'subscription-confirmed',plan:'solo',siteOrigin},
+  ];
   return examples.map(input=>({name:input.kind,email:renderEmail(input)}));
 }

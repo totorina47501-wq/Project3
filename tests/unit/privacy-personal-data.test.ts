@@ -83,3 +83,12 @@ it('inclut les artefacts dérivés privés du seul propriétaire dans le manifes
  const result=await response.json();
  expect(result.privateFiles).toContainEqual({bucket:'verification-media-derived',path:'owner/slide-01.webp',id:'derived-file',metadata:{size:100}});
 });
+
+it('inclut les analyses média après migration même lorsque leur exécution est désactivée',async()=>{
+ vi.stubEnv('MEDIA_AI_SCHEMA_READY','true');vi.stubEnv('MEDIA_AI_ENABLED','false');
+ try{
+  const response=await GET();expect(response.status).toBe(200);
+  expect((await response.json()).collections.mediaAiRuns).toEqual([]);
+  expect(calls.find(call=>call.table==='media_ai_runs')?.filters).toContainEqual(['user_id','owner']);
+ }finally{vi.unstubAllEnvs();}
+});

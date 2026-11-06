@@ -14,6 +14,20 @@ const mime=name=>name.endsWith('.jpg')?'image/jpeg':name.endsWith('.webp')?'imag
 export function createRemoteMediaQueue({client,inputRoot,outputRoot,signal}={}){
  let held;
  const guard=()=>{if(signal?.aborted)failure('CANCELLED','Traitement interrompu.');};
+ // Une indisponibilité Storage ne prouve pas une corruption : la file reprend ces essais, avec son plafond et son délai SQL.
+ const transfer=async(operation,source=false)=>{
+  let response;
+  try{response=await operation();}catch{guard();failure('PROCESS_FAILED','Transport privé indisponible.');}
+  guard();
+  if(response?.error){
+   if(source&&Number(response.error.statusCode??response.error.status)===404)failure('INPUT_INVALID','Source privée invalide.');
+   failure('PROCESS_FAILED','Transport privé indisponible.');
+  }
+  return response??{};
+ };
+ const readBytes=async blob=>{
+  try{return Buffer.from(await blob.arrayBuffer());}catch{guard();failure('PROCESS_FAILED','Lecture privée indisponible.');}
+ };
  const rpc=async(name,args)=>{const {data,error}=await client.rpc(name,args);if(error)failure('PROCESS_FAILED','File distante indisponible.');return data;};
  async function row(id){
   const {data,error}=await client.from('media_processing_jobs').select('user_id,status,lease_token,lease_until').eq('id',id).maybeSingle();
@@ -43,18 +57,18 @@ export function createRemoteMediaQueue({client,inputRoot,outputRoot,signal}={}){
     }
     for(const input of job.inputs){
      guard();if(await queue.isCancelled(held.id,held.leaseToken))failure('CANCELLED','Bail expiré.');
-     const {data:blob,error}=await client.storage.from('verification-media').download(input.path);
+     const {data:blob}=await transfer(()=>client.storage.from('verification-media').download(input.path),true);
      const max=job.kind==='video'?50*1024*1024:8*1024*1024;
-     if(error||!blob||blob.size<1||blob.size>max)failure('INPUT_INVALID','Source privée invalide.');
-     const bytes=Buffer.from(await blob.arrayBuffer());
+     if(!blob||blob.size<1||blob.size>max)failure('INPUT_INVALID','Source privée invalide.');
+     const bytes=await readBytes(blob);
      if(digest(bytes)!==input.sha256)failure('INPUT_INVALID','Source privée invalide.');
      guard();await mkdir(join(inputRoot,held.ownerId),{recursive:true,mode:0o700});
      await writeFile(join(inputRoot,input.path),bytes,{flag:'wx',mode:0o600});
     }
     return held;
    }catch(error){
-    const code=error instanceof MediaJobError?error.code:'INPUT_INVALID';
-    await queue.fail(held.id,held.leaseToken,code);throw error instanceof MediaJobError?error:new MediaJobError('INPUT_INVALID','Source privée invalide.');
+    const code=error instanceof MediaJobError?error.code:'PROCESS_FAILED';
+    await queue.fail(held.id,held.leaseToken,code);throw error instanceof MediaJobError?error:new MediaJobError('PROCESS_FAILED','Préparation privée indisponible.');
    }
   },
   async isCancelled(id,token){guard();return !active(await row(id),token);},
@@ -78,10 +92,9 @@ export function createRemoteMediaQueue({client,inputRoot,outputRoot,signal}={}){
     }finally{await handle?.close();}
     if(bytes.length!==artifact.bytes||digest(bytes)!==artifact.sha256)failure('OUTPUT_INVALID','Sorties privées invalides.');
     const key=`${prefix}/${artifact.name}`;
-    const {error}=await bucket.upload(key,bytes,{upsert:false,contentType:mime(artifact.name),cacheControl:'0'});
-    if(error)failure('OUTPUT_INVALID','Publication privée indisponible.');
-    guard();const {data:remote,error:readError}=await bucket.download(key);
-    if(readError||!remote||remote.size!==artifact.bytes||digest(Buffer.from(await remote.arrayBuffer()))!==artifact.sha256)
+    await transfer(()=>bucket.upload(key,bytes,{upsert:false,contentType:mime(artifact.name),cacheControl:'0'}));
+    guard();const {data:remote}=await transfer(()=>bucket.download(key));
+    if(!remote||remote.size!==artifact.bytes||digest(await readBytes(remote))!==artifact.sha256)
      failure('OUTPUT_INVALID','Relecture privée incohérente.');
    }
    guard();if(await queue.isCancelled(id,token))return false;

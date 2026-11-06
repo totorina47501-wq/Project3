@@ -2,30 +2,18 @@
 import { createAdminSupabase } from '@/lib/supabase/admin';
 import { openaiCapabilityEnabled, OPENAI_MODELS } from '@/lib/openai/config';
 import { chooseLawSources, validatedLawSource, type LawSource } from '@/lib/mia/ranking';
-import { hasCompleteLawIndex, MIA_MIN_VECTOR_SIMILARITY, rankHybridLawSources } from '@/lib/mia/hybrid';
+import { MIA_MIN_VECTOR_SIMILARITY, rankHybridLawSources } from '@/lib/mia/hybrid';
+import { readCorpusPages } from '@/lib/mia/corpus-pages.mjs';
 import type { ModelTelemetry } from '@/lib/ai/schemas';
-
-const CORPUS_PAGE_SIZE = 30;
-const MAX_CORPUS_ROWS = 1000;
 
 // Lecture bornée et paginée : aucune suppression silencieuse au-delà des 30 premières sources.
 async function readLawCorpus(admin: ReturnType<typeof createAdminSupabase>) {
-  const rows: Array<{ article_ref: unknown; content: unknown; source_url: unknown; effective_on?: unknown; checked_at?: unknown }> = [];
-  let total = 0;
-  for (let offset = 0; offset < MAX_CORPUS_ROWS; offset += CORPUS_PAGE_SIZE) {
+  return readCorpusPages(async (offset, size) => {
     const query = admin.from('law_documents')
       .select('article_ref,content,source_url,effective_on,checked_at', { count: 'exact' })
       .order('article_ref', { ascending: true });
-    const { data, error, count } = offset === 0
-      ? await query.limit(CORPUS_PAGE_SIZE)
-      : await query.range(offset, offset + CORPUS_PAGE_SIZE - 1);
-    if (error || !data || count === null) throw new Error('Corpus de référence indisponible.');
-    if (offset === 0) total = count;
-    if (count !== total) throw new Error('Corpus modifié pendant la lecture.');
-    rows.push(...data);
-    if (rows.length >= total) return { rows, total };
-  }
-  throw new Error('Corpus juridique trop volumineux pour cette stratégie de recherche.');
+    return offset === 0 ? await query.limit(size) : await query.range(offset, offset + size - 1);
+  });
 }
 
 export async function retrieveLawSources(question: string, onEmbeddingUsage?: (usage: ModelTelemetry) => void | Promise<void>): Promise<LawSource[]> {
@@ -33,7 +21,7 @@ export async function retrieveLawSources(question: string, onEmbeddingUsage?: (u
     openaiCapabilityEnabled('embeddings', process.env) &&
     Boolean(process.env.OPENAI_API_KEY?.trim());
   const admin = createAdminSupabase();
-  const { rows, total } = await readLawCorpus(admin);
+  const rows = await readLawCorpus(admin);
   const sources: LawSource[] = rows.flatMap((item) => {
     const validated = validatedLawSource(item);
     return validated ? [validated] : [];
@@ -41,14 +29,22 @@ export async function retrieveLawSources(question: string, onEmbeddingUsage?: (u
   const lexical = chooseLawSources(question, sources);
   // Les appels embeddings ne sont jamais tentés si l'index est partiel, le modèle
   // diverge, la lecture est tronquée ou une référence a échoué au contrôle.
-  if (!vectorEnabled || total !== rows.length || sources.length !== rows.length || total > CORPUS_PAGE_SIZE) return lexical;
-  const { data: indexRows, error: indexError, count: indexCount } =
-    await admin.from('law_documents')
-      .select('article_ref,embedding_model,embedding', { count: 'exact' }).limit(30);
+  if (!vectorEnabled || sources.length !== rows.length || rows.length === 0) return lexical;
+  // Seules les métadonnées traversent le réseau : pas 1 536 nombres par document.
+  let indexRows: Array<{ article_ref: string; embedding_model: string }>;
+  try {
+    indexRows = await readCorpusPages(async (offset, size) => {
+      const query = admin.from('law_documents')
+        .select('article_ref,embedding_model', { count: 'exact' })
+        .not('embedding', 'is', null).eq('embedding_model', OPENAI_MODELS.embeddings)
+        .order('article_ref', { ascending: true });
+      return offset === 0 ? await query.limit(size) : await query.range(offset, offset + size - 1);
+    });
+  } catch { return lexical; }
   const references = new Set(sources.map((source) => source.articleRef));
-  if (indexError || !indexRows || indexCount !== rows.length ||
+  if (indexRows.length !== rows.length || new Set(indexRows.map(row => row.article_ref)).size !== rows.length ||
       !indexRows.every((row) => references.has(row.article_ref)) ||
-      !hasCompleteLawIndex(indexRows, OPENAI_MODELS.embeddings)) return lexical;
+      !indexRows.every(row => row.embedding_model === OPENAI_MODELS.embeddings)) return lexical;
 
   let recordingUsage = false;
   try {

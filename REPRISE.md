@@ -1,5 +1,13 @@
 # Reprise MentionCheck — 5 novembre 2026
 
+## Reprise prioritaire — lot intégré du 6 novembre
+
+Lire [docs/47-integrated-delivery.md](docs/47-integrated-delivery.md) avant les bilans historiques ci-dessous. Le lot part de `abcdb79` et conserve les ajouts Copilot ; la PR liens Markdown reste indépendante. Registre : 24 domaines, 36 routes, 18 migrations sources. Trois migrations additives sont appliquées, versions distantes recensées dans le bilan. Aucun nouveau texte juridique importé ni activation Stripe.
+
+La route `/api/media/jobs/[id]/analyze` analyse explicitement les sorties privées déjà préparées ; ne pas la recréer. Historique idempotent, quotas transactionnels, preuves séparées et export RGPD sont raccordés. Vérifier `media_ai_runs` et les coûts liés avant de répéter une recette réelle. La transcription exige le choix utilisateur et OPENAI_AUDIO_ENABLED=true ; elle reste désactivée par défaut.
+
+Validation locale : 337 unités, 90 médias, 25 corpus, 11 suites SQL, Playwright 24 réussis/1 ignoré, TypeScript/lint/build/bundle/dry-run réussis. GitHub CI et déploiement se contrôlent sur le SHA contenant ce bilan ; ne pas confondre ces niveaux de preuve.
+
 ## Point de départ
 
 - Dépôt : `totorina47501-wq/Project3` ; travailler sur `main`.

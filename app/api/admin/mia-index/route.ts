@@ -2,6 +2,8 @@ import { requireUser, publicError, HttpError } from '@/lib/security/auth';
 import { isSameOrigin } from '@/lib/security/origin';
 import { createAdminSupabase } from '@/lib/supabase/admin';
 import { POST as indexCorpus } from '@/app/api/internal/mia-index/route';
+import { readLawIndexPlan } from '@/lib/mia/index-corpus';
+import { MAX_INDEX_BATCH } from '@/lib/mia/index-plan.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,9 +19,8 @@ export async function GET() {
   try {
     await requireOperator();
     const admin = createAdminSupabase();
-    const { data, error } = await admin.from('law_documents').select('embedding,embedding_model');
-    if (error || !data) throw new Error('Corpus indisponible');
-    return Response.json({ total: data.length, indexed: data.filter(d => d.embedding != null && d.embedding_model === 'text-embedding-3-small').length,
+    const plan=await readLawIndexPlan(admin);
+    return Response.json({ total: plan.total, indexed: plan.indexed, pending:plan.pending.length, maxBatch:MAX_INDEX_BATCH,
       enabled: process.env.OPENAI_EMBEDDINGS_ENABLED === 'true' && process.env.OPENAI_PAUSED !== 'true' && Boolean(process.env.OPENAI_API_KEY) }, { headers });
   } catch (error) {
     const { status, message } = publicError(error);

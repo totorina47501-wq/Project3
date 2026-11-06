@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { createLocalEmailTransport, createEmailSimulation } from '../../lib/email/simulation';
 import { emailPreviews, type EmailInput } from '../../lib/email/templates';
 const welcome:EmailInput={kind:'welcome',name:'<Camille>',siteOrigin:'https://local.test'};
-describe('Outbox locale des quatre emails',()=>{
-  it('injecte uniquement un transport local et garde les quatre rendus existants',async()=>{
+describe('Outbox locale des sept emails',()=>{
+  it('injecte uniquement un transport local et prépare tous les messages disponibles',async()=>{
     const transport=createLocalEmailTransport();const outbox=createEmailSimulation(transport);
     const id='3a83817f-dadc-478c-889e-2a3721525a76';
-    const messages:EmailInput[]=[welcome,{kind:'report-ready',verificationId:id,siteOrigin:'https://local.test'},{kind:'quota-warning',used:2,limit:3,periodEnd:'2026-12-01',siteOrigin:'https://local.test'},{kind:'erasure-received',requestId:id,siteOrigin:'https://local.test'}];
+    const messages:EmailInput[]=[welcome,{kind:'report-ready',verificationId:id,siteOrigin:'https://local.test'},{kind:'quota-warning',used:2,limit:3,periodEnd:'2026-12-01',siteOrigin:'https://local.test'},{kind:'erasure-received',requestId:id,siteOrigin:'https://local.test'},
+      {kind:'critical-compliance',verificationId:id,signals:2,siteOrigin:'https://local.test'},
+      {kind:'monthly-report',period:'11/2026',checks:30,risks:5,siteOrigin:'https://local.test'},
+      {kind:'subscription-confirmed',plan:'solo',siteOrigin:'https://local.test'}];
     for(const [index,input] of messages.entries()){
       outbox.enqueue({key:'local_'+index,recipientId:'fixture_owner',input});
       expect((await outbox.dispatch('local_'+index)).status).toBe('simulated');

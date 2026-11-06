@@ -15,7 +15,7 @@ function assertDocument(doc) {
       doc.content.length > 2000 || doc.content !== doc.content.trim() ||
       !SHA.test(doc.content_sha256 ?? '') || doc.content_sha256 !== hash(doc.content) ||
       !SHA.test(doc.source_sha256 ?? '') ||
-      typeof doc.reviewed_by !== 'string' || doc.reviewed_by.trim().length < 3 ||
+      typeof doc.reviewed_by !== 'string' || doc.reviewed_by.trim().length < 3 || doc.reviewed_by.length > 120 ||
       typeof doc.reviewed_at !== 'string' || !Number.isFinite(Date.parse(doc.reviewed_at)) ||
       typeof doc.effective_on !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(doc.effective_on) ||
       new Date(doc.effective_on + 'T00:00:00Z').toISOString().slice(0, 10) !== doc.effective_on)
@@ -47,7 +47,7 @@ export function planApprovedImport(manifest, existing) {
       (old.effective_on ?? null) === doc.effective_on ? 'unchanged' : 'update';
     operations.push({
       article_ref: doc.article_ref, action, source_url: doc.source_url,
-      content_sha256: doc.content_sha256, requires_embedding: action !== 'unchanged',
+      content_sha256: doc.content_sha256, requires_embedding: !old || old.content !== doc.content,
     });
   }
   return {

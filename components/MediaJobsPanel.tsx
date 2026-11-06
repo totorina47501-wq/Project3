@@ -1,9 +1,51 @@
 'use client';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 type Asset = { id: string; group_id: string | null; kind: 'image' | 'video'; status: string };
 type Job = { id: string; verification_id: string; kind: string; status: 'queued'|'processing'|'completed'|'failed'|'cancelled'; attempts: number; failure_code: string | null };
 const labels = { queued: 'En attente', processing: 'Préparation en cours', completed: 'Préparation terminée', failed: 'Échec de préparation', cancelled: 'Annulée' };
+type AnalysisRun = {
+  id: string; include_audio: boolean; status: 'processing'|'completed'|'failed';
+  verification_id: string; created_at: string; completed_at: string | null;
+};
+type AnalysisState = { includeAudio: boolean; busy: boolean; runs: AnalysisRun[]; error: string };
+const initialAnalysis = (): AnalysisState => ({ includeAudio: false, busy: false, runs: [], error: '' });
+
+// Le rendu reste sans effet : seul le bouton peut demander un appel IA payant.
+export function PreparedMediaAnalysisControls({ jobId, kind, includeAudio, busy, runs, error, onAudioChange, onAnalyze, onRefresh }: {
+  jobId: string; kind: string; includeAudio: boolean; busy: boolean; runs: AnalysisRun[]; error: string;
+  onAudioChange: (includeAudio: boolean) => void; onAnalyze: (includeAudio: boolean) => void; onRefresh: () => void;
+}) {
+  const audio = kind === 'video' && includeAudio;
+  const run = runs.find(item => item.include_audio === audio);
+  const processing = runs.some(item => item.status === 'processing');
+  return <div className="mt-3 space-y-3 rounded-lg border border-indigo-200 bg-white p-3" aria-busy={busy || processing}>
+    <p className="text-sm text-slate-700">Une analyse consomme une vérification. Une réécriture peut être générée sous 60/100 et décompte alors ton quota de réécritures.</p>
+    {kind === 'video' && <>
+      <p className="text-xs text-slate-600">Mia observe trois images de la vidéo : cela ne vérifie pas la présence d’une mention pendant toute sa durée.</p>
+      <label htmlFor={'media-ai-audio-' + jobId} className="flex items-center gap-2 text-sm">
+        <input id={'media-ai-audio-' + jobId} type="checkbox" checked={audio} disabled={busy || processing}
+          onChange={event => onAudioChange(event.target.checked)} />
+        Inclure la transcription audio
+      </label>
+      <p className="text-xs text-slate-600">Sans cette option, les paroles ne sont pas analysées. La transcription utilise aussi OpenAI.</p>
+    </>}
+    <div className="flex flex-wrap gap-2">
+      <button type="button" disabled={busy || processing || Boolean(run)} onClick={() => onAnalyze(audio)}
+        className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Analyser avec Mia</button>
+      <button type="button" disabled={busy} onClick={onRefresh} className="rounded-lg border px-3 py-2 text-sm">Consulter les analyses IA</button>
+    </div>
+    {busy && <p role="status" className="text-sm text-indigo-800">Demande en cours. Tu peux laisser cette page ouverte.</p>}
+    {processing && <p role="status" className="text-sm text-indigo-800">Analyse IA en cours. Le suivi consulte seulement son état, sans nouvelle demande IA.</p>}
+    {run?.status === 'failed' && <p className="text-sm text-red-800">Cette analyse a échoué. Aucune nouvelle tentative IA automatique. Consulte son état avant de préparer à nouveau le média.</p>}
+    {runs.filter(item => item.status === 'completed').map(item => <p key={item.id} className="text-sm text-emerald-800">
+      {kind === 'video' ? (item.include_audio ? 'Analyse avec audio terminée. ' : 'Analyse sans audio terminée. ') : 'Analyse du carrousel terminée. '}
+      <Link href={'/dashboard/archive/' + item.verification_id} className="font-semibold underline">Consulter le résultat IA</Link>
+    </p>)}
+    {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+  </div>;
+}
+
 export function MediaJobsPanel({ enabled, assets }: { enabled: boolean; assets: Asset[] }) {
   const [caption, setCaption] = useState('');
   const [platform, setPlatform] = useState('instagram');
@@ -11,6 +53,65 @@ export function MediaJobsPanel({ enabled, assets }: { enabled: boolean; assets: 
   const [jobs, setJobs] = useState<Job[]>([]);
   const [offset, setOffset] = useState(0), [total, setTotal] = useState(0);
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('');
+  const [analyses, setAnalyses] = useState<Record<string, AnalysisState>>({});
+  const analysisRequests = useRef(new Set<string>());
+  const readAnalyses = useCallback(async (jobId: string, clearError = true) => {
+    if (analysisRequests.current.has(jobId)) return;
+    analysisRequests.current.add(jobId);
+    setAnalyses(current => ({ ...current, [jobId]: { ...(current[jobId] ?? initialAnalysis()), busy: true,
+      error: clearError ? '' : (current[jobId]?.error ?? '') } }));
+    try {
+      const response = await fetch('/api/media/jobs/' + jobId + '/analyze', { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? 'État des analyses IA indisponible.');
+      if (!Array.isArray(data.runs)) throw new Error('Réponse de suivi IA incorrecte.');
+      setAnalyses(current => ({ ...current, [jobId]: { ...(current[jobId] ?? initialAnalysis()), runs: data.runs, busy: false } }));
+    } catch (cause) {
+      setAnalyses(current => ({ ...current, [jobId]: { ...(current[jobId] ?? initialAnalysis()),
+        error: cause instanceof Error ? cause.message : 'Suivi IA indisponible.' } }));
+    } finally {
+      analysisRequests.current.delete(jobId);
+      setAnalyses(current => ({ ...current, [jobId]: { ...(current[jobId] ?? initialAnalysis()), busy: false } }));
+    }
+  }, []);
+  const processingAnalyses = Object.entries(analyses).filter(([, value]) => value.runs.some(run => run.status === 'processing'))
+    .map(([id]) => id).sort().join(',');
+  useEffect(() => {
+    if (!enabled || !processingAnalyses) return;
+    // Aucun POST dans le suivi : une déconnexion ne doit jamais relancer la génération.
+    let attempts = 0;
+    const timer = setInterval(() => {
+      if (++attempts > 60) { clearInterval(timer); return; }
+      for (const id of processingAnalyses.split(',')) void readAnalyses(id, false);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [enabled, processingAnalyses, readAnalyses]);
+  async function analyze(jobId: string, includeAudio: boolean) {
+    if (analysisRequests.current.has(jobId) || analyses[jobId]?.runs.some(run => run.include_audio === includeAudio)) return;
+    analysisRequests.current.add(jobId);
+    setAnalyses(current => ({ ...current, [jobId]: { ...(current[jobId] ?? initialAnalysis()), busy: true, error: '' } }));
+    try {
+      const response = await fetch('/api/media/jobs/' + jobId + '/analyze', { method: 'POST',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ includeAudio }) });
+      const data = await response.json();
+      if (['processing', 'completed', 'failed'].includes(data.status) && typeof data.verificationId === 'string') {
+        const run: AnalysisRun = { id: data.verificationId, verification_id: data.verificationId,
+          include_audio: includeAudio, status: data.status, created_at: new Date().toISOString(), completed_at: null };
+        setAnalyses(current => ({ ...current, [jobId]: { ...(current[jobId] ?? initialAnalysis()), runs: [
+          ...(current[jobId]?.runs ?? []).filter(item => item.include_audio !== includeAudio), run,
+        ] } }));
+      }
+      if (!response.ok) throw new Error(data.error ?? 'Analyse IA indisponible.');
+    } catch (cause) {
+      setAnalyses(current => ({ ...current, [jobId]: { ...(current[jobId] ?? initialAnalysis()),
+        error: cause instanceof Error ? cause.message : 'Analyse IA indisponible.' } }));
+    } finally {
+      analysisRequests.current.delete(jobId);
+      setAnalyses(current => ({ ...current, [jobId]: { ...(current[jobId] ?? initialAnalysis()), busy: false } }));
+    }
+    // Même après perte de réponse, rechercher le résultat au lieu de répéter le POST.
+    await readAnalyses(jobId, false);
+  }
   const refresh = useCallback(async () => {
     const response = await fetch(`/api/media/jobs?offset=${offset}`, { cache: 'no-store' });
     const data = await response.json();
@@ -68,7 +169,12 @@ export function MediaJobsPanel({ enabled, assets }: { enabled: boolean; assets: 
       <p className="font-semibold">{job.kind === 'video' ? 'Vidéo' : 'Carrousel'} · {labels[job.status]}</p>
       <p className="text-xs text-slate-600">Tentatives : {job.attempts}/3</p>
       {job.status === 'failed' && <p className="text-sm text-red-700">Le média n’a pas pu être préparé. Vérifie son format et sa durée ; aucun résultat IA n’a été produit.</p>}
-      {job.status === 'completed' && <p className="mt-2 text-sm">Contrôle textuel et empreintes archivés. <Link href={'/dashboard/archive/' + job.verification_id} className="underline">Consulter ce contrôle</Link></p>}
+      {job.status === 'completed' && <>
+        <p className="mt-2 text-sm">Contrôle textuel et empreintes archivés. <Link href={'/dashboard/archive/' + job.verification_id} className="underline">Consulter ce contrôle</Link></p>
+        <PreparedMediaAnalysisControls jobId={job.id} kind={job.kind} {...(analyses[job.id] ?? initialAnalysis())}
+          onAudioChange={includeAudio => setAnalyses(current => ({ ...current, [job.id]: { ...(current[job.id] ?? initialAnalysis()), includeAudio } }))}
+          onAnalyze={includeAudio => void analyze(job.id, includeAudio)} onRefresh={() => void readAnalyses(job.id)} />
+      </>}
       {['queued','processing'].includes(job.status) && <button type="button" disabled={busy} onClick={() => void submit({ action: 'cancel', jobId: job.id })} className="mt-2 rounded-lg border px-3 py-2 text-sm">Annuler la préparation</button>}
     </li>)}</ul>
     <div className="flex items-center justify-between text-sm"><button type="button" disabled={offset === 0 || busy} onClick={() => setOffset(Math.max(0, offset - 20))}>Précédent</button><span>{total} préparation(s)</span><button type="button" disabled={offset + 20 >= total || busy} onClick={() => setOffset(offset + 20)}>Suivant</button></div>

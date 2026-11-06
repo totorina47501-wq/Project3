@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { paidPlanFromPrices, effectivePlan, stripeStatus } from '../../lib/billing/events';
+import { paidPlanFromPrices, effectivePlan, stripeStatus, subscriptionPeriodEnd } from '../../lib/billing/events';
 const config={pro:'price_PRO',studio:'price_STUDIO'};
 describe('Droits Stripe test — sans appel API',()=>{
   it('reconnaît Solo configuré et refuse une collision de tarifs',()=>{
@@ -20,5 +20,14 @@ describe('Droits Stripe test — sans appel API',()=>{
   it('n invente aucun état de facturation',()=>{
     expect(stripeStatus('active')).toBe('active');
     expect(stripeStatus('malformed')).toBe('incomplete');
+  });
+  it('lit les périodes par item du SDK récent et conserve le format historique',()=>{
+    const earlier=1_800_000_000;const later=earlier+86400;
+    expect(subscriptionPeriodEnd({items:{data:[{current_period_end:later},{current_period_end:earlier}]},current_period_end:later})).toBe(new Date(earlier*1000).toISOString());
+    expect(subscriptionPeriodEnd({current_period_end:earlier})).toBe(new Date(earlier*1000).toISOString());
+    expect(subscriptionPeriodEnd({items:{data:[{}]},current_period_end:earlier})).toBe(new Date(earlier*1000).toISOString());
+    expect(subscriptionPeriodEnd({items:{data:[{}]}})).toBeNull();
+    expect(subscriptionPeriodEnd({items:{data:[{current_period_end:Infinity}]}})).toBeNull();
+    expect(subscriptionPeriodEnd({current_period_end:-1})).toBeNull();
   });
 });
