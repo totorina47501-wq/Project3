@@ -51,18 +51,36 @@ jobs:
         run: node --test --experimental-test-isolation=none scripts/commercial/*.test.mjs
       - name: Tests unitaires
         run: npm test
-      - name: Vérifier FFmpeg et FFprobe pour les tests médias réels
-        timeout-minutes: 5
+      # GitHub runner Ubuntu 24.04 doesn't consistently include FFmpeg.
+      # APT downloads from the Azure mirror repeatedly timed out (5 min).
+      # Cache the immutable GitHub release archive and verify SHA256 on EVERY run,
+      # including cache hits. No third-party Actions and no APT dependency.
+      - name: Cache FFmpeg statique pour CI
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/ffmpeg-7.0.2-amd64-static.tar.xz
+          key: mentioncheck-ffmpeg-static-v7.0.2-amd64-abda8d77ce830914
+      - name: Installer FFmpeg et FFprobe statiques avec empreinte vérifiée
+        timeout-minutes: 8
+        shell: bash
         run: |
           set -euo pipefail
-          if command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null; then
-            echo "Preinstalled FFmpeg detected: no APT network install needed"
-          else
-            sudo apt-get update -o Acquire::Retries=1 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15
-            sudo apt-get install -y --no-install-recommends -o Acquire::Retries=1 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 ffmpeg
+          archive="$RUNNER_TEMP/ffmpeg-7.0.2-amd64-static.tar.xz"
+          if [ ! -f "$archive" ]; then
+            curl --fail --location --retry 2 --retry-delay 3 --connect-timeout 15 --max-time 240 \
+              --output "$archive" \
+              'https://github.com/publicala/ffmpeg-static/releases/download/v7.0.2/ffmpeg-7.0.2-amd64-static.tar.xz'
           fi
-          ffmpeg -version | head -n 1
-          ffprobe -version | head -n 1
+          printf '%s  %s\n' 'abda8d77ce8309141f83ab8edf0596834087c52467f6badf376a6a2a4c87cf67' "$archive" | sha256sum --check
+          bin_dir="$RUNNER_TEMP/mentioncheck-ffmpeg/7.0.2"
+          mkdir -p "$bin_dir"
+          tar -xJf "$archive" -C "$bin_dir" --strip-components=1 \
+            ffmpeg-7.0.2-amd64-static/ffmpeg ffmpeg-7.0.2-amd64-static/ffprobe
+          test -x "$bin_dir/ffmpeg"
+          test -x "$bin_dir/ffprobe"
+          printf '%s\n' "$bin_dir" >> "$GITHUB_PATH"
+          "$bin_dir/ffmpeg" -version | head -n 1
+          "$bin_dir/ffprobe" -version | head -n 1
       - name: Tests vidéo hors ligne (aucun appel IA)
         run: npm run test:video:offline
       - name: Tests carrousels hors ligne (aucun appel IA)
