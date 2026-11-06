@@ -12,6 +12,14 @@ it('propose Solo en bac à sable seulement si son tarif est configuré',()=>{
  vi.stubEnv('STRIPE_PRICE_SOLO','');expect(renderToStaticMarkup(PricingPage())).not.toContain('Paiement test solo');
  vi.stubEnv('STRIPE_PRICE_SOLO','price_SOLO');vi.stubEnv('BILLING_ENABLED','false');expect(renderToStaticMarkup(PricingPage())).not.toContain('Paiement test');
 });
+it('présente les trois prix indicatifs et les états sans paiement quand Stripe est désactivé',()=>{
+ vi.stubEnv('BILLING_ENABLED','false');
+ const markup=renderToStaticMarkup(PricingPage());
+ for(const price of [9,19,49])expect(markup).toContain(`${price} €`);
+ expect(markup).toContain('Démonstration gratuite disponible');
+ expect(markup.match(/Abonnement bientôt disponible/g)).toHaveLength(2);
+ expect(markup).not.toContain('Paiement test');
+});
 it('présente les limites réellement accordées, dont cinq sièges Studio propriétaire compris',()=>{
  vi.stubEnv('BILLING_ENABLED','false');
  const markup=renderToStaticMarkup(PricingPage());
