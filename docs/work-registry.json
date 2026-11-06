@@ -105,7 +105,8 @@
       "next": [
         "Corpus distant déjà indexé 5/5 ; invalidation appliquée (version 20261104212312). Ne pas relancer une indexation initiale.",
         "Conversation réelle validée : citation Légifrance, embedding et réponse journalisés par compte ; question hors corpus sans citation. Surveiller le cron opt-in sans recréer le corpus ; voir docs/37-real-openai-validation.md.",
-        "Un échec du journal embedding interrompt désormais la réponse au lieu d’être masqué par le repli lexical ; voir docs/39-technical-reliability.md."
+        "Un échec du journal embedding interrompt désormais la réponse au lieu d’être masqué par le repli lexical ; voir docs/39-technical-reliability.md.",
+        "Évaluation hors ligne des citations/refus, budgets, erreurs d’embedding et isolation A/B : docs/50-mia-rag-offline-evaluation.md ; aucun fournisseur ni réindexation."
       ]
     },
     {
