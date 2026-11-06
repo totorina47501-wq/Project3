@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { useLocalSession } from './fixtures/local-session';
+import { localScenario, useScenarioActor } from './fixtures/scenario';
 const email = process.env.E2E_TEST_EMAIL;
 const password = process.env.E2E_TEST_PASSWORD;
-test.skip(!email || !password, 'Identifiants de compte de test non configurés.');
-test('connexion, cockpit, archives et Mia', async ({ page }) => {
+test('connexion, cockpit, archives, Mia puis déconnexion', async ({ page }) => {
+  test.skip(!email || !password, 'Identifiants de compte de test non configurés.');
   await page.goto('/login');
   await page.getByLabel('Adresse email').fill(email!);
   await page.getByLabel('Mot de passe').fill(password!);
@@ -18,6 +19,10 @@ test('connexion, cockpit, archives et Mia', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Envoyer à Mia' })).toBeDisabled();
   await page.getByRole('button', { name: 'Quelles mentions pour un lien affilié ?' }).click();
   await expect(page.getByRole('textbox', { name: 'Ta question' })).toHaveValue('Quelles mentions pour un lien affilié ?');
+  await page.getByRole('button', { name: 'Déconnexion' }).click();
+  await expect(page).toHaveURL(/\/login(?:\?|$)/);
+  await page.goto('/dashboard');
+  await expect(page).toHaveURL(/\/login(?:\?|$)/);
   // Aucun appel OpenAI payant : contrôle de navigation uniquement.
 });
 
@@ -71,4 +76,26 @@ test('la navigation mobile authentifiée est accessible au clavier hors ligne', 
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(new URL('/dashboard/archive', baseURL!).toString());
   await expect(navigation.getByRole('link', { name: 'Archives', exact: true })).toHaveAttribute('aria-current', 'page');
+});
+
+test('archives PDF : propriétaire autorisé et compte B refusé hors ligne', async ({ browser, request, baseURL }) => {
+  test.skip(process.env.E2E_OFFLINE_AUTH !== '1', 'Nécessite la fixture Supabase HTTP locale.');
+  const scenario = await localScenario(request);
+  const ownerContext = await browser.newContext();
+  const outsiderContext = await browser.newContext();
+  try {
+    await useScenarioActor(ownerContext, baseURL!, scenario.actors.owner);
+    const ownerPdf = await ownerContext.request
+      .get(new URL('/api/archive/' + scenario.verificationIds.owner + '/pdf', baseURL!).toString());
+    expect(ownerPdf.status()).toBe(200);
+    expect((await ownerPdf.body()).subarray(0, 4).toString()).toBe('%PDF');
+
+    await useScenarioActor(outsiderContext, baseURL!, scenario.actors.outsider);
+    const outsiderPdf = await outsiderContext.request
+      .get(new URL('/api/archive/' + scenario.verificationIds.owner + '/pdf', baseURL!).toString());
+    expect(outsiderPdf.status()).toBe(404);
+  } finally {
+    await ownerContext.close();
+    await outsiderContext.close();
+  }
 });

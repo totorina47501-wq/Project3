@@ -23,6 +23,10 @@
 - Vérification mobile, accessibilité clavier et parcours RGPD.
 - Prestataires payants désactivés jusqu'à autorisation et test de bout en bout.
 
+## Trace opérationnelle issue #16 (état documentaire)
+- Fait en local/offline : recettes Playwright authentifiées sans fournisseur payant, refus 401/403, contrôles d'origine, isolation A/B SQL, upload média opt-in avec nettoyage ciblé.
+- Non exécuté dans ce lot : validation staging vs production, vérification service_role distante, preuve RLS/RPC distante, exercice backup/restore et rollback sur environnement isolé.
+
 **Statut :** checklist opérationnelle, pas une preuve de réalisation.
 
 ## Vérification statique des liens Markdown internes
