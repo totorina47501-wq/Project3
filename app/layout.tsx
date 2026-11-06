@@ -15,13 +15,11 @@ export const viewport: Viewport = { width: 'device-width', initialScale: 1 };
 export const metadata: Metadata = {
   title: `${BRAND.publicName} — Vérifiez vos partenariats avec Mia`,
   description: 'MentionCheck aide les créateurs et influenceurs à vérifier les mentions commerciales de leurs publications avec Mia, avant publication.',
-  alternates: { canonical: '/' },
   metadataBase: new URL(publicSiteUrl()),
   openGraph: {
     type:'website',locale:'fr_FR',siteName:BRAND.publicName,
     title:'MentionCheck — vérifier les mentions commerciales',
     description:'Vérifiez les mentions commerciales de vos publications avec Mia, avant publication.',
-    url: '/',
   },
   twitter: { card:'summary', title:BRAND.publicName, description:'Vérifiez les mentions commerciales de vos publications avec Mia.' },
   robots: { index: true, follow: true },

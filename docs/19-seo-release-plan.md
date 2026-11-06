@@ -17,3 +17,12 @@ Statut : plan non déployé.
 - Métadonnées Open Graph cohérentes avec la proposition de valeur.
 - Test Playwright de l'accueil et du canonical ajouté au test existant.
 - Avant lancement : confirmer domaine, coordonnées légales, consentement et Search Console ; ne pas modifier les accès privés ni ouvrir Stripe live.
+
+## Audit SEO hors ligne — 6 novembre 2026
+
+- Le canonical est déclaré uniquement sur l’accueil ; les pages tarifs et privées ne récupèrent plus son URL.
+- L’URL Open Graph fixe de l’accueil a été retirée des métadonnées globales afin de ne pas la propager aux autres routes.
+- `robots.txt` interdit aussi `/dashboard` sans slash, en plus de ses sous-routes ; les tarifs restent exclus du sitemap et `noindex`.
+- Playwright vérifie le canonical de l’accueil, son absence sur les tarifs, les règles robots et l’unicité de l’URL du sitemap.
+- Les contrôles clavier/mobile existants restent couverts par `tests/e2e/authenticated-navigation.spec.ts` ; aucune refonte UI n’est requise par cet audit.
+- Le build local de cette révision mesure l’accueil à 185 B et 106 kB de JavaScript au premier chargement (103 kB partagés). Aucun défaut de bundle supplémentaire n’est établi ; aucun code client n’a été modifié.

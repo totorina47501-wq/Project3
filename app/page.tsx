@@ -1,6 +1,11 @@
 // Chemin : app/page.tsx
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { BRAND } from '@/lib/branding';
+
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+};
 
 export default function Home() {
   return (
