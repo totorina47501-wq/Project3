@@ -61,3 +61,5 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   console.log(`${problems.length} lien(s) interne(s) cassé(s)${report?' [rapport non bloquant]':''}`);
   process.exit(problems.length&&!report?1:0);
 }
+
+// CI revalidation marker: code behavior unchanged; recheck Copilot PR on current GitHub policy.
