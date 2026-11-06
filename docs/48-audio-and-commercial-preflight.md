@@ -33,8 +33,10 @@ Vérification sans fournisseur :
 
 ```sh
 node --test --experimental-test-isolation=none scripts/commercial/*.test.mjs
-npx vitest run tests/unit/openai-audio-adapter.test.ts tests/unit/prepared-media-engine.test.ts
+npx vitest run tests/unit/openai-audio-adapter.test.ts tests/unit/prepared-media-engine.test.ts tests/unit/media-ai-route.test.ts
 ```
+
+Ces suites hors ligne couvrent les transcriptions vides/tronquées, le choix explicite de l'audio, l'épuisement du quota, les erreurs fournisseur simulées et l'idempotence d'une analyse audio terminée. Les clients OpenAI sont simulés ; aucun appel fournisseur n'est effectué.
 
 Les scripts restent directement exécutables avec Node : `package.json` et le contrôle des liens Markdown sont réservés à la PR Copilot #34 pendant ce lot.
 

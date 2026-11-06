@@ -71,6 +71,13 @@ it('indique explicitement une transcription vide sans prétendre avoir compris d
  const result=await analyzePreparedMedia({...input,includeAudio:true});
  expect(result.coverage.audio).toBe('transcribed');expect(result.warnings.join(' ')).toContain('Aucune parole exploitable');
 });
+it('signale une transcription tronquée sans prétendre avoir contrôlé les paroles restantes',async()=>{
+ m.load.mockResolvedValue({images:[{name:'frame-01.jpg',dataUrl:'data:one'}],audio:{bytes:new Uint8Array(64),durationSeconds:2},evidence:[],warnings:[]});
+ m.audio.mockResolvedValue({text:'x'.repeat(12_000),truncated:true,usage:{...usage,model:'gpt-transcribe'},durationSeconds:2});
+ const result=await analyzePreparedMedia({...input,includeAudio:true});
+ expect(result.coverage.audio).toBe('transcribed');
+ expect(result.warnings.join(' ')).toContain('La transcription est tronquée');
+});
 it('reste partiel lorsque la transcription demandée échoue',async()=>{
  m.load.mockResolvedValue({images:[{name:'frame-01.jpg',dataUrl:'data:one'}],audio:{bytes:new Uint8Array(64),durationSeconds:2},evidence:[],warnings:[]});
  m.audio.mockRejectedValue(new Error('provider secret'));
