@@ -47,7 +47,10 @@ jobs:
       - name: Tests unitaires
         run: npm test
       - name: Installer FFmpeg pour les tests médias réels
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+        timeout-minutes: 5
+        run: |
+          sudo apt-get update -o Acquire::Retries=1 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20
+          sudo apt-get install -y --no-install-recommends -o Acquire::Retries=1 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 ffmpeg
       - name: Tests vidéo hors ligne (aucun appel IA)
         run: npm run test:video:offline
       - name: Tests carrousels hors ligne (aucun appel IA)

@@ -43,3 +43,11 @@ Les scripts restent directement exécutables avec Node : `package.json` et le co
 TypeScript et lint réussis ; 344 tests unitaires avec les interrupteurs de la CI, 5 tests de la commande commerciale, 90 tests médias et 11 suites SQL locales passent. Playwright : 24 réussis, 1 ignoré, sans appel fournisseur. Build Next.js, bundle OpenNext et dry-run Wrangler réussis. Aucun changement de schéma ni nouvelle migration dans ce lot.
 
 Le diagnostic lancé sans dossier dans cet environnement local retourne volontairement le code 2 et 29 champs non renseignés ; il ne permet pas de déduire les secrets déjà configurés sur le Worker. Le dossier vierge est prêt à compléter, les informations réelles ne sont pas inventées.
+
+## Recette OpenAI réelle
+
+Sur `a1c8385`, la variante audio de la vidéo existante répond HTTP 200, mode full, avec trois frames analysées et `audio=transcribed`. La piste d'une seconde est un signal synthétique sans paroles : transcription vide, avertissement explicite attendu. Cela valide le transport WAV et son intégration ; aucune précision sur parole naturelle n'est mesurée par cette fixture.
+
+Le doublon retourne la même vérification ; cinq lignes de coût seulement : une transcription gpt-transcribe, trois Vision et une analyse texte GPT-4o. 1 258 tokens d'entrée et 246 de sortie pour GPT-4o ; l'audio ne fournit pas de tokens et est estimé à 0,000075 USD par durée. Total du lot : 0,00568 USD estimés, sans vérification de facture. Le compte technique est rebanni et aucune session n'est active. [Relevé minimisé](receipts/2026-11-06-audio.json).
+
+Le job qualité initial a attendu plus de huit minutes dans l'installation FFmpeg. Le correctif final borne les connexions APT, limite les reprises et évite les paquets recommandés ; tous les tests sont conservés. Le résultat CI reste à vérifier sur ce dernier SHA.

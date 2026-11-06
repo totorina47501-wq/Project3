@@ -6,6 +6,8 @@ Lire [docs/48-audio-and-commercial-preflight.md](docs/48-audio-and-commercial-pr
 
 Un diagnostic commercial local réutilise le contrôle existant : `node scripts/commercial/check.mjs`. Modèle vierge : `docs/commercial-dossier.template.json` ; ne pas inventer les informations de l’exploitant. Les valeurs et secrets ne sont jamais reproduits dans le rapport. Aucun paiement, email ou OAuth activé. Le lot laisse `package.json` et les fichiers de la PR Copilot #34 intacts.
 
+Audio réellement validé sur `a1c8385` : une transcription gpt-transcribe, trois frames et la légende, mode complet, doublon idempotent, estimation totale 0,00568 USD. Signal technique sans paroles : ne pas confondre avec une mesure de précision sur voix naturelle. Compte de recette rebanni, zéro session active. [Preuve audio](docs/receipts/2026-11-06-audio.json). Ne pas répéter cette recette payante. Le commit suivant ne modifie que la preuve et les délais réseau de l’installation FFmpeg en CI.
+
 ## Reprise prioritaire — lot intégré du 6 novembre
 
 Lire [docs/47-integrated-delivery.md](docs/47-integrated-delivery.md) avant les bilans historiques ci-dessous. Le lot part de `abcdb79` et conserve les ajouts Copilot ; la PR liens Markdown reste indépendante. Registre : 24 domaines, 36 routes, 18 migrations sources. Trois migrations additives sont appliquées, versions distantes recensées dans le bilan. Aucun nouveau texte juridique importé ni activation Stripe.

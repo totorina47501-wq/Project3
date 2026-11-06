@@ -1,0 +1,52 @@
+{
+  "jobId": "b9bd8ac6-a8ac-42a1-9b2a-3c82e4de4627",
+  "httpStatus": 200,
+  "verificationId": "da374e96-2761-47d7-aaf4-f40c5f9a63fa",
+  "analysisMode": "full",
+  "coverage": {
+    "imagesExpected": 3,
+    "imagesAnalyzed": 3,
+    "audio": "transcribed",
+    "textAnalyzed": true
+  },
+  "score": 98,
+  "warnings": [
+    "Trois images de la vidéo sont analysées : elles ne permettent pas de vérifier la présence continue des mentions pendant toute la vidéo.",
+    "Aucune parole exploitable n’a été transcrite dans la piste audio."
+  ],
+  "elapsedSeconds": 13.88,
+  "duplicateSameVerification": true,
+  "historyCompleted": true,
+  "date": "2026-11-06",
+  "applicationCommit": "a1c83852ddede0617cb03d7014cb3a543c9023df",
+  "models": [
+    "gpt-transcribe",
+    "gpt-4o"
+  ],
+  "syntheticDataOnly": true,
+  "fixtureAudio": "Signal synthétique sans paroles",
+  "ledger": {
+    "calls": 5,
+    "transcriptionCalls": 1,
+    "visionCalls": 3,
+    "textCalls": 1,
+    "promptTokens": 1258,
+    "completionTokens": 246,
+    "estimatedCostUsd": 0.00568,
+    "audioDurationSeconds": 1,
+    "transcriptCharacters": 0,
+    "audioTokensReported": false,
+    "audioEstimatedCostUsd": 7.5e-05,
+    "invoiceVerified": false
+  },
+  "fixtureCleanup": {
+    "banned": true,
+    "activeSessions": 0
+  },
+  "notes": [
+    "Vidéo existante réutilisée : aucun nouvel upload ni nouvelle extraction.",
+    "Résultat de transcription vide attendu sur le signal sans paroles ; précision sur parole naturelle non mesurée.",
+    "Deux POST, une seule vérification et cinq lignes de coût.",
+    "Aucun paiement, email, OAuth ou opération de purge activé."
+  ]
+}
