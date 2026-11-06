@@ -24,3 +24,11 @@
 - Prestataires payants désactivés jusqu'à autorisation et test de bout en bout.
 
 **Statut :** checklist opérationnelle, pas une preuve de réalisation.
+
+## Vérification statique des liens Markdown internes
+
+Hors réseau, sans dépendance : `npm run docs:links` (bloquant, code 1 si anomalie), `npm run docs:links:report` (inventaire non bloquant), `npm run docs:links:test` (tests unitaires).
+
+Portée : `*.md` à la racine et `docs/**/*.md` (hors `docs/receipts`, généré). Ignorés : HTTPS/autres schémas, `mailto:`, `//`, fragments seuls, code inline et blocs de code.
+
+Limitations : les ancres `#...` et les paramètres `?...` sont retirés sans vérification ; seuls les liens inline et les définitions de référence sont analysés (pas le HTML brut).
