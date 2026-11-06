@@ -1,0 +1,93 @@
+name: MentionCheck Codex dispatch
+# Explicit opt-in: agent:codex ONLY, never agent:approved (Copilot queue).
+# This workflow does not merge, deploy, or execute PR code.
+on:
+  schedule:
+    - cron: '5,35 * * * *'
+  issues:
+    types: [closed]
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Inspect only, do not assign a new agent
+        type: boolean
+        default: true
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+concurrency:
+  group: mentioncheck-codex-dispatch
+  cancel-in-progress: false
+jobs:
+  dispatch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      CODEX_DISPATCH_TOKEN: ${{ secrets.CODEX_DISPATCH_TOKEN || secrets.COPILOT_DISPATCH_TOKEN || secrets.GH_AW_AGENT_TOKEN }}
+    steps:
+      - name: Select one safe Codex issue and verify assignment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.CODEX_DISPATCH_TOKEN || secrets.COPILOT_DISPATCH_TOKEN || secrets.GH_AW_AGENT_TOKEN }}
+          script: |
+            const owner = context.repo.owner, repo = context.repo.repo;
+            if (owner !== 'totorina47501-wq' || repo !== 'Project3') {
+              throw Error('Incorrect repository');
+            }
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', per_page: 100
+            });
+            const prs = await github.paginate(github.rest.pulls.list, {
+              owner, repo, state: 'open', per_page: 100
+            });
+            const isCodex = (user) => user?.login === 'Codex';
+            const activeIssue = issues.some(i => !i.pull_request && i.assignees?.some(isCodex));
+            const activePr = prs.some(p => isCodex(p.user));
+            if (activeIssue || activePr) {
+              core.info('Codex already has an issue or open PR; capacity 1/1. No assignment.');
+              return;
+            }
+            const hasLabel = (i, name) => i.labels?.some(l => l.name === name);
+            const candidateIssues = issues.filter(i =>
+              !i.pull_request && hasLabel(i, 'agent:codex') &&
+              !hasLabel(i, 'agent:approved') &&
+              !i.assignees?.some(a => ['Codex','Copilot','copilot-swe-agent[bot]'].includes(a.login))
+            ).sort((a,b) => a.number-b.number);
+            for (const issue of candidateIssues) {
+              const number = issue.number;
+              const closing = new RegExp('(?:fix(?:es|ed)?|clos(?:es|ed)?|resolv(?:es|ed)?)\\s+#' + number + '\\b','i');
+              if (prs.some(pr => closing.test((pr.title||'')+' '+(pr.body||'')))) {
+                core.info('Issue #'+number+' has an open linked PR; skipping.');
+                continue;
+              }
+              const latest = (await github.rest.issues.get({owner,repo,issue_number:number})).data;
+              if (latest.state !== 'open' ||
+                  !hasLabel(latest,'agent:codex') || hasLabel(latest,'agent:approved') ||
+                  latest.assignees?.some(a => ['Codex','Copilot','copilot-swe-agent[bot]'].includes(a.login))) {
+                continue;
+              }
+              const dryRun = context.eventName === 'workflow_dispatch' &&
+                String(context.payload.inputs?.dry_run) === 'true';
+              if (dryRun) {
+                core.info('Dry-run: would assign Codex to #'+number);
+                return;
+              }
+              if (!process.env.CODEX_DISPATCH_TOKEN) {
+                throw Error('Missing CODEX_DISPATCH_TOKEN or existing Copilot dispatch PAT');
+              }
+              // Partner-agent REST assignment is not guaranteed by GitHub API docs.
+              // Never silently substitute Copilot for Codex.
+              await github.rest.issues.addAssignees({
+                owner,repo,issue_number:number,assignees:['Codex']
+              });
+              const check = (await github.rest.issues.get({owner,repo,issue_number:number})).data;
+              if (!check.assignees?.some(isCodex)) {
+                throw Error('Codex assignee not persisted on issue #'+number);
+              }
+              core.info('Codex assignee verified on #'+number+'; confirm session and PR separately.');
+              return;
+            }
+            core.info('No Codex-only issue eligible for dispatch.');

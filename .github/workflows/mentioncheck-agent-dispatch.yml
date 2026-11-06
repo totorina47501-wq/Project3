@@ -84,6 +84,8 @@ jobs:
           # merely because it is P0 or because a CI failed.
           candidates="$(jq -r '[.[] | select(.pull_request == null and .state == "open") |
             select(any(.labels[]?; .name == "agent:approved")) |
+            select(any(.labels[]?; .name == "agent:codex") | not) |
+            select(any(.assignees[]?; .login == "Codex") | not) |
             select((.assignees // [] | map(.login) | index("Copilot")) == null) |
             select((.assignees // [] | map(.login) | index("copilot-swe-agent[bot]")) == null)
             ] | sort_by(.number) | .[].number' <<< "$issues")"
@@ -101,6 +103,8 @@ jobs:
             details="$(gh api "repos/$REPO/issues/$number")"
             [ "$(jq -r .state <<< "$details")" = open ] || continue
             jq -e '[.labels[].name] | index("agent:approved") != null' <<< "$details" >/dev/null || continue
+            jq -e '[.labels[].name] | index("agent:codex") == null' <<< "$details" >/dev/null || continue
+            jq -e 'any(.assignees[]?; .login == "Codex") | not' <<< "$details" >/dev/null || continue
             if jq -e --arg num "$number" '
               any(.[]; ((.body // "") + " " + (.title // "")) |
                 test("(?i)(close[sd]?|fix(e[sd])?|resolve[sd]?)\\s+#" + $num + "\\b"))' <<< "$prs" >/dev/null; then
