@@ -74,6 +74,22 @@ describe('Contrats statiques des workflows agents', () => {
     expect(agentMerge).toContain('return; // main may advance');
   });
 
+  it('continue après fusion robot sans dépendre des événements push ou PR fermée', () => {
+    const ci = workflow('ci.yml');
+    expect(ci).toContain('  workflow_dispatch:');
+    expect(ci).toContain('Cache Chromium Playwright');
+    expect(ci).toContain('npx playwright install chromium');
+    expect(ci).not.toContain('npx playwright install --with-deps chromium');
+    expect(agentMerge).toContain('  actions: write');
+    expect(agentMerge).toContain('actions/workflows/ci.yml/dispatches');
+    expect(agentMerge).toContain("workflow_id:'ci.yml',ref:'main'");
+    expect(agentMerge).toContain("github.event.workflow_run.event == 'workflow_dispatch'");
+    expect(agentMerge).toContain("workflow_id:'mentioncheck-agent-dispatch.yml',ref:'main',inputs:{dry_run:'false'}");
+    expect(agentMerge).toContain('current===source.head_sha');
+    expect(agentMerge).toContain('source.head_branch===\'main\'');
+    expect(agentMerge).not.toContain('actions/checkout@');
+  });
+
   it('réserve le workflow documentaire au label explicite et aux chemins permis', () => {
     expect(docsMerge).toContain("github.event.workflow_run.conclusion == 'success'");
     expect(docsMerge).toContain('[ "$(jq -r \'.draft\' <<< "$pr")" = false ]');
