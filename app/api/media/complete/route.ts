@@ -60,14 +60,18 @@ export async function POST(request: Request) {
       .gt('expires_at', new Date().toISOString()).select('id').maybeSingle();
     if (!updated && !updateError) {
       // A concurrent confirmation may have already finalized the same asset.
-      // Return its persisted digest rather than claiming a failed second write
-      // (only possible after the persistence migration is enabled).
+      // Read the digest only when its additive migration is enabled.
       if (persistDigest) {
         const { data: current, error: readError } = await admin.from('media_assets')
           .select('status,media_sha256').eq('id', item.id)
           .eq('user_id', user.id).maybeSingle();
         if (!readError && current?.status === 'ready')
           return readyMediaResponse(current.media_sha256);
+      } else {
+        const { data: current, error: readError } = await admin.from('media_assets')
+          .select('status').eq('id', item.id).eq('user_id', user.id).maybeSingle();
+        if (!readError && current?.status === 'ready')
+          return readyMediaResponse(null);
       }
       throw new HttpError(409, 'Média expiré ou déjà modifié.');
     }
