@@ -11,7 +11,7 @@ const verification='95200000-0000-4000-8000-000000000001',run='95300000-0000-400
 const context={params:Promise.resolve({id:job})};
 const request=(body:unknown,origin='https://mentioncheck.test')=>new Request(`https://mentioncheck.test/api/media/jobs/${job}/analyze`,{method:'POST',headers:{origin,'content-type':'application/json'},body:JSON.stringify(body)});
 beforeEach(()=>{
- vi.clearAllMocks();vi.stubEnv('MEDIA_AI_ENABLED','true');vi.stubEnv('OPENAI_PAUSED','false');vi.stubEnv('OPENAI_API_KEY','fixture-not-a-secret');vi.stubEnv('OPENAI_AUDIO_ENABLED','false');
+ vi.clearAllMocks();vi.stubEnv('MEDIA_AI_ENABLED','true');vi.stubEnv('OPENAI_PAUSED','false');vi.stubEnv('OPENAI_API_KEY','fixture-not-a-secret');vi.stubEnv('OPENAI_TEXT_ENABLED','true');vi.stubEnv('OPENAI_VISION_ENABLED','true');vi.stubEnv('OPENAI_AUDIO_ENABLED','false');
  const chain={select:()=>chain,eq:()=>chain,single:async()=>({data:{plan:'solo',kind:'video',status:'completed',result:{},verification_id:'source',platform:'instagram',content_text:'Publicité — Test'},error:null})};
  m.from.mockReturnValue(chain);m.auth.mockResolvedValue({user:{id:owner},client:{from:m.from}});
  m.rpc.mockResolvedValue({data:{id:run,verification_id:verification,claimed:true,status:'processing'},error:null});

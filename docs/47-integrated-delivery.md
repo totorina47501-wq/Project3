@@ -32,3 +32,9 @@ RLS vérifiée sur les deux nouvelles tables, INSERT refusé au rôle authentica
 Les flags média IA et disponibilité du schéma sont déclarés dans Wrangler, sans remplacer les clés runtime existantes. Aucun paiement, email ni appel OpenAI réel dans les tests locaux. Audio désactivé par défaut ; activation et recette audio réelles restent distinctes.
 
 Les checks et déploiements sont attachés au commit contenant ce document. Une éventuelle recette multimodale après déploiement laisse ses preuves dans media_ai_runs et ai_analyses ; les vérifier avant tout nouvel appel payant. Réutiliser les deux préparations synthétiques recensées dans docs/receipts/2026-11-05-cloudflare-media.json, sans téléverser à nouveau ni recréer une clé.
+
+## Recette distante effectuée après publication
+
+Sur `ccb441d`, les deux préparations synthétiques existantes ont donné HTTP 200, mode full : carrousel 2 images et vidéo 3 frames, plus analyse textuelle. Le second POST de chaque préparation retourne la même vérification ; le journal totalise uniquement 5 appels Vision et 2 appels texte. 2 232 tokens d'entrée, 434 de sortie, estimation 0,00992 USD. Aucune transcription demandée. Compte de recette rebanni et zéro session active. Relevé : [preuve minimisée](receipts/2026-11-06-prepared-media-ai.json).
+
+Le premier job qualité GitHub a identifié trois fixtures qui héritaient de OPENAI_TEXT_ENABLED=false et OPENAI_VISION_ENABLED=false. Elles déclarent désormais explicitement leurs capacités simulées ; les 337 tests repassent avec les variables exactes de la CI. Aucun accès fournisseur n'est introduit. Le correctif est un second commit, sans réécriture de l'historique publié et sans modification de la logique applicative validée réellement.

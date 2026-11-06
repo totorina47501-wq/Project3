@@ -1,0 +1,65 @@
+{
+  "date": "2026-11-06",
+  "applicationCommit": "ccb441d4a19e19bf1b99030ee2677eb0bddd8e0a",
+  "applicationUrl": "https://mentioncheck.toto-rina47501.workers.dev",
+  "provider": "OpenAI",
+  "models": [
+    "gpt-4o"
+  ],
+  "syntheticDataOnly": true,
+  "audioRequested": false,
+  "checks": [
+    {
+      "kind": "carousel",
+      "jobId": "c56de0da-6034-48bd-b8e4-1597182fa6de",
+      "status": 200,
+      "verificationId": "74c45714-8ccd-42e0-b7a4-16cbd6ab232b",
+      "analysisMode": "full",
+      "coverage": {
+        "imagesExpected": 2,
+        "imagesAnalyzed": 2,
+        "audio": "not_requested",
+        "textAnalyzed": true
+      },
+      "score": 95,
+      "elapsedSeconds": 12.19,
+      "duplicateSameVerification": true,
+      "historyCompleted": true
+    },
+    {
+      "kind": "video",
+      "jobId": "b9bd8ac6-a8ac-42a1-9b2a-3c82e4de4627",
+      "status": 200,
+      "verificationId": "7a7a2251-dcbd-4171-b660-23a156ac1654",
+      "analysisMode": "full",
+      "coverage": {
+        "imagesExpected": 3,
+        "imagesAnalyzed": 3,
+        "audio": "not_requested",
+        "textAnalyzed": true
+      },
+      "score": 95,
+      "elapsedSeconds": 11.31,
+      "duplicateSameVerification": true,
+      "historyCompleted": true
+    }
+  ],
+  "ledger": {
+    "calls": 7,
+    "visionCalls": 5,
+    "textCalls": 2,
+    "promptTokens": 2232,
+    "completionTokens": 434,
+    "estimatedCostUsd": 0.00992,
+    "invoiceVerified": false
+  },
+  "fixtureCleanup": {
+    "banned": true,
+    "activeSessions": 0
+  },
+  "notes": [
+    "Deux préparations existantes réutilisées, aucun nouvel upload.",
+    "Quatre POST dont deux doublons : deux vérifications et sept lignes de coût seulement.",
+    "Aucune transcription, réécriture supplémentaire, purge, activation Stripe ni émission email."
+  ]
+}

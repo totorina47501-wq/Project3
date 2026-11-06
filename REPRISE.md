@@ -8,6 +8,8 @@ La route `/api/media/jobs/[id]/analyze` analyse explicitement les sorties privé
 
 Validation locale : 337 unités, 90 médias, 25 corpus, 11 suites SQL, Playwright 24 réussis/1 ignoré, TypeScript/lint/build/bundle/dry-run réussis. GitHub CI et déploiement se contrôlent sur le SHA contenant ce bilan ; ne pas confondre ces niveaux de preuve.
 
+Recette réelle supplémentaire sur `ccb441d` : carrousel 2/2 et vidéo 3/3 frames, légendes analysées, mode complet, historique et doublons idempotents. Sept appels GPT-4o journalisés, coût estimé 0,00992 USD ; audio non demandé. Compte technique à nouveau désactivé et aucune session active. Voir [relevé minimisé](docs/receipts/2026-11-06-prepared-media-ai.json). Ne pas répéter ces appels pour reproduire le bilan. Le correctif suivant ne touche que les fixtures de tests et la documentation ; la logique applicative est identique.
+
 ## Point de départ
 
 - Dépôt : `totorina47501-wq/Project3` ; travailler sur `main`.
