@@ -79,8 +79,14 @@ jobs:
           test -x "$bin_dir/ffmpeg"
           test -x "$bin_dir/ffprobe"
           printf '%s\n' "$bin_dir" >> "$GITHUB_PATH"
-          "$bin_dir/ffmpeg" -version | head -n 1
-          "$bin_dir/ffprobe" -version | head -n 1
+          # Les tests média existants invoquent aussi /usr/bin/ffmpeg et
+          # /usr/bin/ffprobe en chemins absolus, pas seulement via PATH.
+          # Installer les binaires vérifiés à ces emplacements dans ce runner
+          # éphémère ; ne toucher ni aux fixtures ni aux processeurs.
+          sudo install -m 0755 "$bin_dir/ffmpeg" /usr/bin/ffmpeg
+          sudo install -m 0755 "$bin_dir/ffprobe" /usr/bin/ffprobe
+          /usr/bin/ffmpeg -version | head -n 1
+          /usr/bin/ffprobe -version | head -n 1
       - name: Tests vidéo hors ligne (aucun appel IA)
         run: npm run test:video:offline
       - name: Tests carrousels hors ligne (aucun appel IA)
