@@ -11,7 +11,8 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
-  actions: read
+  # Required only to explicitly dispatch trusted workflows after bot merges.
+  actions: write
 concurrency:
   group: mentioncheck-safe-agent-merge
   cancel-in-progress: false
@@ -82,6 +83,10 @@ jobs:
             -f merge_method=squash -f sha="$RUN_SHA" \
             -f commit_title="test: verified Copilot PR #$number"
           echo "Merged fully verified safe Copilot PR #$number." >> "$GITHUB_STEP_SUMMARY"
+          # GITHUB_TOKEN merges do not emit a new push workflow. workflow_dispatch
+          # is explicitly allowed and enforces the full trusted main CI.
+          gh api --method POST "repos/$REPO/actions/workflows/ci.yml/dispatches" -f ref=main
+          echo "Triggered main CI after GitHub bot merge." >> "$GITHUB_STEP_SUMMARY"
 
   recovery:
     # Re-evaluate safe completed Copilot PRs after CI success as well as on the
@@ -103,6 +108,7 @@ jobs:
             (
               github.event.workflow_run.event == 'pull_request' ||
               github.event.workflow_run.event == 'push'
+              || github.event.workflow_run.event == 'workflow_dispatch'
             )
           )
         )
@@ -149,13 +155,34 @@ jobs:
                 {id:pr.node_id});
               const latest=(await github.rest.pulls.get({owner,repo,pull_number:pr.number})).data;
               if (latest.state!=='open' || latest.draft || latest.head.sha!==sha || latest.base.ref!=='main') continue;
+              let mergedSha;
               try {
                 const merged=await github.rest.pulls.merge({owner,repo,pull_number:pr.number,
                   merge_method:'squash',sha,commit_title:'test: verified safe Copilot PR #'+pr.number});
-                core.notice('Merged safe Copilot PR #'+pr.number+' at '+merged.data.sha);
+                mergedSha=merged.data.sha;
+                core.notice('Merged safe Copilot PR #'+pr.number+' at '+mergedSha);
               } catch(e) {
                 core.warning('GitHub refused safe merge for PR #'+pr.number+' (HTTP '+(e.status||'unknown')+')');
+                return;
               }
+              // A bot merge cannot trigger CI via "push"; explicitly start main CI.
+              await github.rest.actions.createWorkflowDispatch({owner,repo,workflow_id:'ci.yml',ref:'main'});
+              core.notice('Dispatched main CI after Copilot PR #'+pr.number+' at '+mergedSha);
               return; // main may advance; next pass must revalidate from the new main
+            }
+            // After the latest main SHA passes complete CI, resume the approved
+            // dispatcher. Its reconciliation closes merged Copilot issues before
+            // counting free slots and uses the scoped Copilot assignment PAT.
+            const source=context.payload.workflow_run;
+            if (context.eventName==='workflow_run' && source?.conclusion==='success' &&
+                ['push','workflow_dispatch'].includes(source.event) && source.head_branch==='main') {
+              const current=(await github.rest.repos.getBranch({owner,repo,branch:'main'})).data.commit.sha;
+              if (current===source.head_sha) {
+                await github.rest.actions.createWorkflowDispatch({owner,repo,
+                  workflow_id:'mentioncheck-agent-dispatch.yml',ref:'main',inputs:{dry_run:'false'}});
+                core.notice('Dispatched approved Copilot backlog after green main at '+current);
+              } else {
+                core.notice('Skipped stale main CI '+source.head_sha+'; current main is '+current);
+              }
             }
             core.summary.addRaw('Safe Copilot recovery checked '+checked+' PRs; no eligible merge.');

@@ -5,6 +5,8 @@ on:
   pull_request:
   push:
     branches: [main, feat/mentioncheck-bloc-1-fondations]
+  # Explicit post-merge CI: GITHUB_TOKEN bot merges do not generate push workflows.
+  workflow_dispatch:
 
 # Une seule CI par commit de branche avec PR, et une CI par push sur main.
 permissions:
@@ -101,8 +103,20 @@ jobs:
         run: npm run test:training:offline
       - name: Fixture HTTP locale
         run: npm run test:fixtures
+      # GitHub-hosted Ubuntu already carries Chromium's shared libraries.
+      # Avoid APT mirrors (the --with-deps step may stall) while caching only
+      # the browser downloaded by the repository's pinned Playwright version.
+      - name: Cache Chromium Playwright
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: mentioncheck-playwright-chromium-v1.64.1-${{ runner.os }}-${{ runner.arch }}
       - name: Installer Chromium
-        run: npx playwright install --with-deps chromium
+        timeout-minutes: 8
+        env:
+          PLAYWRIGHT_DOWNLOAD_CONNECTION_TIMEOUT: '60000'
+        run: |
+          npx playwright install chromium || (sleep 3 && npx playwright install chromium)
       - name: Parcours Playwright locaux sans fournisseur
         env:
           MEDIA_PROCESSING_ENABLED: 'true'
