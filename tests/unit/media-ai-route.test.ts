@@ -31,10 +31,24 @@ it('ne consomme aucun quota si les appels IA ou audio sont désactivés',async()
  vi.stubEnv('OPENAI_PAUSED','true');expect((await POST(request({includeAudio:false}),context)).status).toBe(503);
  vi.stubEnv('OPENAI_PAUSED','false');expect((await POST(request({includeAudio:true}),context)).status).toBe(503);expect(m.rpc).not.toHaveBeenCalled();
 });
+it('refuse la réservation lorsque le quota média est épuisé',async()=>{
+ m.rpc.mockResolvedValue({data:null,error:{code:'54000'}});
+ const response=await POST(request({includeAudio:false}),context);
+ expect(response.status).toBe(429);expect(m.engine).not.toHaveBeenCalled();
+ expect(m.rpc).toHaveBeenCalledWith('media_ai_claim',{p_user:owner,p_job:job,p_audio:false});
+});
 it('n’appelle pas le moteur pour une analyse déjà enregistrée',async()=>{
  m.rpc.mockResolvedValue({data:{id:run,verification_id:verification,claimed:false,status:'completed',result:{score:95}},error:null});
  const response=await POST(request({includeAudio:false}),context);
  expect(response.status).toBe(200);expect((await response.json()).result.score).toBe(95);expect(m.engine).not.toHaveBeenCalled();
+});
+it('retourne le résultat audio déjà terminé sans second appel IA',async()=>{
+ vi.stubEnv('OPENAI_AUDIO_ENABLED','true');
+ m.rpc.mockResolvedValue({data:{id:run,verification_id:verification,claimed:false,status:'completed',result:{coverage:{audio:'transcribed'}}},error:null});
+ const response=await POST(request({includeAudio:true}),context);
+ expect(response.status).toBe(200);expect((await response.json()).result.coverage.audio).toBe('transcribed');
+ expect(m.rpc).toHaveBeenCalledWith('media_ai_claim',{p_user:owner,p_job:job,p_audio:true});
+ expect(m.engine).not.toHaveBeenCalled();
 });
 it('répond 202 au double clic en cours sans second appel IA',async()=>{
  m.rpc.mockResolvedValue({data:{id:run,verification_id:verification,claimed:false,status:'processing'},error:null});

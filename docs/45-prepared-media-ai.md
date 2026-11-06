@@ -8,6 +8,8 @@ Le validateur vérifie chemins, propriétaire, whitelist, manifestes, cardinalit
 
 Une nouvelle vérification conserve le résultat IA ; la preuve technique initiale reste intacte. L'unicité préparation/couverture interdit le double appel après double clic. Les échecs sont terminaux, les requêtes interrompues expirent après dix minutes lors de la consultation, et leur quota est restitué une seule fois. Les tokens connus des réponses mal formées sont journalisés. Les coûts audio restent estimatifs par durée ; les prompts, images et transcriptions ne sont pas copiés dans les journaux.
 
+Les tests hors ligne réutilisent `prepared-media-engine` et la route existante : transcription vide ou tronquée, choix audio explicite, quota épuisé, erreurs fournisseur simulées et résultat idempotent selon la couverture. Ils n'effectuent aucun appel OpenAI réel.
+
 ## Activation séparée
 
 Appliquer la migration `20261105121000_prepared_media_ai.sql` après validation ; définir MEDIA_AI_SCHEMA_READY=true pour l'export personnel, puis MEDIA_AI_ENABLED=true pour la fonction. L'audio reste désactivé par défaut. La clé serveur existante est réutilisée. Aucune extraction de clé ni aucun appel payant n'est requis pour les tests locaux.
