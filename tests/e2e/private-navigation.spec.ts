@@ -18,6 +18,16 @@ test('les endpoints privés rejettent un invité', async ({ request, baseURL }) 
   expect(report.status()).toBe(401);
 });
 
+test('les mutations sensibles refusent une origine tierce (CSRF)', async ({ request }) => {
+  const headers = { Origin: 'https://attacker.invalid' };
+  expect((await request.post('/api/auth/login', { headers, data: {} })).status()).toBe(403);
+  expect((await request.post('/api/auth/logout', { headers })).status()).toBe(403);
+  expect((await request.post('/api/check', { headers, data: { caption: 'test', platform: 'instagram' } })).status()).toBe(403);
+  expect((await request.post('/api/account/erasure', {
+    headers, data: { action: 'request', confirmation: 'SUPPRIMER' },
+  })).status()).toBe(403);
+});
+
 test('un visiteur ne peut ni lire ni déposer de demande d effacement',async({request})=>{
   const status=await request.get('/api/account/erasure');
   expect(status.status()).toBe(401);

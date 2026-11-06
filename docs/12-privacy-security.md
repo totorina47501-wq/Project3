@@ -28,6 +28,30 @@ Le plan contient `dryRun=true`, `deleted=false`, `status=prepared_disabled`. Auc
 
 Les étapes futures restent à vérifier par un opérateur : identité, conservation légale, révocation des sessions et clés API, retrait du consentement, traitement des fichiers via l’API Storage, Vault, Stripe/OpenAI/journaux/sauvegardes, données SQL et enfin Auth. Une équipe encore possédée bloque le traitement jusqu’au transfert explicite ; aucun historique d’un autre membre ne doit être supprimé. Les contraintes d’archives et de preuves doivent être traitées dans une procédure transactionnelle revue avant toute exécution. Ne jamais marquer une demande `completed` sur la base de ce plan.
 
+### Circuit opérateur RGPD préparé (non destructif, non exécuté)
+1. Recevoir la demande (`requested`) et vérifier l’identité du demandeur hors application.
+2. Vérifier les bases légales de conservation (facturation, litiges, obligations légales) et documenter les blocages.
+3. Lancer uniquement le `preview` pour produire l’inventaire et les compteurs (`dryRun=true`, `deleted=false`).
+4. Contrôler manuellement l’export structuré et l’inventaire `privateFiles` sans exposer d’URL signée.
+5. Préparer la séquence d’exécution future (non active ici): révocation sessions/clefs API, suppression Storage/Auth, purge SQL, traces d’audit.
+6. Exiger une validation humaine explicite avant toute action destructive.
+7. Journaliser la complétion avec preuves horodatées et conserver le dossier d’audit.
+8. Tant que l’exécuteur destructif n’existe pas, conserver l’état `prepared_disabled` et interdire `completed`.
+
+## Supabase Auth : protection mots de passe compromis (checklist opératoire)
+
+Le signal `leaked password protection disabled` relève d’un paramétrage Auth externe, pas d’une migration SQL locale.
+
+1. Confirmer l’environnement ciblé (`staging` ou `production`) et l’administrateur responsable.
+2. Capturer un état initial horodaté de la console Auth Security Advisor (sans secret ni données personnelles).
+3. Vérifier l’impact produit attendu: refus/alerte sur mot de passe compromis, parcours de reset, support utilisateur.
+4. Valider le plan de communication interne avant activation (support, conformité, runbook incidents).
+5. Activer la protection uniquement avec validation administrateur explicite.
+6. Tester sur compte de test non sensible: tentative mot de passe compromis, reset, connexion mot de passe sain.
+7. Vérifier l’absence de régression sur login/logout et messages d’erreur publics.
+8. Archiver la preuve d’activation (capture + SHA + environnement) et la date d’effet.
+9. Si non activé, conserver le risque documenté avec échéance et responsable.
+
 ## Sessions et cache
 
 Le middleware vérifie les sessions avec `getUser`, conserve les cookies rafraîchis et ajoute `Cache-Control: private, no-store` et `Vary: Cookie`. Une indisponibilité du rafraîchissement ne donne aucun droit : les routes réexécutent `requireUser`. Les réponses et erreurs des routes de compte sont également privées et non stockables. Les erreurs SDK ne sont pas exposées.

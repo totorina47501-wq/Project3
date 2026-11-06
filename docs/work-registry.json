@@ -25,7 +25,8 @@
         "supabase/migrations/202611032002_rls_and_functions.sql"
       ],
       "next": [
-        "Connexion réelle validée le 5 novembre 2026 sur le Worker via compte technique isolé, ensuite désactivé. Les parcours locaux restent couverts par Playwright ; voir docs/37-real-openai-validation.md."
+        "Connexion réelle validée le 5 novembre 2026 sur le Worker via compte technique isolé, ensuite désactivé. Les parcours locaux restent couverts par Playwright ; voir docs/37-real-openai-validation.md.",
+        "Checklist opératoire Auth Security Advisor (mots de passe compromis) documentée, sans activation automatique : docs/12-privacy-security.md."
       ]
     },
     {
@@ -224,7 +225,8 @@
         "supabase/migrations/202611042004_privacy_erasure_requests.sql"
       ],
       "next": [
-        "Aperçu et journal dry_run testés hors ligne ; aucune mutation SQL/Storage destructive. Permissions distantes et toute procédure opérateur restent à valider séparément."
+        "Aperçu et journal dry_run testés hors ligne ; aucune mutation SQL/Storage destructive. Permissions distantes et toute procédure opérateur restent à valider séparément.",
+        "Circuit opérateur préparé (identité, rétention légale, export, suppression Auth/Storage à valider manuellement, audit de complétion) : docs/12-privacy-security.md."
       ]
     },
     {
@@ -398,7 +400,8 @@
       "routes": [],
       "migrations": [],
       "next": [
-        "Playwright local vérifie session, refus 401/403, origine tierce et navigation clavier ; scénarios SQL A/B dans collaborations/Studio. E2E distant avec identifiants à valider séparément."
+        "Playwright local vérifie session, refus 401/403, origine tierce, logout, archives PDF et navigation clavier ; scénarios SQL A/B dans collaborations/Studio. E2E distant avec identifiants à valider séparément.",
+        "Les preuves locales et manquantes (staging/prod, service_role distant, backup/restore/rollback) sont tracées dans docs/18-security-review-checklist.md."
       ]
     },
     {
