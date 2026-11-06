@@ -84,8 +84,29 @@ jobs:
           echo "Merged fully verified safe Copilot PR #$number." >> "$GITHUB_STEP_SUMMARY"
 
   recovery:
-    # Fallback if CI finishes before the cloud agent does; no PR checkout.
-    if: ${{ github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
+    # Re-evaluate safe completed Copilot PRs after CI success as well as on the
+    # schedule; GitHub schedule may be delayed or skipped. No untrusted checkout.
+    # Wait for the exact-PR merge job in the same workflow, never race it.
+    needs: merge
+    if: >-
+      ${{
+        always() &&
+        github.repository == 'totorina47501-wq/Project3' &&
+        github.ref == 'refs/heads/main' &&
+        needs.merge.result != 'failure' &&
+        (
+          github.event_name == 'schedule' ||
+          github.event_name == 'workflow_dispatch' ||
+          (
+            github.event_name == 'workflow_run' &&
+            github.event.workflow_run.conclusion == 'success' &&
+            (
+              github.event.workflow_run.event == 'pull_request' ||
+              github.event.workflow_run.event == 'push'
+            )
+          )
+        )
+      }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
