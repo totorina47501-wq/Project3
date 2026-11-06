@@ -1,7 +1,7 @@
 // De bout en bout : vraies migrations + PostgreSQL WASM + Sharp, aucun fournisseur.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
@@ -56,10 +56,74 @@ test('file SQL → Sharp → contrôle textuel et preuve archivée, sans IA', as
       assert.equal(await queue.isCancelled(cancelled, lease.leaseToken), true);
       assert.equal(await queue.complete(cancelled, lease.leaseToken, {}), false);
     });
+    await t.test('un bail expiré est repris avec un nouveau jeton et un seul résultat SQL', async () => {
+      const expired = await enqueue('PUBLICITÉ — Bail expiré');
+      const abandoned = await queue.claim(randomUUID());
+      assert.equal(abandoned.id, expired);
+      await db.query("update public.media_processing_jobs set lease_until=now()-interval '1 second' where id=$1", [expired]);
+      assert.equal(await queue.isCancelled(expired, abandoned.leaseToken), true);
+      assert.equal(await queue.complete(expired, abandoned.leaseToken, {}), false);
+      assert.equal(await queue.fail(expired, abandoned.leaseToken, 'PROCESS_FAILED'), false);
+
+      const retry = await queue.claim(randomUUID());
+      assert.equal(retry.id, expired);
+      assert.notEqual(retry.leaseToken, abandoned.leaseToken);
+      assert.deepEqual(await runQueuedMediaJob({
+        queue: {
+          claim: async () => retry,
+          isCancelled: queue.isCancelled,
+          complete: queue.complete,
+          fail: queue.fail,
+        },
+        workerId: randomUUID(),
+        inputRoot: inputs,
+        outputRoot: outputs,
+      }), { state: 'completed', id: expired });
+
+      assert.deepEqual((await db.query(`select j.status,j.attempts,
+        (select count(*)::integer from public.verifications where id=j.verification_id) as verification_count
+        from public.media_processing_jobs j where j.id=$1`, [expired])).rows[0],
+      { status: 'completed', attempts: 2, verification_count: 1 });
+    });
     await t.test('toutes les sources d’un carrousel restent protégées par les références SQL', async () => {
       await assert.rejects(db.query('delete from public.media_assets where id=$1', [assets[1]]), /foreign key/i);
       // Aucune mutation externe : cet échec de suppression concerne la fixture mémoire.
       assert.equal((await db.query('select count(*)::integer as n from public.media_assets')).rows[0].n, 2);
+    });
+    await t.test('un échec FFmpeg épuise les retries SQL sans dupliquer la vérification', async () => {
+      const videoAsset = randomUUID(), path = `${owner}/${randomUUID()}.mp4`;
+      const bytes = Buffer.from('synthetic invalid MP4');
+      await mkdir(join(inputs, owner), { recursive: true });
+      await writeFile(join(inputs, path), bytes);
+      await db.query(`insert into public.media_assets(id,user_id,kind,status,storage_path,mime_type,declared_bytes,actual_bytes,completed_at,expires_at,media_sha256)
+        values($1,$2,'video','ready',$3,'video/mp4',$4,$4,now(),now()+interval '1 day',$5)`,
+      [videoAsset, owner, path, bytes.length, createHash('sha256').update(bytes).digest('hex')]);
+      const caption = 'PUBLICITÉ — Échec FFmpeg';
+      const enqueueVideo = async () => (await db.query(
+        `select public.media_job_enqueue($1,$2::uuid[],$3,'tiktok',$4::jsonb) as id`,
+        [owner, [videoAsset], caption, JSON.stringify({ score: 100, riskLevel: 'low', violations: [] })],
+      )).rows[0].id;
+      const failedJob = await enqueueVideo();
+
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        if (attempt > 1) {
+          await db.query("update public.media_processing_jobs set available_at=now()-interval '1 second' where id=$1", [failedJob]);
+        }
+        assert.deepEqual(await runQueuedMediaJob({ queue, workerId: randomUUID(), inputRoot: inputs, outputRoot: outputs }),
+          { state: 'failed', id: failedJob, code: 'PROCESS_FAILED' });
+        const row = (await db.query(`select j.status,j.attempts,j.failure_code,v.status as verification_status
+          from public.media_processing_jobs j join public.verifications v on v.id=j.verification_id where j.id=$1`, [failedJob])).rows[0];
+        assert.deepEqual(row, {
+          status: attempt === 3 ? 'failed' : 'queued',
+          attempts: attempt,
+          failure_code: 'PROCESS_FAILED',
+          verification_status: attempt === 3 ? 'failed' : 'queued',
+        });
+      }
+
+      assert.equal(await enqueueVideo(), failedJob);
+      assert.equal((await db.query('select count(*)::integer as n from public.verifications where id=(select verification_id from public.media_processing_jobs where id=$1)', [failedJob])).rows[0].n, 1);
+      assert.equal((await readdir(outputs)).includes(failedJob), false);
     });
     await t.test('la même file traite une vidéo FFmpeg et archive les trois frames', async () => {
       const videoId=randomUUID(),path=`${owner}/${randomUUID()}.mp4`;

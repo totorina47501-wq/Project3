@@ -28,7 +28,7 @@ Vérification locale, sans réseau :
 npm run test:media-jobs:offline
 ```
 
-Les tests synthétisent de vraies images Sharp et une vidéo FFmpeg, contrôlent les hashes obligatoires, le CAS refusé, la reprise, l'annulation active et l'adaptateur SQL. `sql-pipeline.test.mjs` charge toutes les migrations réelles via le même harnais PostgreSQL, puis traite et archive réellement un carrousel et une vidéo. Auth/Storage sont simulés, pgvector est explicitement omis.
+Les tests synthétisent de vraies images Sharp et une vidéo FFmpeg, contrôlent les hashes obligatoires, le CAS refusé, la reprise, l'annulation active et l'adaptateur SQL. `remote-queue.test.mjs` couvre les coupures Storage pendant la lecture et la reprise SQL après une panne. `sql-pipeline.test.mjs` charge toutes les migrations réelles via le même harnais PostgreSQL : il vérifie qu'un bail expiré est réattribué avec un nouveau jeton, que l'ancien CAS ne peut ni terminer ni échouer le job, et qu'une vidéo invalide atteint le plafond de trois tentatives FFmpeg sans créer de seconde vérification. Il traite aussi un carrousel et une vidéo valides de bout en bout. Auth/Storage sont simulés, pgvector est explicitement omis.
 
 ## Persistance et accès applicatif
 
