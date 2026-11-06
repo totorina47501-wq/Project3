@@ -87,11 +87,22 @@ jobs:
 
             # REST assignment is used, not a personal token. Fail visibly if
             # the GitHub Copilot agent cannot be assigned by GITHUB_TOKEN.
-            gh api --method POST "repos/$REPO/issues/$number/assignees" \
-              -f 'assignees[]=copilot-swe-agent[bot]' >/dev/null
+            # GitHub exposes the coding agent as the assignable user "Copilot".
+            # "copilot-swe-agent[bot]" is an Actions identity and is not a
+            # reliable issue assignee. Fail closed if this token lacks permission.
+            if ! response="$(gh api --method POST "repos/$REPO/issues/$number/assignees" \
+              -f 'assignees[]=Copilot' 2>&1)"; then
+              echo "::error::Copilot assignment rejected for issue #$number. Check GitHub Actions permissions and Copilot agent availability."
+              echo "Assignment rejected for #$number; inspect this run's error. No assignment claimed." >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
             checked="$(gh api "repos/$REPO/issues/$number")"
-            jq -e 'any(.assignees[]?; .login == "Copilot" or .login == "copilot-swe-agent[bot]")' <<< "$checked" >/dev/null
-            echo "Assigned Copilot to approved issue #$number." >> "$GITHUB_STEP_SUMMARY"
+            if ! jq -e 'any(.assignees[]?; .login == "Copilot")' <<< "$checked" >/dev/null; then
+              echo "::error::GitHub did not persist Copilot as assignee of issue #$number."
+              echo "Assignment not persisted for #$number. Check Copilot availability and token permissions." >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+            echo "Verified Copilot assignee on approved issue #$number." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           done <<< "$candidates"
 
