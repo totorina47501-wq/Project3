@@ -27,6 +27,18 @@ describe('Contrats statiques des workflows agents', () => {
     expect(dispatch).toContain('BLOCKED: Copilot assignee missing');
   });
 
+  it('libère les slots uniquement après fusion confirmée d’une PR Copilot liée', () => {
+    expect(dispatch).toContain('merged_prs="$(gh api');
+    expect(dispatch).toContain('.merged_at != null');
+    expect(dispatch).toContain('.user.login == "Copilot"');
+    expect(dispatch).toContain('.base.ref == "main"');
+    expect(dispatch).toContain('.head.repo.full_name == $repo');
+    expect(dispatch).toContain('select(any(.labels[]?; .name == "agent:approved"))');
+    expect(dispatch).toContain('gh api --method PATCH "repos/$REPO/issues/$completed_number"');
+    expect(dispatch).toContain('-f state=closed -f state_reason=completed');
+    expect(dispatch).toContain('Closed completed Copilot issue');
+  });
+
   it('réserve le safe-code auto-merge aux PR Copilot admissibles et au SHA exact', () => {
     expect(agentMerge).toContain("github.event.workflow_run.conclusion == 'success'");
     expect(agentMerge).toContain("github.event.workflow_run.event == 'pull_request'");
