@@ -62,6 +62,18 @@ describe('Contrats statiques des workflows agents', () => {
     expect(agentMerge).not.toContain('actions/checkout@');
   });
 
+  it('relance la récupération après CI réussie même sans cron fiable', () => {
+    expect(agentMerge).toContain('    needs: merge');
+    expect(agentMerge).toContain('always()');
+    expect(agentMerge).toContain("needs.merge.result != 'failure'");
+    expect(agentMerge).toContain("github.event.workflow_run.event == 'pull_request'");
+    expect(agentMerge).toContain("github.event.workflow_run.event == 'push'");
+    expect(agentMerge).toContain("github.event.workflow_run.conclusion == 'success'");
+    expect(agentMerge).toContain("github.event_name == 'schedule'");
+    expect(agentMerge).toContain("github.ref == 'refs/heads/main'");
+    expect(agentMerge).toContain('return; // main may advance');
+  });
+
   it('réserve le workflow documentaire au label explicite et aux chemins permis', () => {
     expect(docsMerge).toContain("github.event.workflow_run.conclusion == 'success'");
     expect(docsMerge).toContain('[ "$(jq -r \'.draft\' <<< "$pr")" = false ]');
