@@ -3,8 +3,8 @@ import { useLocalSession } from './fixtures/local-session';
 import { localScenario, useScenarioActor } from './fixtures/scenario';
 const email = process.env.E2E_TEST_EMAIL;
 const password = process.env.E2E_TEST_PASSWORD;
-test.skip(!email || !password, 'Identifiants de compte de test non configurés.');
 test('connexion, cockpit, archives, Mia puis déconnexion', async ({ page }) => {
+  test.skip(!email || !password, 'Identifiants de compte de test non configurés.');
   await page.goto('/login');
   await page.getByLabel('Adresse email').fill(email!);
   await page.getByLabel('Mot de passe').fill(password!);
