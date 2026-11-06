@@ -47,6 +47,30 @@ jobs:
           [ "$REPO" = "totorina47501-wq/Project3" ] || exit 1
 
           issues="$(gh api --paginate "repos/$REPO/issues?state=open&per_page=100")"
+
+          # A merged Copilot PR does not always close its linked issue when a
+          # GitHub Actions token performs the merge. Reconcile it before counting
+          # capacity so completed work cannot block the backlog indefinitely.
+          # Trust only an explicit closing reference on a merged Copilot PR
+          # targeting main from this repository; never close unrelated issues.
+          merged_prs="$(gh api "repos/$REPO/pulls?state=closed&sort=updated&direction=desc&per_page=100")"
+          while IFS= read -r completed_number; do
+            [ -n "$completed_number" ] || continue
+            if jq -e --arg repo "$REPO" --arg num "$completed_number" '
+              any(.[]; .merged_at != null and .user.login == "Copilot" and
+                .base.ref == "main" and .head.repo.full_name == $repo and
+                (.head.ref | startswith("copilot/")) and
+                ((.body // "") | test("(?i)(fix(es|ed)?|close(s|d)?|resolve(s|d)?)\\s+#" + $num + "\\b"))
+              )' <<< "$merged_prs" >/dev/null; then
+              gh api --method PATCH "repos/$REPO/issues/$completed_number" \
+                -f state=closed -f state_reason=completed >/dev/null
+              echo "Closed completed Copilot issue #$completed_number after verified PR merge." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done < <(jq -r '[.[] | select(.pull_request == null and .state == "open") |
+            select(any(.labels[]?; .name == "agent:approved")) |
+            select(any(.assignees[]?; .login == "Copilot" or .login == "copilot-swe-agent[bot]")) |
+            .number] | .[]' <<< "$issues")
+          issues="$(gh api --paginate "repos/$REPO/issues?state=open&per_page=100")"
           active="$(jq '[.[] | select(.pull_request == null) |
             select(any(.assignees[]?; .login == "Copilot" or .login == "copilot-swe-agent[bot]"))] | length' <<< "$issues")"
           echo "Open issues currently assigned to Copilot: $active / $MAX_ACTIVE"

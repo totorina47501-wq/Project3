@@ -38,3 +38,11 @@ Commande reproductible : `npm test -- tests/unit/agent-workflow-contracts.test.t
 ## Périmètre et état
 
 Aucun workflow, droit, secret, paramètre de protection, service externe, déploiement ou données distantes n’a été modifié. Aucune fusion n’a été déclenchée par cet audit. Les SHA et statuts cités ci-dessus sont des preuves de runs précis, pas une preuve de recette production ou de déploiement.
+
+## Réconciliation automatique après fusion (6 novembre 2026)
+
+Le run de dispatch [#42240642217](https://github.com/totorina47501-wq/Project3/actions/runs/42240642217) a affecté l'issue #58 après clôture de #57. L'issue #57 était restée ouverte malgré la fusion de la PR Copilot #70 par `github-actions[bot]`, ce qui saturait artificiellement le plafond de deux agents. La clôture de #57 a été effectuée par l'opérateur durant l'audit, puis le dispatch a confirmé la libération de capacité.
+
+Le correctif proposé dans `mentioncheck-agent-dispatch.yml` réconcilie les issues ouvertes déjà affectées à Copilot avant le calcul de capacité : clôture uniquement si une PR effectivement fusionnée dans `main`, provenant du même dépôt et de Copilot, contient une référence explicite de fermeture de l'issue. Aucune fusion, suppression, déploiement ni modification des protections n'est ajoutée. La récupération et les deux tâches maximales restent inchangées.
+
+Les tests statiques du contrat de réconciliation ne démontrent pas son exécution à distance. L'acceptation exige une CI verte sur le SHA exact, la fusion du correctif selon les contrôles normaux, puis un run de dispatch réussi et une preuve de clôture automatique lors d'une prochaine PR Copilot fusionnée. Le cron GitHub reste best effort : deux créneaux par heure ne garantissent pas une ponctualité stricte.
