@@ -13,7 +13,9 @@ concurrency:
 
 jobs:
   quality:
-    runs-on: ubuntu-latest
+    # Pin the OS: ubuntu-latest started transitioning to 26.04 and apt downloads
+    # for FFmpeg can stall the full CI despite passing tests.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
       OPENAI_PAUSED: 'true'
@@ -46,11 +48,18 @@ jobs:
         run: node --test --experimental-test-isolation=none scripts/commercial/*.test.mjs
       - name: Tests unitaires
         run: npm test
-      - name: Installer FFmpeg pour les tests médias réels
+      - name: Vérifier FFmpeg et FFprobe pour les tests médias réels
         timeout-minutes: 5
         run: |
-          sudo apt-get update -o Acquire::Retries=1 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20
-          sudo apt-get install -y --no-install-recommends -o Acquire::Retries=1 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 ffmpeg
+          set -euo pipefail
+          if command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null; then
+            echo "Preinstalled FFmpeg detected: no APT network install needed"
+          else
+            sudo apt-get update -o Acquire::Retries=1 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15
+            sudo apt-get install -y --no-install-recommends -o Acquire::Retries=1 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 ffmpeg
+          fi
+          ffmpeg -version | head -n 1
+          ffprobe -version | head -n 1
       - name: Tests vidéo hors ligne (aucun appel IA)
         run: npm run test:video:offline
       - name: Tests carrousels hors ligne (aucun appel IA)
