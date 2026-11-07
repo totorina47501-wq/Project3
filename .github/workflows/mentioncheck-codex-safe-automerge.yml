@@ -39,6 +39,11 @@ jobs:
                  pr.head?.repo?.full_name!==owner+'/'+repo||
                  !pr.head?.ref?.startsWith('codex/'))continue;
               examined++;
+              // Security/release proof gates cannot be waived by a green offline CI.
+              if((pr.labels||[]).some(l=>l.name==='release:evidence-required')){
+                core.notice('Skipping proof-gated Codex PR #'+pr.number);
+                continue;
+              }
               const files=await github.paginate(github.rest.pulls.listFiles,
                 {owner,repo,pull_number:pr.number,per_page:100});
               const safe=files.length>0&&files.length<=20&&files.every(f=>
@@ -96,7 +101,8 @@ jobs:
                 {id:pr.node_id});
               const latest=(await github.rest.pulls.get({owner,repo,pull_number:pr.number})).data;
               if(latest.state!=='open'||latest.draft||latest.head.sha!==sha||
-                 latest.base.ref!=='main'||latest.user.login!=='Codex')continue;
+                 latest.base.ref!=='main'||latest.user.login!=='Codex'||
+                 latest.labels?.some(l=>l.name==='release:evidence-required'))continue;
               let merged;
               try{
                 merged=await github.rest.pulls.merge({owner,repo,pull_number:pr.number,
