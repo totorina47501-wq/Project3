@@ -27,6 +27,15 @@ describe('Codex safe auto-merge contract',()=>{
     expect(safe).toContain("r.name==='Running OpenAI Codex'");
     expect(safe).toContain("r.head_sha===sha");
     expect(safe).toContain("r.event==='pull_request'");
+    expect(safe).toContain("r.event==='workflow_dispatch'");
+    expect(safe).toContain("r.actor?.login==='github-actions[bot]'");
+    expect(safe).toContain("const realFailure=");
+    expect(safe).toContain("!['success','action_required','skipped'].includes(r.conclusion)");
+    expect(safe).toContain("const dispatched=");
+    expect(safe).toContain("!realFailure&&!pending&&!dispatched&&trustedRecovery");
+    expect(safe).toContain("workflow_id:'ci.yml',ref:pr.head.ref");
+    expect(safe).toContain("source.head_branch==='main'");
+
     expect(safe).toContain("ci.conclusion!=='success'");
     expect(safe).toContain("j.name===name&&j.conclusion==='success'");
     expect(safe).toContain("latest.head.sha!==sha");
