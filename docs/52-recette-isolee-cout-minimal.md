@@ -1,0 +1,111 @@
+# Recette isolée à coût minimal — MentionCheck / issue #16
+
+Date : 7 novembre 2026. **Statut : protocole prêt, recette intégrale NON réalisée.**
+
+Objectif : fournir des preuves de recette sans envoyer de données de production vers un environnement de test, sans utiliser de crédits IA, ni créer de ressources facturées sans approbation. Ce protocole **n'autorise aucune modification de Supabase production**.
+
+## Point de départ vérifié
+
+- Projet Supabase de production existant : `zcztvberuihphqklhjsr`, PostgreSQL 17, statut ACTIVE_HEALTHY lors du contrôle du 7 novembre.
+- 27 tables publiques avec RLS activée, 18 migrations distantes recensées ; cinq tables sans politique RLS et cinq fonctions `SECURITY DEFINER` exposées aux utilisateurs authentifiés méritent une validation métier et A/B, pas une modification aveugle.
+- Auth : l'alerte `leaked password protection disabled` est encore présente. L'activer est un choix administrateur, non une migration SQL.
+- Aucun staging Supabase connecté n'a été identifié ; aucune sauvegarde restaurée sur base isolée n'est prouvée.
+- Déjà couvert **localement** : `npm run test:sql:offline` (PGlite avec Auth/Storage simulés et pgvector volontairement omis), `npm run test:privacy:offline`, Playwright hors ligne. Ne pas recréer ces tests.
+
+## Niveau A — coût de service : 0 € (poste/runner local)
+
+### A1. Contrôles applicatifs déjà implémentés
+
+Depuis le dépôt, Node conforme à `.nvmrc`, sans variable d'environnement pointant vers la production :
+
+```bash
+npm ci --ignore-scripts
+npm run work:check
+npm run test:sql:offline
+npm run test:privacy:offline
+npm run test:e2e
+```
+
+`npm run test:e2e` **sans** `PLAYWRIGHT_BASE_URL` utilise la fixture locale prévue dans `playwright.config.ts`. Les refus 401/403, l'origine CSRF, l'isolation SQL A/B et la navigation sont testés hors ligne. Ce n'est **pas** un test d'Auth hébergé réel. Si des variables `PLAYWRIGHT_BASE_URL` ou `E2E_MEDIA_UPLOAD_ENABLED` subsistent dans le shell, les retirer auparavant pour ce niveau ; ne pas réutiliser de vrais identifiants.
+
+### A2. Restaurer une sauvegarde SYNTHÉTIQUE sur PostgreSQL local
+
+Pré-requis : Bash et Docker local avec moteur `default` sur socket Unix. Script autonome, sans fichier `.env`, sans argument ni URL de connexion :
+
+```bash
+bash scripts/recette/isolated-postgres-restore.sh
+```
+
+Le script :
+1. refuse `DOCKER_HOST` et `DOCKER_CONTEXT`, exige un moteur Docker local sur socket Unix ;
+2. crée un PostgreSQL 17 jetable **sans réseau, sans port publié et sans volume** ;
+3. crée exactement deux lignes factices, lance `pg_dump` puis `pg_restore` dans une seconde base, et compare le nombre de lignes et leur empreinte ;
+4. détruit le conteneur et le dump temporaire, succès ou échec.
+
+L'image `postgres:17-alpine` peut nécessiter un téléchargement gratuit. Le moteur réel et les droits Docker doivent être disponibles sur la machine d'exécution. **Ce test prouve une procédure mécanique de dump/restore PostgreSQL sur une fixture.** Il ne prouve ni la restauration d'une sauvegarde Supabase réelle ni le rollback des migrations MentionCheck.
+
+### A3. Supabase local (Auth + Storage plus proches du réel)
+
+La racine `supabase/` contient déjà les migrations et `seed.sql`, sans `config.toml` enregistré dans le dépôt. Sur un poste local propre, après avoir examiné l'aide et les versions de la CLI Supabase :
+
+```bash
+supabase --help
+supabase init
+supabase start
+supabase db reset --local
+supabase status
+```
+
+**Ne jamais utiliser** `supabase db reset --linked`, `--db-url` ou une cible distante ; ces variantes peuvent supprimer les données du projet lié. Ne pas lancer `supabase db push` sur la production. `supabase init` peut demander un choix si une configuration existe déjà : ne pas écraser sans revue. Les migrations historiques peuvent nécessiter des adaptations pour la CLI locale : enregistrer chaque échec, ne jamais le compenser en appliquant du SQL sur la production.
+
+La pile locale utilise Docker et un stockage local : coût de fournisseur nul, consommation des ressources de la machine non nulle. Conserver `OPENAI_PAUSED=true`, `BILLING_ENABLED=false`, `MEDIA_RETENTION_ENABLED=false` et les fonctions payantes désactivées.
+
+## Niveau B — environnement Supabase hébergé temporaire (uniquement après accord sur les frais)
+
+Une branche **preview** séparée apporte réellement Database, Auth, Storage et des identifiants distincts ; elle démarre sans copie des données de production. Sinon choisir un projet Supabase indépendant. Déployer uniquement schéma et données **synthétiques**, avec deux comptes de test jetables A et B. **Ne pas fusionner une branche DB vers la production** pour clore la recette.
+
+Tarif indicatif publié Supabase : branche Micro à partir de **0,01344 USD/heure** de calcul ; 4 h ≈ **0,054 USD**, 24 h ≈ **0,323 USD**, hors réseau, disque et autres consommations, éventuels prérequis d'abonnement non compris. Les branches ne sont **pas** couvertes par le Spend Cap. Contrôler le devis réel avant création, choisir une durée courte, puis supprimer la branche après archivage des preuves.
+
+### Vérifications hébergées obligatoires
+
+1. **Isolation** : références Supabase/URL/clé publique staging différentes de production, `service_role` uniquement côté serveur ; ne jamais copier sa valeur dans un rapport, un frontend ou un journal.
+2. **Auth A/B** : authentification, déconnexion, reset de mot de passe, sessions expirées, accès hors compte interdit.
+3. **RLS et RPC** : tenter la lecture des fichiers, archives, conversations, studios et cinq fonctions `SECURITY DEFINER` depuis A sur les ressources de B, et inversement. Refus observés sur les vraies API ; vérifier aussi que les cinq tables sans policy ne deviennent pas exposées aux clients par un autre chemin.
+4. **Médias** : uploads synthétiques privés, vérification d'URL signée et propriété, nettoyage **uniquement** des objets jetables créés pendant la session.
+5. **CSRF / quotas** : origine tierce refusée, réponse 401/403, limites et réservations concurrentes, sans consommation d'API IA.
+6. **RGPD** : export et dry-run de demande d'effacement, jamais suppression d'utilisateur ou de média non créé pour le test.
+7. **Backup/rollback** : sauvegarde du staging, restauration sur une **autre base isolée**, comparaison tables/contraintes/policies, simulation de rollback de code avec SHA. Une sauvegarde ou un rollback **production** ne doit pas être déclenché.
+
+### Exécuter seulement les tests E2E adaptés au staging
+
+Le dépôt reconnaît `PLAYWRIGHT_BASE_URL` et `E2E_TEST_EMAIL` / `E2E_TEST_PASSWORD` dans ses specs. Avant toute exécution distante, vérifier visuellement les URLs, les variables et les protections d'appel IA. Exemple de test **non destructif** à lancer uniquement sur staging :
+
+```bash
+# Variables privées propres AU STAGING ; ne pas les coller dans un terminal partagé
+# PLAYWRIGHT_BASE_URL=https://<url-staging> E2E_TEST_EMAIL=... E2E_TEST_PASSWORD=...
+OPENAI_PAUSED=true BILLING_ENABLED=false \
+  npx playwright test tests/e2e/authenticated-navigation.spec.ts
+```
+
+Attention : `PLAYWRIGHT_BASE_URL` évite le serveur de fixture locale et change réellement la destination. Pour l'upload, `E2E_MEDIA_UPLOAD_ENABLED=true` n'est permis que sur staging vérifié et après revue du nettoyage. Le contrôle SQL A/B du harnais local ne remplace pas les tests hébergés.
+
+## Critères de clôture de l'issue #16 et livrables de preuve
+
+| Bloc | Preuve attendue | État |
+| --- | --- | --- |
+| Labo SQL/PGlite et Auth simulé | Runs CI existants + SHA exact | Vérifié localement, preuves CI existantes |
+| Dump/restore synthétique local | Sortie du script + version Docker/Postgres | Script préparé, **pas encore exécuté** |
+| Auth/Storage/RLS A/B hébergés | Environnement, date, cas négatifs et résultat, sans PII | Non exécuté |
+| Staging réellement isolé | Références, configuration et désactivation IA/billing/purge | Non créé |
+| Backup/restore du schéma réel + rollback | Procès-verbal d'essai sur instance isolée, SHA et empreinte | Non exécuté |
+| Auth leaked-password | Activation + test ou acceptation de risque explicite | À décider |
+| Release | CI GitHub et Cloudflare vertes sur SHA exact | À vérifier lors de la livraison |
+
+Un simple run CI vert ou le smoke test de 2 lignes **ne ferme pas #16**. Archiver un bilan horodaté indiquant `executed`, `not_executed`, `failed` ou `blocked_cost_approval` pour chaque preuve, sans secrets. Ne pas inscrire `Fixes #16` / `Closes #16` tant que les preuves distantes manquent.
+
+## Sources techniques et tarification
+
+- [Supabase — développement local](https://supabase.com/docs/guides/local-development/cli-workflows)
+- [Supabase — développement local avec Docker](https://supabase.com/docs/guides/local-development)
+- [Supabase — branches isolées](https://supabase.com/docs/guides/deployment/branching)
+- [Supabase — coûts du branching](https://supabase.com/docs/guides/platform/manage-your-usage/branching)
