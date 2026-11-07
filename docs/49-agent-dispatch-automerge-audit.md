@@ -70,3 +70,22 @@ Pour lever ce blocage sans nouveau secret, sans PAT privilégié de fusion et sa
 3. Le dispatcher déjà en place ferme seulement les issues associées à une PR Copilot réellement fusionnée dans ce dépôt avec référence de clôture explicite. Il recalcule la capacité, refuse toute affectation au-delà de deux missions et délègue l'affectation avec le secret utilisateur `COPILOT_DISPATCH_TOKEN` existant.
 
 Les exécutions déclenchées via ce mécanisme doivent être vérifiées réellement après intégration : CI sur `main` final, clôture #56/#58 et affectation #59 ou suivante. Le cron GitHub reste un filet de sécurité. Le workflow de confiance ne checkout aucun code de PR avec des droits d'écriture.
+
+## Addendum — cycle Codex #86 → #89 (7 novembre 2026)
+
+Cet addendum complète l'audit avec un **deuxième cycle observé** centré sur l'issue #86 et la PR #89. Les constats ci-dessous restent datés et bornés aux preuves listées.
+
+| Preuve distante | Résultat observé | Limite explicite |
+|---|---|---|
+| [MentionCheck Codex dispatch #42359521650](https://github.com/totorina47501-wq/Project3/actions/runs/42359521650) (issue [#86](https://github.com/totorina47501-wq/Project3/issues/86)) | Run terminé `success` ; l'affectation GraphQL de Codex est attestée dans le cycle de certification de l'issue #86. | Ce run seul ne prouve ni la création d'une PR ni une fusion ultérieure. |
+| [Running OpenAI Codex #42359542125](https://github.com/totorina47501-wq/Project3/actions/runs/42359542125) et [PR #89](https://github.com/totorina47501-wq/Project3/pull/89) | Session Codex terminée `success` ; PR #89 créée automatiquement. | La création de PR ne vaut pas validation CI ni fusion automatique. |
+| [MentionCheck CI #42367668844](https://github.com/totorina47501-wq/Project3/actions/runs/42367668844), SHA PR `01e8692957a3d97d4ffea82fdb45decb6e91ece5` | CI `pull_request` verte sur le SHA final de #89 après blocage initial `action_required`. | La relance a nécessité un rafraîchissement manuel unique du SHA de la branche PR après changement de politique d'approbation ; ce n'est pas une preuve de reprise 100% événementielle sans intervention. |
+| [Codex safe-code auto-merge #42367989619](https://github.com/totorina47501-wq/Project3/actions/runs/42367989619), [PR #89](https://github.com/totorina47501-wq/Project3/pull/89), issue [#86](https://github.com/totorina47501-wq/Project3/issues/86) | Run `success` ; PR #89 fusionnée par `github-actions[bot]` ; issue #86 clôturée automatiquement. | La preuve porte sur cette PR admissible ; elle ne généralise pas à toutes les futures PR. |
+| [MentionCheck CI main #42368002073](https://github.com/totorina47501-wq/Project3/actions/runs/42368002073), SHA `851df9b80f225fb016c9c0a22fa5b9f4dc039fe3` | CI post-fusion sur `main` terminée `success` sur le SHA fusionné. | Le vert CI `main` n'implique pas que tous les workflows `workflow_run` du même SHA se déclenchent sans approbation supplémentaire. |
+| Commentaire de certification propriétaire sur [issue #86](https://github.com/totorina47501-wq/Project3/issues/86#issuecomment-6706267736) (Cloudflare mentioncheck + media-retention verts sur le SHA `851df9b...`) | Confirmation complémentaire d'un statut vert côté Cloudflare sur le même SHA. | Source déclarative d'audit (commentaire d'issue), distincte d'un run GitHub Actions natif. |
+| [Codex safe-code auto-merge #42368001911](https://github.com/totorina47501-wq/Project3/actions/runs/42368001911) (et autres `workflow_run` acteur Codex) | `conclusion: action_required` persistant sur certains déclenchements `workflow_run` post-fusion. | La reprise immédiate de **tous** les workflows n'est pas certifiée ; le cron reste best effort et non ponctuel. |
+
+### Distinction de portée (ne pas extrapoler)
+
+- **Démontré sur ce cycle** : dispatch Codex réel, exécution agent, PR créée, CI verte sur SHA de PR après intervention de politique + rafraîchissement manuel unique, fusion automatique sûre, clôture d'issue et CI `main` verte sur SHA fusionné.
+- **Non démontré à ce stade** : cycle « zéro intervention humaine » garanti pour toutes les PR futures, ni reprise événementielle immédiate universelle de tous les `workflow_run` déclenchés par l'identité Codex.
