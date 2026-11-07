@@ -12,11 +12,14 @@ describe('Codex/Copilot separation contracts', () => {
     expect(codex).toContain("cron: '5,35 * * * *'");
     expect(codex).toContain('types: [opened, labeled, closed]');
     expect(codex).toContain("default: true");
-    expect(codex).toContain("agent:codex");
-    expect(codex).toContain("agent:approved");
-    expect(codex).toContain("activeIssue || activePr");
-    expect(codex).toContain("const dryRun");
-    expect(codex).toContain("has an open linked PR; skipping");
+    expect(codex).toContain("hasLabel(i, 'agent:codex')");
+    expect(codex).toContain("!hasLabel(i, 'agent:approved')");
+    expect(codex).toContain('const activePr = prs.some(p => isCodex(p.user));');
+    expect(codex).toContain('if (activeIssue || activePr) {');
+    expect(codex).toContain("if (prs.some(pr => closing.test((pr.title||'')+' '+(pr.body||'')))) {");
+    expect(codex).toContain("Issue #'+number+' has an open linked PR; skipping.");
+    expect(codex).toContain("const dryRun = context.eventName === 'workflow_dispatch' &&");
+    expect(codex).toContain("Dry-run: would assign Codex to #'+number");
   });
   it('requires Codex identity and checks persistence without auto-merge', () => {
     expect(codex).toContain("addAssigneesToAssignable");
@@ -31,5 +34,6 @@ describe('Codex/Copilot separation contracts', () => {
     expect(copilot).toContain('select(any(.labels[]?; .name == "agent:codex") | not)');
     expect(copilot).toContain('select(any(.assignees[]?; .login == "Codex") | not)');
     expect(copilot).toContain('index("agent:codex") == null');
+    expect(copilot).toContain('jq -e \'any(.assignees[]?; .login == "Codex") | not\'');
   });
 });
