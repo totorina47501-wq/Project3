@@ -10,6 +10,7 @@ const copilot = file('mentioncheck-agent-dispatch.yml');
 describe('Codex/Copilot separation contracts', () => {
   it('isolates Codex queue and never creates a second concurrent session', () => {
     expect(codex).toContain("cron: '5,35 * * * *'");
+    expect(codex).toContain('types: [opened, labeled, closed]');
     expect(codex).toContain("default: true");
     expect(codex).toContain("agent:codex");
     expect(codex).toContain("agent:approved");

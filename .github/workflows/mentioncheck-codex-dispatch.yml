@@ -4,8 +4,9 @@ name: MentionCheck Codex dispatch
 on:
   schedule:
     - cron: '5,35 * * * *'
+  # React immediately to new explicitly labeled Codex missions, and also recover after closures.
   issues:
-    types: [closed]
+    types: [opened, labeled, closed]
   pull_request:
     types: [closed]
   workflow_dispatch:
