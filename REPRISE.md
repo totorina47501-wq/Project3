@@ -1,5 +1,9 @@
 # Reprise MentionCheck — 6 novembre 2026
 
+## Recette isolée / issue #16 — préparation du 7 novembre 2026
+
+Voir [docs/52-recette-isolee-cout-minimal.md](docs/52-recette-isolee-cout-minimal.md) et `scripts/recette/isolated-postgres-restore.sh` pour le laboratoire sans accès production. Ce labo synthétique ne remplace pas les preuves Auth/RLS hébergées, l'isolation staging/prod et la restauration d'un véritable schéma. Aucun staging facturé ni changement Supabase production autorisé par ce lot. L'issue #16 porte `release:evidence-required` ; ne pas la fermer sur une seule CI verte.
+
 ## Audio et exploitation — lot suivant du 6 novembre
 
 Lire [docs/48-audio-and-commercial-preflight.md](docs/48-audio-and-commercial-preflight.md). L’audio est explicitement activé dans Wrangler ; le choix du créateur et les autres interrupteurs restent obligatoires. Le contrôle signale les transcriptions vides ou tronquées et comptabilise les réponses audio mal formées.
