@@ -2,7 +2,7 @@
 
 ## Portée
 
-- Nouveau workflow : `.github/workflows/mentioncheck-codex-dispatch.yml` ; calendrier `:05` et `:35`, au mieux selon GitHub Actions.
+- Workflow : `.github/workflows/mentioncheck-codex-dispatch.yml` ; calendrier `:05` et `:35` (best effort GitHub Actions), et réveil immédiat sur une issue **ouverte** ou **étiquetée**, ou sur la clôture d'une issue/PR. Ces événements ne contournent pas la limite d'une mission Codex simultanée.
 - La file Copilot existante reste sur `:00` et `:30`. Son dispatcher ignore désormais toute issue portant `agent:codex` ou déjà assignée à Codex.
 - Les issues destinées à Codex portent **uniquement** le label `agent:codex` ; ne pas ajouter `agent:approved` réservé à la file Copilot.
 - Une seule mission Codex active : le workflow bloque toute nouvelle affectation s'il existe une issue déjà attribuée à Codex ou une PR Codex ouverte.
