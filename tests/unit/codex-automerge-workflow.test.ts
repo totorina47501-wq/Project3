@@ -15,6 +15,8 @@ describe('Codex safe auto-merge contract',()=>{
   it('checks Codex app identity, branch and safe-file restrictions',()=>{
     expect(safe).toContain("pr.user?.login!=='Codex'");
     expect(safe).toContain("startsWith('codex/')");
+    expect(safe).toContain("if((pr.labels||[]).some(l=>l.name==='release:evidence-required'))");
+    expect(safe).toContain("latest.labels?.some(l=>l.name==='release:evidence-required')");
     expect(safe).toContain("files.length<=20");
     expect(safe).toContain("['added','modified']");
     expect(safe).toContain("f.additions<=300&&f.deletions<=300");
