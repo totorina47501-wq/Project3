@@ -149,6 +149,28 @@ opérateur seul ne modifie pas ces pages publiques.
    fonctions internes disponibles. OAuth social, garantie de brand safety,
    signature qualifiée ou horodatage par tiers de confiance ne sont pas livrés.
 
+## Prérequis manquants — sans configuration externe
+
+Les éléments ci-dessous complètent les champs du dossier opérateur déjà listés
+plus haut ; ils ne changent aucun paramètre ni statut d’intégration. Les données
+opérateur manquantes ne sont pas déductibles du nom MentionCheck ou du code.
+Les valeurs réelles doivent être recueillies et validées par l’opérateur avant
+toute configuration ou activation.
+
+| Domaine | État connu dans le dépôt | À confirmer par l’opérateur avant intégration | Données opérateur non fournies |
+|---|---|---|---|
+| OAuth social | Déclaration manuelle disponible ; aucun flux OAuth fournisseur ni gestion de jeton n’est activé. | Réseaux à prendre en charge, compte développeur et validation de chaque application, scopes minimaux, URI de retour, cycle de révocation et information des utilisateurs. | Réseaux choisis, titulaire des comptes développeur, origines et URI de retour approuvées, autorisations effectivement accordées. |
+| Emails | Rendus et simulation locale disponibles ; aucun transport fournisseur ni domaine expéditeur n’est configuré. | Fournisseur retenu, propriété et authentification du domaine, expéditeur et réponse, déclencheurs, base d’envoi, désabonnement si applicable, rebonds et suivi des erreurs. | Domaine, adresses d’expédition/réponse, compte fournisseur, événements à notifier et responsable de suivi. |
+| Stripe | Checkout/webhook en mode de test préparé ; le mode live est refusé et aucune recette de paiement distante n’est établie. | Produits, devise, montant et périodicité exacts, taxes, parcours de souscription/échec/annulation, remboursement, webhook de test et mentions associées ; conserver les secrets uniquement dans le gestionnaire approprié. | Décision tarifaire et fiscale, compte opérateur, identifiants de prix de test et endpoint de test autorisé. |
+| Mentions et conditions | Pages légales provisoires ; identité de l’éditeur, coordonnées et textes finaux non validés. | Identité et coordonnées réelles, responsable de publication, prix et taxes, conditions d’accès/résiliation/rétractation et revue juridique adaptée à l’activité. | Raison sociale ou nom réel, forme juridique, adresse, immatriculation, contacts officiels et version approuvée des textes. |
+| Contrats et transferts | Des références de revue sont prévues dans le dossier, sans preuve ici d’approbation des contrats applicables. | Examiner les accords et sous-traitants réellement utilisés, lieux de traitement/sauvegarde, transferts, conservation et clauses requises avant de retenir chaque fournisseur. | Contrats et versions applicables, région retenue, résultats de revue et personne habilitée à les approuver. |
+
+Le dossier privé existant peut recevoir les références de pièces et de revue ;
+ne pas y copier de secret ni publier de donnée entre crochets. Tant que les
+informations ne sont pas fournies et les revues non terminées, conserver les
+intégrations désactivées. Cette checklist n’autorise ni paramétrage externe ni
+activation, et ne constitue pas un avis juridique.
+
 ## Validation locale sans fournisseurs
 
 ```sh
