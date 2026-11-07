@@ -172,6 +172,21 @@ n’est revendiquée. Le réseau sortant des tests unitaires est bloqué par le
 setup du dépôt. Le build, Playwright et la validation globale du SHA final sont
 rapportés séparément par la livraison principale.
 
+### Parcours tarifaire sans paiement
+
+Les tests `pricing-solo` rendent les offres avec Stripe désactivé et vérifient
+les prix indicatifs, la démonstration Solo et l’absence de CTA de paiement.
+`stripe-solo-checkout` vérifie le refus avant authentification lorsque la
+facturation est désactivée, le contrôle d’origine, l’absence du tarif Solo et
+le masquage d’une erreur fournisseur simulée. La création de session reste
+mockée ; aucun service externe n’est appelé.
+
+```sh
+npm test -- tests/unit/pricing-solo.test.ts tests/unit/stripe-solo-checkout.test.ts
+```
+
+Résultat local : **8 tests réussis**.
+
 ## Complément du 6 novembre — atomicité
 
 La limitation transactionnelle décrite plus haut est corrigée dans la migration `20261105122000_billing_atomic_sync.sql` et le webhook utilise ce RPC service-only. Le verrou du profil sérialise abonnement et droits dans une transaction. Les anciennes souscriptions, dates d'événement périmées et résurrections d'abonnements annulés sont refusées. Les lignes historiques sans date de création fournisseur nécessitent une réconciliation explicite avant remplacement : aucune date n'est inventée. SQL testé exclusivement sur PostgreSQL local ; facturation toujours désactivée.
