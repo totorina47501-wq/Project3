@@ -38,6 +38,10 @@ describe('Recette PostgreSQL isolée — contrat de sécurité',()=>{
     expect(doc).toContain('PLAYWRIGHT_BASE_URL');
     expect(doc).toContain('leaked-password');
     expect(doc).toContain('Non exécuté');
+    expect(doc).toContain('ukvgnkxgzyhswgpnvyzz');
+    expect(doc).toContain('18/18 migrations');
+    expect(doc).toContain('SQL RLS A/B simulé');
+    expect(doc).toContain('Worker staging et contrôle des flags non configurés');
     expect(doc).toContain('ne ferme pas #16');
   });
 });

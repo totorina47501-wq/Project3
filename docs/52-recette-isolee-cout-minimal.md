@@ -1,6 +1,6 @@
 # Recette isolée à coût minimal — MentionCheck / issue #16
 
-Date : 7 novembre 2026. **Statut : protocole prêt, recette intégrale NON réalisée.**
+Date : 7 novembre 2026. **Statut : staging Supabase gratuit créé, migrations appliquées et test SQL A/B simulé réussi ; recette intégrale NON réalisée.**
 
 Objectif : fournir des preuves de recette sans envoyer de données de production vers un environnement de test, sans utiliser de crédits IA, ni créer de ressources facturées sans approbation. Ce protocole **n'autorise aucune modification de Supabase production**.
 
@@ -9,7 +9,7 @@ Objectif : fournir des preuves de recette sans envoyer de données de production
 - Projet Supabase de production existant : `zcztvberuihphqklhjsr`, PostgreSQL 17, statut ACTIVE_HEALTHY lors du contrôle du 7 novembre.
 - 27 tables publiques avec RLS activée, 18 migrations distantes recensées ; cinq tables sans politique RLS et cinq fonctions `SECURITY DEFINER` exposées aux utilisateurs authentifiés méritent une validation métier et A/B, pas une modification aveugle.
 - Auth : l'alerte `leaked password protection disabled` est encore présente. L'activer est un choix administrateur, non une migration SQL.
-- Aucun staging Supabase connecté n'a été identifié ; aucune sauvegarde restaurée sur base isolée n'est prouvée.
+- **Staging créé et vérifié le 7 novembre** : projet Supabase indépendant `ukvgnkxgzyhswgpnvyzz` (`MentionCheck-Staging`, `eu-central-1`, plan Free, devis Supabase **0 USD/mois**). La production demeure `zcztvberuihphqklhjsr`. Aucune sauvegarde/restauration de schéma réel n'est prouvée.
 - Déjà couvert **localement** : `npm run test:sql:offline` (PGlite avec Auth/Storage simulés et pgvector volontairement omis), `npm run test:privacy:offline`, Playwright hors ligne. Ne pas recréer ces tests.
 
 ## Niveau A — coût de service : 0 € (poste/runner local)
@@ -60,11 +60,11 @@ supabase status
 
 La pile locale utilise Docker et un stockage local : coût de fournisseur nul, consommation des ressources de la machine non nulle. Conserver `OPENAI_PAUSED=true`, `BILLING_ENABLED=false`, `MEDIA_RETENTION_ENABLED=false` et les fonctions payantes désactivées.
 
-## Niveau B — environnement Supabase hébergé temporaire (uniquement après accord sur les frais)
+## Niveau B — staging Supabase hébergé gratuit créé (sans branche facturée)
 
-Une branche **preview** séparée apporte réellement Database, Auth, Storage et des identifiants distincts ; elle démarre sans copie des données de production. Sinon choisir un projet Supabase indépendant. Déployer uniquement schéma et données **synthétiques**, avec deux comptes de test jetables A et B. **Ne pas fusionner une branche DB vers la production** pour clore la recette.
+Le **deuxième projet Free** existe désormais : [MentionCheck-Staging](https://supabase.com/dashboard/project/ukvgnkxgzyhswgpnvyzz). Il utilise une instance PostgreSQL, Auth et Storage séparés. **Les 18 migrations sources du dépôt ont été appliquées dans ce projet, sans recopier les données de production.** Ne pas créer de nouvelle branche payante, ni réutiliser les identifiants de production. Les tests Auth réels nécessitent encore deux comptes jetables A et B et un Worker staging relié **exclusivement** à ce projet. **Ne pas fusionner de branche DB vers la production** pour clore la recette.
 
-Tarif indicatif publié Supabase : branche Micro à partir de **0,01344 USD/heure** de calcul ; 4 h ≈ **0,054 USD**, 24 h ≈ **0,323 USD**, hors réseau, disque et autres consommations, éventuels prérequis d'abonnement non compris. Les branches ne sont **pas** couvertes par le Spend Cap. Contrôler le devis réel avant création, choisir une durée courte, puis supprimer la branche après archivage des preuves.
+**Coût vérifié de la création du projet staging : 0 USD/mois**, dans la limite des quotas du plan Free. Le coût d'une branche Preview, qui peut être facturée, est **hors périmètre** et aucune branche payante n'a été créée. Garder le projet Staging séparé, sans données réelles ni fournisseur payant.
 
 ### Vérifications hébergées obligatoires
 
@@ -89,14 +89,24 @@ OPENAI_PAUSED=true BILLING_ENABLED=false \
 
 Attention : `PLAYWRIGHT_BASE_URL` évite le serveur de fixture locale et change réellement la destination. Pour l'upload, `E2E_MEDIA_UPLOAD_ENABLED=true` n'est permis que sur staging vérifié et après revue du nettoyage. Le contrôle SQL A/B du harnais local ne remplace pas les tests hébergés.
 
+## Relevé de vérification Supabase Staging — 7 novembre 2026
+
+- Projet staging `ukvgnkxgzyhswgpnvyzz`, distinct de production `zcztvberuihphqklhjsr`. Création confirmée `ACTIVE_HEALTHY` ; PostgreSQL **17**, région `eu-central-1`, devis de création **0 USD/mois**.
+- **18/18 migrations du dépôt** exécutées avec succès sur staging. La nomenclature des versions appliquées diffère de la production : ne pas inférer une égalité d'historique de versions.
+- Relevés structurels de `public` sur les deux projets : **27 tables, 27 RLS activées, 226 colonnes, 25 policies, 30 fonctions** ; MD5 des définitions de colonnes et policies concordants. Trois buckets Storage de mêmes noms : `deal-contracts`, `verification-media`, `verification-media-derived`.
+- Test hébergé SQL sur staging : deux identités **fictives** insérées dans une transaction, rôle PostgreSQL `authenticated` et sous-claim JWT **simulé** A puis B. Les quatre tables `users`, `verifications`, `media_assets`, `assistant_conversations` refusent à chaque identité les lignes de l'autre et permettent la lecture des lignes propres.
+- La transaction a été **ROLLBACK**. Contrôle après test : `auth.users`, `public.users`, `verifications`, `media_assets`, `assistant_conversations` et `storage.objects` sont tous à **0 ligne**.
+- **Limites** : simulation de claim SQL, et non deux jetons émis par GoTrue / sessions HTTP ; aucun vrai upload Storage, E2E Worker, sauvegarde/restauration de schéma réel ni rollback applicatif testé ; protection de mots de passe compromis en **production** non modifiée.
+- **Interdiction** : ne jamais pointer les tests jetables vers la production ; ne pas relancer des migrations staging déjà appliquées ; ne pas clôturer #16 sur ces seules preuves.
+
 ## Critères de clôture de l'issue #16 et livrables de preuve
 
 | Bloc | Preuve attendue | État |
 | --- | --- | --- |
 | Labo SQL/PGlite et Auth simulé | Runs CI existants + SHA exact | Vérifié localement, preuves CI existantes |
 | Dump/restore synthétique local | Sortie du script + version Docker/Postgres | Script préparé, **pas encore exécuté** |
-| Auth/Storage/RLS A/B hébergés | Environnement, date, cas négatifs et résultat, sans PII | Non exécuté |
-| Staging réellement isolé | Références, configuration et désactivation IA/billing/purge | Non créé |
+| Auth/Storage/RLS A/B hébergés | Environnement, date, cas négatifs et résultat, sans PII | **SQL RLS A/B simulé sur staging réussi** ; vrais parcours Auth/HTTP/Storage non exécutés |
+| Staging réellement isolé | Références, configuration et désactivation IA/billing/purge | **Projet DB/Auth/Storage créé et séparé** ; Worker staging et contrôle des flags non configurés |
 | Backup/restore du schéma réel + rollback | Procès-verbal d'essai sur instance isolée, SHA et empreinte | Non exécuté |
 | Auth leaked-password | Activation + test ou acceptation de risque explicite | À décider |
 | Release | CI GitHub et Cloudflare vertes sur SHA exact | À vérifier lors de la livraison |
