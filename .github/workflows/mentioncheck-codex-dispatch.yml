@@ -79,14 +79,26 @@ jobs:
               if (!process.env.CODEX_DISPATCH_TOKEN) {
                 throw Error('Missing CODEX_DISPATCH_TOKEN or existing Copilot dispatch PAT');
               }
-              // Partner-agent REST assignment is not guaranteed by GitHub API docs.
-              // Never silently substitute Copilot for Codex.
-              await github.rest.issues.addAssignees({
-                owner,repo,issue_number:number,assignees:['Codex']
-              });
+              // REST returned success without persisting Codex on issue #86.
+              // Prefer GitHub GraphQL with the verified partner Bot node ID.
+              const identity = (await github.rest.pulls.get({owner,repo,pull_number:79})).data.user;
+              if (identity?.login !== 'Codex' || identity.type !== 'Bot' || !identity.node_id) {
+                throw Error('Verified Codex Bot identity unavailable');
+              }
+              const headers = {'GraphQL-Features':'issues_copilot_assignment_api_support,coding_agent_model_selection'};
+              const lookup = await github.graphql(
+                'query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name){issue(number:$number){id}}}',
+                {owner,name:repo,number,headers}
+              );
+              const issueId = lookup.repository?.issue?.id;
+              if (!issueId) throw Error('Missing issue GraphQL node ID');
+              await github.graphql(
+                'mutation($issueId:ID!,$botIds:[ID!]!){addAssigneesToAssignable(input:{assignableId:$issueId,assigneeIds:$botIds}){assignable{... on Issue{id assignees(first:20){nodes{login}}}}}}',
+                {issueId,botIds:[identity.node_id],headers}
+              );
               const check = (await github.rest.issues.get({owner,repo,issue_number:number})).data;
               if (!check.assignees?.some(isCodex)) {
-                throw Error('Codex assignee not persisted on issue #'+number);
+                throw Error('Codex GraphQL assignee not persisted on issue #'+number);
               }
               core.info('Codex assignee verified on #'+number+'; confirm session and PR separately.');
               return;
