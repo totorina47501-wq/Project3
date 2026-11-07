@@ -1,5 +1,9 @@
 # Reprise MentionCheck — 6 novembre 2026
 
+## Staging Supabase créé — 7 novembre 2026
+
+Projet gratuit isolé : `MentionCheck-Staging` / `ukvgnkxgzyhswgpnvyzz` ; production : `zcztvberuihphqklhjsr`. **18 migrations appliquées sur staging**, 27 tables et RLS conformes aux définitions de production ; test SQL A/B simulé passé avec rollback et **zéro donnée conservée**. Lire [`docs/52-recette-isolee-cout-minimal.md`](docs/52-recette-isolee-cout-minimal.md) avant toute recette. Les tests Auth réels, Worker staging, backup/restore du schéma et rollback restent non exécutés. Ne pas utiliser de clés de production en staging, ne pas clôturer #16.
+
 ## Recette isolée / issue #16 — préparation du 7 novembre 2026
 
 Voir [docs/52-recette-isolee-cout-minimal.md](docs/52-recette-isolee-cout-minimal.md) et `scripts/recette/isolated-postgres-restore.sh` pour le laboratoire sans accès production. Ce labo synthétique ne remplace pas les preuves Auth/RLS hébergées, l'isolation staging/prod et la restauration d'un véritable schéma. Aucun staging facturé ni changement Supabase production autorisé par ce lot. L'issue #16 porte `release:evidence-required` ; ne pas la fermer sur une seule CI verte.
