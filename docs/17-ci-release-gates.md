@@ -27,6 +27,17 @@
 - Fait en local/offline : recettes Playwright authentifiées sans fournisseur payant, refus 401/403, contrôles d'origine, isolation A/B SQL, upload média opt-in avec nettoyage ciblé.
 - Non exécuté dans ce lot : validation staging vs production, vérification service_role distante, preuve RLS/RPC distante, exercice backup/restore et rollback sur environnement isolé.
 
+## Addendum audit Supabase distant (lecture seule, 7 novembre 2026)
+
+- Environnement inspecté : projet `zcztvberuihphqklhjsr` (ACTIVE_HEALTHY), PostgreSQL 17, région `eu-central-1`.
+- Vérifié : 27 tables `public` avec RLS activée ; 22 avec politiques et 5 sans policy (`api_keys`, `law_documents`, `law_import_runs`, `stripe_webhook_events`, `workspace_invitations`) ; état intentionnel à confirmer côté accès métier serveur/privés.
+- Vérifié : 18 migrations enregistrées à distance (présence), sans essai de restauration réelle.
+- Vérifié : 5 RPC `SECURITY DEFINER` exposées à `authenticated` (`archive_brand_deal`, `delete_brand_deal_draft`, `remove_social_account`, `save_brand_deal`, `save_social_account`) avec garde-fous `search_path`, `auth.uid()` et absence d'`EXECUTE` pour `anon`; des tests d'autorisation E2E distants restent requis.
+- Vérifié : `leaked password protection disabled` toujours présent dans Supabase Auth Advisor.
+- Vérifié : aucune branche Supabase de staging et un seul projet relié ; ne pas simuler une séparation staging/prod inexistante.
+- Toujours non exécuté : E2E distants authentifiés A/B, validation `service_role` hébergée, exercice backup/restore sur instance isolée et rollback applicatif/schéma.
+- Règle de clôture : ne pas fermer l'issue #16 sur la seule base de preuves locales/documentaires ; une recette distante datée reste obligatoire.
+
 **Statut :** checklist opérationnelle, pas une preuve de réalisation.
 
 ## Vérification statique des liens Markdown internes

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updated": "2026-11-06",
+  "updated": "2026-11-07",
   "scope": "Code de la branche, non preuve de déploiement ni de commercialisation.",
   "features": [
     {
@@ -401,7 +401,8 @@
       "migrations": [],
       "next": [
         "Playwright local vérifie session, refus 401/403, origine tierce, logout, archives PDF et navigation clavier ; scénarios SQL A/B dans collaborations/Studio. E2E distant avec identifiants à valider séparément.",
-        "Les preuves locales et manquantes (staging/prod, service_role distant, backup/restore/rollback) sont tracées dans docs/18-security-review-checklist.md."
+        "Audit distant Supabase en lecture seule du 7 novembre 2026 consigné : 27 tables public avec RLS activée, 5 sans policy intentionnelle, 18 migrations présentes et WARN Auth leaked-password toujours actif; détails dans docs/18-security-review-checklist.md.",
+        "Les preuves encore manquantes (E2E distants A/B, staging/prod, service_role distant, tests RLS/RPC d'autorisation, backup/restore/rollback isolés) restent ouvertes et ne permettent pas de clore l'issue #16."
       ]
     },
     {

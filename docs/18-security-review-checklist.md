@@ -62,4 +62,13 @@ de production n’est revendiqué.
 - Vérification RLS/RPC sur instance Supabase distante: non exécutée dans ce lot.
 - Sauvegarde/restauration PostgreSQL et rollback complet (app + schéma) sur environnement isolé: non exécutés, runbook requis côté exploitation.
 
+## Addendum — audit distant Supabase (lecture seule, 7 novembre 2026)
+
+- Projet inspecté: `zcztvberuihphqklhjsr` (`ACTIVE_HEALTHY`), PostgreSQL 17, `eu-central-1`.
+- Inventaire SQL confirmé: 27 tables `public` avec RLS activée; 22 ont des policies et 5 restent volontairement sans policy (`api_keys`, `law_documents`, `law_import_runs`, `stripe_webhook_events`, `workspace_invitations`).
+- Migrations distantes: 18 versions présentes vérifiées; identité de contenu et restauration non démontrées par ce relevé.
+- Advisor SQL: 5 WARN sur RPC `SECURITY DEFINER` exécutables par `authenticated` (`archive_brand_deal`, `delete_brand_deal_draft`, `remove_social_account`, `save_brand_deal`, `save_social_account`); garde-fous constatés (`search_path` fixé, contrôle `auth.uid()`, `anon` sans `EXECUTE`), mais couverture E2E distante d'autorisation encore manquante.
+- Advisor Auth: WARN `leaked password protection disabled` toujours actif; décision admin et test sur compte jetable requis.
+- Topologie: aucune branche Supabase de staging et un seul projet connecté; ne pas revendiquer d'isolation staging/prod non prouvée.
+
 **Statut :** preuves locales ciblées pour quotas et Auth/RGPD ; aucune validation globale ni validation distante n’est revendiquée.
