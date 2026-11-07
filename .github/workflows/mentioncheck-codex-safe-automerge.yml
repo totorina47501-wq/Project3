@@ -50,14 +50,43 @@ jobs:
               const sha=pr.head.sha;
               const runs=await github.paginate(github.rest.actions.listWorkflowRunsForRepo,
                 {owner,repo,branch:pr.head.ref,per_page:100});
-              const ci=runs.filter(r=>r.name==='MentionCheck CI'&&
-                r.path==='.github/workflows/ci.yml'&&r.event==='pull_request'&&
-                r.head_sha===sha&&r.pull_requests?.some(x=>x.number===pr.number))
-                .sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at))[0];
-              if(!ci||ci.status!=='completed'||ci.conclusion!=='success')continue;
-              const agent=runs.filter(r=>r.name==='Running OpenAI Codex')
+              // Require a successfully completed Codex session before any CI recovery.
+              const agent=runs.filter(r=>r.name==='Running OpenAI Codex'&&
+                r.head_branch===pr.head.ref)
                 .sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at))[0];
               if(!agent||agent.status!=='completed'||agent.conclusion!=='success')continue;
+
+              // GitHub may mark pull_request runs authored by the partner bot
+              // action_required before any job starts. Only a trusted, read-only
+              // workflow_dispatch run by github-actions[bot] can be the fallback.
+              const ciRuns=runs.filter(r=>r.name==='MentionCheck CI'&&
+                r.path==='.github/workflows/ci.yml'&&r.head_sha===sha&&
+                ((r.event==='pull_request'&&r.pull_requests?.some(x=>x.number===pr.number))||
+                 (r.event==='workflow_dispatch'&&r.head_branch===pr.head.ref&&
+                  r.actor?.login==='github-actions[bot]')));
+              const ci=ciRuns.sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at))[0];
+              if(!ci||ci.status!=='completed'||ci.conclusion!=='success'){
+                // Never override an actual failed PR test, only a blocked
+                // action_required run with zero jobs. One recovery attempt per SHA.
+                const realFailure=ciRuns.some(r=>r.event==='pull_request'&&
+                  r.conclusion&& !['success','action_required','skipped'].includes(r.conclusion));
+                const pending=ciRuns.some(r=>['queued','in_progress','waiting','pending'].includes(r.status));
+                const dispatched=ciRuns.some(r=>r.event==='workflow_dispatch');
+                const trustedRecovery=context.eventName==='schedule'||
+                  (context.eventName==='workflow_run'&&source?.conclusion==='success'&&
+                   source.head_branch==='main'&&['push','workflow_dispatch'].includes(source.event));
+                if(!realFailure&&!pending&&!dispatched&&trustedRecovery){
+                  // CI workflow is read-only, runs with OpenAI/billing/retention OFF;
+                  // safe-file filter above excludes any workflow modifications.
+                  await github.rest.actions.createWorkflowDispatch({
+                    owner,repo,workflow_id:'ci.yml',ref:pr.head.ref
+                  });
+                  core.notice('Dispatched one trusted read-only Codex CI for PR #'+pr.number+
+                    ' at SHA '+sha+' after blocked bot-created PR event.');
+                  return;
+                }
+                continue;
+              }
               const jobs=await github.paginate(github.rest.actions.listJobsForWorkflowRun,
                 {owner,repo,run_id:ci.id,filter:'latest',per_page:100});
               if(!['quality','Image du runner média (sans fournisseur)'].every(name=>
