@@ -19,9 +19,11 @@ describe('Codex/Copilot separation contracts', () => {
     expect(codex).toContain("has an open linked PR; skipping");
   });
   it('requires Codex identity and checks persistence without auto-merge', () => {
-    expect(codex).toContain("assignees:['Codex']");
-    expect(codex).toContain("Codex assignee not persisted");
+    expect(codex).toContain("addAssigneesToAssignable");
+    expect(codex).toContain("Codex GraphQL assignee not persisted");
     expect(codex).toContain("confirm session and PR separately");
+    expect(codex).toContain("identity.type !== 'Bot'");
+    expect(codex).not.toContain("github.rest.issues.addAssignees(");
     expect(codex).not.toContain("mergePullRequest");
     expect(codex).not.toContain("actions/checkout@");
   });

@@ -17,7 +17,7 @@
 ## Prérequis d'authentification
 
 - Le workflow lit `CODEX_DISPATCH_TOKEN`, ou à défaut le secret existant `COPILOT_DISPATCH_TOKEN` / `GH_AW_AGENT_TOKEN`. Jamais de jeton dans le dépôt.
-- La documentation GitHub couvre explicitement l'affectation de Copilot via API. **L'équivalence pour le partenaire Codex n'est pas attestée**. L'affectation REST est tentée avec le compte `Codex`, et sa persistance est revérifiée.
+- La documentation GitHub couvre explicitement l'affectation de Copilot via API. **L'équivalence pour le partenaire Codex n'est pas attestée**. Un test réel de l'issue #86 a démontré que REST ne conservait pas l'assignee Codex. Une mutation GraphQL `addAssigneesToAssignable` est désormais tentée avec l'identité Bot confirmée par la PR #79, et l'affectation est revérifiée. Le lancement de session n'est pas garanti par cette seule étape.
 - Même si GitHub conserve l'assignee Codex, cela ne prouve pas encore la création d'une session ou PR. Ne pas déclarer Full Auto avant un test réel concluant.
 
 ## Recette de certification
