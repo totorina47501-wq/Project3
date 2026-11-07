@@ -1,0 +1,108 @@
+name: Codex safe-code auto-merge
+# Trusted default-branch workflow. Never checkout PR code with write access.
+on:
+  schedule:
+    - cron: '15,45 * * * *'
+  workflow_run:
+    workflows: ["MentionCheck CI"]
+    types: [completed]
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write
+concurrency:
+  group: mentioncheck-codex-safe-automerge
+  cancel-in-progress: false
+jobs:
+  merge:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Verify Codex identity, safe diff, exact CI and finished agent before merge
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner=context.repo.owner,repo=context.repo.repo;
+            if(owner!=='totorina47501-wq'||repo!=='Project3'||context.ref!=='refs/heads/main') {
+              throw Error('Untrusted repository or ref');
+            }
+            const source=context.payload.workflow_run;
+            // Only completed successful runs are allowed to open the merge path.
+            if(context.eventName==='workflow_run'&&source?.conclusion!=='success') return;
+            const prs=await github.paginate(github.rest.pulls.list,{owner,repo,state:'open',per_page:100});
+            let examined=0;
+            for(const pr of prs.sort((a,b)=>a.number-b.number)) {
+              if(examined>=10)break;
+              if(pr.user?.login!=='Codex'||pr.base?.ref!=='main'||
+                 pr.head?.repo?.full_name!==owner+'/'+repo||
+                 !pr.head?.ref?.startsWith('codex/'))continue;
+              examined++;
+              const files=await github.paginate(github.rest.pulls.listFiles,
+                {owner,repo,pull_number:pr.number,per_page:100});
+              const safe=files.length>0&&files.length<=20&&files.every(f=>
+                ['added','modified'].includes(f.status)&&f.additions<=300&&f.deletions<=300&&
+                (/^tests\//.test(f.filename)||/^docs\/.+\.md$/.test(f.filename))&&
+                !/^docs\/(12-privacy-security|17-ci-release-gates|18-security-review-checklist|42-copilot-mobile-workflow|50-codex-dispatch)\.md$/.test(f.filename)&&
+                !/^docs\/(legal|security|contracts)\//.test(f.filename));
+              if(!safe)continue;
+              const sha=pr.head.sha;
+              const runs=await github.paginate(github.rest.actions.listWorkflowRunsForRepo,
+                {owner,repo,branch:pr.head.ref,per_page:100});
+              const ci=runs.filter(r=>r.name==='MentionCheck CI'&&
+                r.path==='.github/workflows/ci.yml'&&r.event==='pull_request'&&
+                r.head_sha===sha&&r.pull_requests?.some(x=>x.number===pr.number))
+                .sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at))[0];
+              if(!ci||ci.status!=='completed'||ci.conclusion!=='success')continue;
+              const agent=runs.filter(r=>r.name==='Running OpenAI Codex')
+                .sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at))[0];
+              if(!agent||agent.status!=='completed'||agent.conclusion!=='success')continue;
+              const jobs=await github.paginate(github.rest.actions.listJobsForWorkflowRun,
+                {owner,repo,run_id:ci.id,filter:'latest',per_page:100});
+              if(!['quality','Image du runner média (sans fournisseur)'].every(name=>
+                jobs.some(j=>j.name===name&&j.conclusion==='success')))continue;
+              if(pr.draft)await github.graphql(
+                'mutation($id:ID!){markPullRequestReadyForReview(input:{pullRequestId:$id}){pullRequest{isDraft}}}',
+                {id:pr.node_id});
+              const latest=(await github.rest.pulls.get({owner,repo,pull_number:pr.number})).data;
+              if(latest.state!=='open'||latest.draft||latest.head.sha!==sha||
+                 latest.base.ref!=='main'||latest.user.login!=='Codex')continue;
+              let merged;
+              try{
+                merged=await github.rest.pulls.merge({owner,repo,pull_number:pr.number,
+                  merge_method:'squash',sha,commit_title:'test: verified safe Codex PR #'+pr.number});
+              }catch(err){
+                core.warning('GitHub refused protected Codex merge for PR #'+pr.number+
+                  ' (HTTP '+(err.status||'unknown')+')');
+                return;
+              }
+              core.notice('Merged safe Codex PR #'+pr.number+' at '+merged.data.sha);
+              // Close only the issue explicitly fixed by this verified Codex PR.
+              const matched=(pr.body||'').match(/(?:fix(?:es|ed)?|clos(?:es|ed)?|resolv(?:es|ed)?)\s+#(\d+)\b/i);
+              if(matched){
+                const issueNumber=Number(matched[1]);
+                const issue=(await github.rest.issues.get({owner,repo,issue_number:issueNumber})).data;
+                if(issue.state==='open'&&!issue.pull_request&&
+                   issue.labels?.some(l=>l.name==='agent:codex')){
+                  await github.rest.issues.update({owner,repo,issue_number:issueNumber,
+                    state:'closed',state_reason:'completed'});
+                  core.notice('Closed verified Codex issue #'+issueNumber);
+                }
+              }
+              // Bot-token merges do not cause normal push workflow events.
+              await github.rest.actions.createWorkflowDispatch({owner,repo,workflow_id:'ci.yml',ref:'main'});
+              core.notice('Triggered main CI after Codex PR #'+pr.number);
+              return; // Revalidate a fresh head/CI on the next invocation.
+            }
+            // Resume Codex dispatch only after successful main CI on current SHA.
+            if(context.eventName==='workflow_run'&&source?.conclusion==='success'&&
+               ['push','workflow_dispatch'].includes(source.event)&&source.head_branch==='main'){
+              const current=(await github.rest.repos.getBranch({owner,repo,branch:'main'})).data.commit.sha;
+              if(current===source.head_sha){
+                await github.rest.actions.createWorkflowDispatch({owner,repo,
+                  workflow_id:'mentioncheck-codex-dispatch.yml',ref:'main',inputs:{dry_run:'false'}});
+                core.notice('Resumed Codex backlog after green main at '+current);
+              }
+            }
+            core.summary.addRaw('Codex safe recovery inspected '+examined+' PRs; no eligible merge.');
