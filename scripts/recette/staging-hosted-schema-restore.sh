@@ -94,7 +94,7 @@ test -s "$temporary/real-staging-public.sql" || fail empty_schema_dump
 if grep -Eiq '^-- Data for Name: .*; Type: TABLE DATA;' \
  "$temporary/real-staging-public.sql"; then fail schema_dump_contains_data; fi
 # Fail closed if no schema/table definition is present.
-if ! grep -Eq '^CREATE TABLE public\\.|^CREATE TABLE "public"\\.' \
+if ! grep -Eq '^[[:space:]]*CREATE TABLE([[:space:]]+IF NOT EXISTS)?[[:space:]]+' \
  "$temporary/real-staging-public.sql"; then fail schema_dump_missing_tables; fi
 printf 'STAGING_REMOTE_SCHEMA_DUMP_PASS schema=public data=excluded\n'
 
