@@ -88,9 +88,14 @@ npm install --prefix "$temporary/cli" --no-audit --no-fund --silent supabase@2 \
  --schema public -f "$temporary/real-staging-public.sql") \
  > "$temporary/dump.log" 2>&1 || fail supabase_schema_dump
 test -s "$temporary/real-staging-public.sql" || fail empty_schema_dump
-# Refuse accidental data export. Dump must not contain COPY or INSERT payload.
-if grep -Eiq '^[[:space:]]*(COPY[[:space:]]|INSERT[[:space:]]INTO[[:space:]])' \
+# Supabase CLI `db dump` exports SCHEMA ONLY by default. Pg functions can contain
+# INSERT/COPY statements as SOURCE CODE: do not mistake them for exported user rows.
+# An actual pg_dump DATA section has a specific top-level metadata header.
+if grep -Eiq '^-- Data for Name: .*; Type: TABLE DATA;' \
  "$temporary/real-staging-public.sql"; then fail schema_dump_contains_data; fi
+# Fail closed if no schema/table definition is present.
+if ! grep -Eq '^CREATE TABLE public\\.|^CREATE TABLE "public"\\.' \
+ "$temporary/real-staging-public.sql"; then fail schema_dump_missing_tables; fi
 printf 'STAGING_REMOTE_SCHEMA_DUMP_PASS schema=public data=excluded\n'
 
 # Start a fresh LOCAL Supabase project with Auth/Storage system catalogs.
