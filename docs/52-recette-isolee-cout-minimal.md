@@ -119,3 +119,13 @@ Un simple run CI vert ou le smoke test de 2 lignes **ne ferme pas #16**. Archive
 - [Supabase — développement local avec Docker](https://supabase.com/docs/guides/local-development)
 - [Supabase — branches isolées](https://supabase.com/docs/guides/deployment/branching)
 - [Supabase — coûts du branching](https://supabase.com/docs/guides/platform/manage-your-usage/branching)
+
+## Publication Cloudflare Staging — préparation du 8 novembre 2026
+
+**Statut : configuration et workflow ajoutés, Worker staging pas encore publié.** La publication exige une authentification Cloudflare non disponible dans cette conversation ; un run CI/dry-run n'est pas une publication.
+
+- `wrangler.staging.jsonc` cible exclusivement le nouveau Worker `mentioncheck-staging`, prévu à `https://mentioncheck-staging.toto-rina47501.workers.dev`, et le projet Supabase `ukvgnkxgzyhswgpnvyzz`. Il n'importe **aucun conteneur, Durable Object ou cron**, désactive tous les appels IA, le paiement, les médias et la rétention ; `wrangler.jsonc` de production reste intact.
+- Workflow GitHub Actions **MentionCheck Staging Cloudflare**, uniquement via `workflow_dispatch` sur `main` : mode `dry-run` sans publication (clé de build fictive), puis `publish`. Il vérifie les frontières, compile avec OpenNext et contrôle le bundle avant déploiement.
+- Le mode `publish` requiert des secrets GitHub Actions limités au staging : `MENTIONCHECK_STAGING_CLOUDFLARE_ACCOUNT_ID`, `MENTIONCHECK_STAGING_CLOUDFLARE_API_TOKEN` (accès minimal Workers Scripts Edit dans le compte existant), `MENTIONCHECK_STAGING_SUPABASE_ANON_KEY` (clé publiable staging) et `MENTIONCHECK_STAGING_SUPABASE_SERVICE_KEY` (clé privée uniquement staging). **Ne jamais partager de valeur de clé dans un chat ou la commiter.**
+- Le workflow transmet la clé publiable à Next au **build**, puis installe les clés publique et serveur comme secrets **exclusivement sur le Worker staging**. Avant toute publication, il valide les deux clés par des API du projet staging (Auth Settings / schéma PostgREST), sans afficher les clés ni les données. Aucune clé de production ne doit être copiée ; faire vérifier les identifiants staging par l'administrateur avant de lancer `publish`. Le compte Cloudflare peut facturer des requêtes selon le forfait : le coût 0 $/mois annoncé concerne **Supabase Free**, pas un budget Cloudflare garanti.
+- Après succès : tester l'URL du Worker staging et les deux vrais comptes Auth sur le **staging**. La CI et les tests SQL actuels ne prouvent ni un déploiement Cloudflare ni une recette Auth navigateur. Réserver `#16` ouverte tant que les essais E2E et le backup/restore réel n'ont pas été effectués.

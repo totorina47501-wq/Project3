@@ -1,0 +1,98 @@
+# Déploiement sûr et explicite ; aucune PR ou push ne publie un Worker.
+name: MentionCheck Staging Cloudflare
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry-run (aucune publication) ou publish (staging seulement)"
+        type: choice
+        options: [dry-run, publish]
+        default: dry-run
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: mentioncheck-staging-cloudflare
+  cancel-in-progress: false
+jobs:
+  staging:
+    if: github.ref == 'refs/heads/main' && github.repository == 'totorina47501-wq/Project3'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://ukvgnkxgzyhswgpnvyzz.supabase.co
+      NEXT_PUBLIC_APP_URL: https://mentioncheck-staging.toto-rina47501.workers.dev
+      OPENAI_PAUSED: 'true'
+      OPENAI_TEXT_ENABLED: 'false'
+      OPENAI_VISION_ENABLED: 'false'
+      OPENAI_AUDIO_ENABLED: 'false'
+      OPENAI_EMBEDDINGS_ENABLED: 'false'
+      BILLING_ENABLED: 'false'
+      MEDIA_RETENTION_ENABLED: 'false'
+      MEDIA_PROCESSING_ENABLED: 'false'
+      MEDIA_AI_ENABLED: 'false'
+      MEDIA_CLOUDFLARE_RUNNER_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.MENTIONCHECK_STAGING_CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.MENTIONCHECK_STAGING_CLOUDFLARE_API_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.MENTIONCHECK_STAGING_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.MENTIONCHECK_STAGING_SUPABASE_SERVICE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Vérifier le périmètre staging
+        run: node scripts/recette/check-cloudflare-staging-boundary.mjs
+      - name: Refuser publication sans les quatre secrets staging
+        if: inputs.mode == 'publish'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN NEXT_PUBLIC_SUPABASE_ANON_KEY SUPABASE_SERVICE_KEY; do
+            if [[ -z "$(printenv "$name" || true)" ]]; then
+              echo "::error::Secret staging manquant: $name ; déploiement interdit"
+              exit 1
+            fi
+          done
+      - name: Prouver que les deux clés sont valides sur la base Supabase staging, pas production
+        if: inputs.mode == 'publish'
+        shell: bash
+        run: |
+          set -euo pipefail
+          staging='https://ukvgnkxgzyhswgpnvyzz.supabase.co'
+          anonymous_status="$(curl --silent --show-error --max-time 20 --output /dev/null --write-out '%{http_code}' -H "apikey: $NEXT_PUBLIC_SUPABASE_ANON_KEY" "$staging/auth/v1/settings")"
+          if [[ "$anonymous_status" != '200' ]]; then
+            echo "::error::Clé publique invalide pour le Supabase staging (HTTP $anonymous_status)."
+            exit 1
+          fi
+          admin_status="$(curl --silent --show-error --max-time 20 --output /dev/null --write-out '%{http_code}' -H "apikey: $SUPABASE_SERVICE_KEY" "$staging/rest/v1/")"
+          if [[ "$admin_status" != '200' ]]; then
+            echo "::error::Clé serveur non autorisée sur le Supabase staging (HTTP $admin_status)."
+            exit 1
+          fi
+      - name: Fournir une clé fictive pour le dry-run sans authentification
+        if: inputs.mode == 'dry-run'
+        run: echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=staging-dry-run-placeholder" >> "$GITHUB_ENV"
+      - name: Installation déterministe
+        run: npm ci --ignore-scripts
+      - name: Compiler Next.js sur la référence staging
+        run: npm run build
+      - name: Construire OpenNext avec la configuration staging
+        run: npx @opennextjs/cloudflare build --skipNextBuild --config wrangler.staging.jsonc
+      - name: Prévisualiser le package Cloudflare sans déployer
+        run: npx wrangler deploy --config wrangler.staging.jsonc --dry-run
+      - name: Publier uniquement mentioncheck-staging
+        if: inputs.mode == 'publish'
+        run: npx @opennextjs/cloudflare deploy --config wrangler.staging.jsonc -- --keep-vars
+      - name: Définir les secrets sur le Worker staging uniquement
+        if: inputs.mode == 'publish'
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$NEXT_PUBLIC_SUPABASE_ANON_KEY" | npx wrangler secret put NEXT_PUBLIC_SUPABASE_ANON_KEY --config wrangler.staging.jsonc
+          printf '%s' "$SUPABASE_SERVICE_KEY" | npx wrangler secret put SUPABASE_SERVICE_KEY --config wrangler.staging.jsonc
+      - name: Vérifier la page connexion staging
+        if: inputs.mode == 'publish'
+        run: curl --fail --silent --show-error --retry 3 --max-time 25 https://mentioncheck-staging.toto-rina47501.workers.dev/login --output /dev/null
