@@ -37,6 +37,17 @@ try{
  assert.equal(enabled.enabled,before.enabled,'Worker public routing modified');
  assert.equal(enabled.previews_enabled,true,'Preview URLs not enabled');
  console.log('STAGING_PREVIEW_API_ENABLE_PASS worker='+worker);
+ // Probe sur un identifiant UUID inexistant, seulement si l'inventaire initial est vide.
+ // Cela ne peut supprimer aucune Preview réelle et permet de bloquer un autre orphelin.
+ const {randomUUID}=await import('node:crypto');
+ const response=await fetch(origin+previewRoute+'/'+randomUUID(),{
+  method:'DELETE',headers:{Authorization:'Bearer '+token},signal:AbortSignal.timeout(12000)});
+ console.log('STAGING_PREVIEW_DELETE_PERMISSION_PROBE_HTTP_'+response.status);
+ if(response.status===403 || response.status===401)
+  throw Error('STAGING_PREVIEW_DELETE_TOKEN_PERMISSION_MISSING');
+ if(![400,404,200,204].includes(response.status))
+  throw Error('STAGING_PREVIEW_DELETE_PROBE_UNEXPECTED_'+response.status);
+ console.log('STAGING_PREVIEW_DELETE_PERMISSION_PROBE_PASS');
 }catch(e){problem=e;}finally{
  if(toggled){
   try{
