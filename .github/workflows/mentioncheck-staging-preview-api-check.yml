@@ -1,0 +1,27 @@
+name: MentionCheck staging Preview API access check
+on:
+  push:
+    branches: [test/mentioncheck-staging-auth-20261108]
+    paths:
+      - '.github/workflows/mentioncheck-staging-preview-api-check.yml'
+      - 'scripts/recette/staging-preview-api-check.mjs'
+permissions:
+  contents: read
+concurrency:
+  group: mentioncheck-staging-cloudflare
+  cancel-in-progress: false
+jobs:
+  preview-api:
+    if: github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/test/mentioncheck-staging-auth-20261108'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.MENTIONCHECK_STAGING_CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.MENTIONCHECK_STAGING_CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Toggle et restauration du réglage Preview URLs staging
+        run: node scripts/recette/staging-preview-api-check.mjs
