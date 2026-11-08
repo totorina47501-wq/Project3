@@ -1,4 +1,4 @@
-# Aucun déploiement ni appel aux API payantes. Branche staging uniquement.
+# Recette staging uniquement ; aucun déploiement ni appel IA.
 name: MentionCheck Staging Auth AB
 on:
   push:
@@ -6,6 +6,9 @@ on:
     paths:
       - '.github/workflows/mentioncheck-staging-auth-recette.yml'
       - 'scripts/recette/staging-auth-ab.mjs'
+      - 'scripts/recette/staging-browser-run.mjs'
+      - 'tests/e2e/staging-live-recette.spec.ts'
+      - 'docs/53-staging-certification.md'
   workflow_dispatch:
 permissions:
   contents: read
@@ -14,12 +17,13 @@ concurrency:
   cancel-in-progress: false
 jobs:
   auth-ab:
-    if: github.repository == 'totorina47501-wq/Project3' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/test/mentioncheck-staging-auth-20261108')
+    if: github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/test/mentioncheck-staging-auth-20261108'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://ukvgnkxgzyhswgpnvyzz.supabase.co
       NEXT_PUBLIC_APP_URL: https://mentioncheck-staging.toto-rina47501.workers.dev
+      PLAYWRIGHT_BASE_URL: https://mentioncheck-staging.toto-rina47501.workers.dev
       OPENAI_PAUSED: 'true'
       OPENAI_TEXT_ENABLED: 'false'
       OPENAI_VISION_ENABLED: 'false'
@@ -37,9 +41,34 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - name: Vérifier la séparation staging/production
+      - name: Garde-fou isolation staging et fournisseurs
         run: node scripts/recette/check-cloudflare-staging-boundary.mjs
-      - name: Installer les dépendances existantes
+      - name: Installer les dépendances verrouillées
         run: npm ci --ignore-scripts
-      - name: Exécuter Auth A/B, RLS, RPC et Storage privé avec nettoyage
+      - name: Auth API A/B, RLS, RPC, Storage et nettoyage
         run: node scripts/recette/staging-auth-ab.mjs
+      - name: Installer Chromium
+        timeout-minutes: 5
+        run: npx playwright install chromium
+      - name: Playwright navigateur, CSRF, RGPD et quotas
+        timeout-minutes: 6
+        run: node scripts/recette/staging-browser-run.mjs
+  backup-synthetic:
+    name: PostgreSQL jetable — restauration synthétique
+    if: github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/test/mentioncheck-staging-auth-20261108'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Test dump/restore PostgreSQL local sans réseau et sans production
+        run: bash scripts/recette/isolated-postgres-restore.sh
+      - name: Vérifier possibilité de retour à la configuration staging publiée
+        shell: bash
+        run: |
+          git show 5b08082f4a54830f0537548cc5502a36bb4f9bb8:wrangler.staging.jsonc > /tmp/mentioncheck-staging-baseline.jsonc
+          cmp -s wrangler.staging.jsonc /tmp/mentioncheck-staging-baseline.jsonc
+          echo 'ROLLBACK_CONFIG_BASELINE_OK : vérification statique, aucun rollback exécuté'
