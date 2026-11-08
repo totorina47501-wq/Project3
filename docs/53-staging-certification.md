@@ -1,5 +1,8 @@
 # Certification MentionCheck — staging, 8 novembre 2026
 
+**Dernière preuve (8 novembre) :** [Restauration vraie du schéma staging sur Supabase local — run #42528880867](https://github.com/totorina47501-wq/Project3/actions/runs/42528880867) : PASS pour `public`, `privacy_internal`, `studio_private`, 9 catégories d'empreintes contrôlées. [Procès-verbal complet](receipts/2026-11-08-staging-certification.md). Blocages restants : build Cloudflare hors PR draft et décision Auth. Historique de préparation conservé ci-dessous.
+
+
 **Résultats distants vérifiés** : [procès-verbal de recette 8 novembre](receipts/2026-11-08-staging-certification.md). Tests navigateur 9 PASS / 3 skips ; restauration vraie du schéma non exécutée ; rollback opérationnel staging désormais PASS (run #42522596101), sans changement de code.
 
 Statut initial : **recette en cours sur branche isolée**. Les résultats doivent être confrontés aux runs, jamais déduits de l'existence du code.

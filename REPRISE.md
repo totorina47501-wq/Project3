@@ -1,5 +1,10 @@
 # Reprise MentionCheck — 6 novembre 2026
 
+## Restauration du schéma staging hébergé — VALIDÉE le 8 novembre 2026
+
+[GitHub #42528880867](https://github.com/totorina47501-wq/Project3/actions/runs/42528880867) **SUCCESS** : vraie connexion Postgres Session pooler du projet staging, dump **schema-only** de `public`, `privacy_internal`, `studio_private`, restauration sur Supabase local Docker jetable, empreintes de 9 catégories de catalogues correspondantes (27 tables, 25 policies, 30 fonctions publiques, 3 privées, 156 contraintes). Une seule contrainte de scopes API subit une normalisation textuelle ciblée des parenthèses/casts, sans assouplissement des autres 155. Aucun contenu utilisateur ni secret exporté, aucun changement sur production. Détails : [procès-verbal actualisé](docs/receipts/2026-11-08-staging-certification.md). Le build Cloudflare production et la politique Auth restent non certifiés ; issue #16 maintenue ouverte, PR #99 draft.
+
+
 ## Rollback staging réellement vérifié — 8 novembre 2026
 
 Le [run #42522596101](https://github.com/totorina47501-wq/Project3/actions/runs/42522596101) est **SUCCESS** : version staging identique créée avec la même clé, vérification des deux bindings secrets, retour effectif au déploiement sain par `wrangler rollback`, smoke HTTP final OK. **Ce n'est pas un rollback de code différent.** La production n'a pas été modifiée. Les vraies restauration du schéma staging, validation du build Cloudflare et décision sur Auth compromises restent bloquantes. Voir le [procès-verbal](docs/receipts/2026-11-08-staging-certification.md).

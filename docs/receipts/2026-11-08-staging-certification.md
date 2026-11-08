@@ -76,3 +76,15 @@
 - Production non ciblée, aucun appel IA ni paiement ; le worker historique \`mentioncheck-staging\` seulement.
 
 **Blocages restant pour la certification complète :** vrai dump/restore du schéma Supabase staging sur une instance isolée (accès DB non fourni), configuration de build Cloudflare corrigée uniquement dans la PR draft mais non encore déployée/revalidée sur production, et décision administrateur sur la protection de mots de passe compromis (plan Free ne la propose pas). L'issue #16 reste ouverte.
+
+## Addendum 8 novembre 2026, 22:12 UTC — véritable schéma staging restauré et comparé : PASS
+
+- **Preuve GitHub :** [run #42528880867](https://github.com/totorina47501-wq/Project3/actions/runs/42528880867), SUCCESS ; commit du script `58ca05fd5594510f617db09fa554455c16b3e16a` sur la branche non fusionnée de la PR #99.
+- **Source :** connexion PostgreSQL Supabase staging par Session pooler IPv4, projet `ukvgnkxgzyhswgpnvyzz` ; PostgreSQL 17. Empreinte du catalogue lue exclusivement en lecture seule. Aucune requête d'écriture distante.
+- **Export et restauration réels :** `supabase db dump` avec les trois schémas d'application `public`, `privacy_internal`, `studio_private` en **schema-only**, sans `--data-only` et sans lignes utilisateurs. Restauration SQL dans un Supabase local Docker jetable, puis suppression des fichiers et de l'instance par le script.
+- **Contrôle :** égalité des empreintes du catalogue source / restauré sur neuf catégories : tables 27, colonnes 226, contraintes 156, index 82, RLS policies 25, triggers 14, enums 33, fonctions publiques 30, fonctions privées 3.
+- **Précision sur les contraintes :** les 155 autres contraintes sont comparées sans altération. La contrainte `api_keys_scopes_check` présente une variation de représentation textuelle après dump/restore ; pour celle-ci seule, le garde-fou retire les parenthèses, espaces et casts `::text` redondants **sans permettre `OR`**. Les opérateurs, expressions et littéraux restent comparés. Les empreintes globales correspondent avec cette normalisation ciblée. Une égalité octet-pour-octet de son DDL brut n'est pas revendiquée.
+- **Marqueurs des logs :** `STAGING_DATABASE_URL_BOUNDARY_PASS` / `STAGING_REMOTE_CATALOG_READONLY_PASS` / `STAGING_REMOTE_SCHEMA_DUMP_PASS` / `STAGING_REAL_PUBLIC_SCHEMA_RESTORE_PASS` / `STAGING_SCHEMA_CATALOG_FINGERPRINT_PASS` / `STAGING_REAL_SCHEMA_NO_DATA_NO_PRODUCTION_WRITES_PASS`.
+- **Périmètre de la preuve :** restauration du **schéma de l'application**, pas des données utilisateurs, objets Storage, configurations Auth externes, secrets, ni d'une sauvegarde de données métier. Aucun paiement, appel IA payant ou modification de production.
+
+**Statut : la porte « restauration réelle du schéma staging hébergé vers base isolée » est maintenant PASS.** L'issue #16 reste ouverte pour le build Cloudflare production à revalider après le correctif de la PR non fusionnée, la décision Auth leaked-password (protection native Supabase Free indisponible) et, si exigé, un rollback entre deux versions de code différentes.
