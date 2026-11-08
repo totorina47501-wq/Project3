@@ -112,7 +112,19 @@ docker run --rm --network host postgres:17-alpine \
 docker run --rm --network host \
  -v "$temporary/real-staging-public.sql:/app-schema.sql:ro" postgres:17-alpine \
  psql "$local_dsn" -X -w -v ON_ERROR_STOP=1 --single-transaction -f /app-schema.sql \
- > "$temporary/restore.log" 2>&1 || fail local_schema_restore
+ > "$temporary/restore.log" 2>&1 || {
+  # Only error summaries from the schema-only restore; never output SQL or credentials.
+  awk '/ERROR:|FATAL:/ {
+    line=$0
+    sub(/^.*(ERROR:|FATAL:)/,"POSTGRES_ERROR:",line)
+    gsub(/postgresql?:\/\/[^[:space:]]+/,"[DB_URL_REDACTED]",line)
+    gsub(/sb_(secret|publishable)_[[:alnum:]_-]+/,"[KEY_REDACTED]",line)
+    print substr(line,1,180)
+    count++
+    if(count>=3)exit
+  }' "$temporary/restore.log" >&2
+  fail local_schema_restore
+ }
 docker run --rm --network host \
  -v "$temporary/catalog.sql:/catalog.sql:ro" postgres:17-alpine \
  psql "$local_dsn" -X -A -t -w -v ON_ERROR_STOP=1 -f /catalog.sql \
