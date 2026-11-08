@@ -1,0 +1,55 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "mentioncheck-staging",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-11-05",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": true,
+  "preview_urls": false,
+  "keep_vars": true,
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "ratelimits": [
+    {
+      "name": "API_SOLO_LIMITER",
+      "namespace_id": "11003",
+      "simple": {
+        "limit": 30,
+        "period": 60
+      }
+    },
+    {
+      "name": "API_PAID_LIMITER",
+      "namespace_id": "11004",
+      "simple": {
+        "limit": 120,
+        "period": 60
+      }
+    }
+  ],
+  "vars": {
+    "NEXT_PUBLIC_APP_URL": "https://mentioncheck-staging.toto-rina47501.workers.dev",
+    "NEXT_PUBLIC_SUPABASE_URL": "https://ukvgnkxgzyhswgpnvyzz.supabase.co",
+    "OPENAI_PAUSED": "true",
+    "OPENAI_TEXT_ENABLED": "false",
+    "OPENAI_VISION_ENABLED": "false",
+    "OPENAI_AUDIO_ENABLED": "false",
+    "OPENAI_EMBEDDINGS_ENABLED": "false",
+    "BILLING_ENABLED": "false",
+    "STRIPE_MODE": "test",
+    "MEDIA_JOBS_SCHEMA_READY": "true",
+    "MEDIA_PROCESSING_ENABLED": "false",
+    "MEDIA_CLOUDFLARE_RUNNER_ENABLED": "false",
+    "MEDIA_RUNNER_PAUSED": "true",
+    "MEDIA_AI_ENABLED": "false",
+    "MEDIA_AI_SCHEMA_READY": "true",
+    "MEDIA_RETENTION_ENABLED": "false"
+  }
+}

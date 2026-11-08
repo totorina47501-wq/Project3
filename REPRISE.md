@@ -1,5 +1,9 @@
 # Reprise MentionCheck — 6 novembre 2026
 
+## Worker staging Cloudflare — préparation du 8 novembre 2026
+
+Fichiers `wrangler.staging.jsonc` et `.github/workflows/mentioncheck-staging-cloudflare.yml` : Worker isolé `mentioncheck-staging`, traitements payants désactivés. Déploiement **non encore prouvé** : accès Cloudflare et secrets staging requis avant `publish`. Lire la section dédiée dans `docs/52-recette-isolee-cout-minimal.md`. Production inchangée.
+
 ## Staging Supabase créé — 7 novembre 2026
 
 Projet gratuit isolé : `MentionCheck-Staging` / `ukvgnkxgzyhswgpnvyzz` ; production : `zcztvberuihphqklhjsr`. **18 migrations appliquées sur staging**, 27 tables et RLS conformes aux définitions de production ; test SQL A/B simulé passé avec rollback et **zéro donnée conservée**. Lire [`docs/52-recette-isolee-cout-minimal.md`](docs/52-recette-isolee-cout-minimal.md) avant toute recette. Les tests Auth réels, Worker staging, backup/restore du schéma et rollback restent non exécutés. Ne pas utiliser de clés de production en staging, ne pas clôturer #16.
