@@ -29,6 +29,36 @@ if(command.error || command.status!==0){
   }
  }
 }
+// Preuve de restaurabilité du Worker staging : aucune lecture de la valeur des secrets,
+// uniquement présence des noms de bindings dans les versions historiques.
+const candidateIds=[
+ '07293543-3e88-4852-986e-ca229a23ad99',
+ '606ef4f1-ddb3-4f15-8acb-c2fdc29c12c8',
+ '3cdc6128-f55a-418f-ae16-94cc308e706b',
+ 'd98664b3-26ee-41fa-be7d-ca4b8672137e'
+];
+for(const id of candidateIds){
+ const versionUrl='https://api.cloudflare.com/client/v4/accounts/'+account+
+ '/workers/scripts/mentioncheck-staging/versions/'+id;
+ try{
+  const res=await fetch(versionUrl,{method:'GET',headers:{Authorization:'Bearer '+token},
+   signal:AbortSignal.timeout(11000)});
+  if(res.status!==200){
+   console.log('STAGING_VERSION_READONLY_BLOCKED_HTTP_'+res.status);continue;
+  }
+  const payload=await res.json();
+  const raw=payload.result?.resources?.bindings;
+  const bindings=Array.isArray(raw)?raw:raw&&typeof raw==='object'?Object.values(raw):[];
+  const names=bindings.filter(b=>b&&b.type==='secret_text').map(b=>b.name);
+  const a=names.includes('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  const b=names.includes('SUPABASE_SERVICE_KEY');
+  const date=payload.result?.metadata?.created_on??'unknown';
+  console.log('STAGING_VERSION_SECRETS_PRESENT '+id+' public='+a+' server='+b+' date='+date);
+ }catch{
+  console.log('STAGING_VERSION_READONLY_NETWORK_BLOCKED');
+ }
+}
+
 const endpoint='https://api.cloudflare.com/client/v4/accounts/'+account+'/builds/builds/'+buildId+'/logs';
 let response;
 try{response=await fetch(endpoint,{method:'GET',headers:{Authorization:'Bearer '+token},
