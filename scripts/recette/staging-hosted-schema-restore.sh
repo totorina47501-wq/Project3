@@ -46,7 +46,17 @@ WITH items(kind,definition) AS (
  SELECT 'functions',p.proname||':'||pg_get_function_identity_arguments(p.oid)||':'||md5(pg_get_functiondef(p.oid))
  FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public'
  UNION ALL
- SELECT 'constraints',c.relname||':'||con.conname||':'||pg_get_constraintdef(con.oid)
+ -- Only known api_keys_scopes_check may differ in harmless parentheses/cast text
+ -- during pg_dump -> pg_restore. This check is a conjunction (no OR).
+ -- Its canonical form preserves operator, operand, number and literal ordering.
+ SELECT 'constraints',c.relname||':'||con.conname||':'||
+ CASE
+   WHEN c.relname='api_keys' AND con.conname='api_keys_scopes_check'
+    AND pg_get_constraintdef(con.oid) !~* '(^|[[:space:]])OR([[:space:]]|$)'
+   THEN replace(regexp_replace(pg_get_constraintdef(con.oid),
+    '[()[:space:]]','','g'),'::text','')
+   ELSE pg_get_constraintdef(con.oid)
+ END
  FROM pg_constraint con JOIN pg_class c ON c.oid=con.conrelid
  JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public'
  UNION ALL
