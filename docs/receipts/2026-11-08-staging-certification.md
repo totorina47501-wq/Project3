@@ -63,3 +63,16 @@
 - Le même diagnostic recense **quatre déploiements** du Worker staging. Les versions historiques ont des états de secrets potentiellement différents ; **ne jamais** exécuter un rollback automatique aveugle vers une de ces versions. Il faut préparer deux versions complètes et vérifiées (secrets inclus), tester et restaurer le Worker staging seulement.
 - L'organisation Supabase est confirmée `plan=free` ; la protection native contre les mots de passe compromis est réservée à Pro et supérieur d'après la documentation Supabase. **Aucun changement de forfait ou activation payante** ; documenter le risque pour le lancement. `#16` reste ouverte.
 
+
+## Addendum du 8 novembre, 20:57 UTC — rollback Cloudflare staging réellement exécuté
+
+[Run #42522596101](https://github.com/totorina47501-wq/Project3/actions/runs/42522596101) : **SUCCESS** (commit de test 166433bf82bfcdb104fb99d189e493ec6aef480e).
+
+- Le script a d'abord vérifié en lecture seule le déploiement actif de référence, exact \`d98664b3-26ee-41fa-be7d-ca4b8672137e\`, et la présence des deux noms de secrets Supabase. Si la référence avait changé, il aurait refusé toute écriture.
+- Un \`wrangler secret put SUPABASE_SERVICE_KEY\` a créé une **deuxième version complète** avec la **même clé staging**, sans changement de code ni de valeur. Cette version a été contrôlée avec les deux secrets et le smoke login + refus d'accès invité.
+- \`wrangler rollback d98664b3-26ee-41fa-be7d-ca4b8672137e --name mentioncheck-staging\` a restauré la version saine d'origine. L'API Cloudflare confirme le retour de la version active à cette référence ; smoke final \`STAGING_HEALTH_OK_AFTER_ROLLBACK\`.
+- Logs : \`STAGING_ROLLBACK_SECOND_SAFE_VERSION_CREATED\`, \`STAGING_REAL_ROLLBACK_OPERATION_PASS\`. Après run, connexion HTTP staging et production toutes deux accessibles.
+- **Portée exacte :** rollback opérationnel de **versions Worker** avec changement non fonctionnel de secret ; **pas** encore démonstration de rollback entre deux codes applicatifs différents ni de migrations SQL. La partie « rollback opérationnel » passe à **PASS (mécanisme)**, la preuve de rollback de code d'une nouvelle release reste à prévoir.
+- Production non ciblée, aucun appel IA ni paiement ; le worker historique \`mentioncheck-staging\` seulement.
+
+**Blocages restant pour la certification complète :** vrai dump/restore du schéma Supabase staging sur une instance isolée (accès DB non fourni), configuration de build Cloudflare corrigée uniquement dans la PR draft mais non encore déployée/revalidée sur production, et décision administrateur sur la protection de mots de passe compromis (plan Free ne la propose pas). L'issue #16 reste ouverte.

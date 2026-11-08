@@ -1,6 +1,6 @@
 # Certification MentionCheck — staging, 8 novembre 2026
 
-**Résultats distants vérifiés** : [procès-verbal de recette 8 novembre](receipts/2026-11-08-staging-certification.md). Tests navigateur 9 PASS / 3 skips ; restauration vraie du schéma et rollback effectif non exécutés.
+**Résultats distants vérifiés** : [procès-verbal de recette 8 novembre](receipts/2026-11-08-staging-certification.md). Tests navigateur 9 PASS / 3 skips ; restauration vraie du schéma non exécutée ; rollback opérationnel staging désormais PASS (run #42522596101), sans changement de code.
 
 Statut initial : **recette en cours sur branche isolée**. Les résultats doivent être confrontés aux runs, jamais déduits de l'existence du code.
 
@@ -19,7 +19,7 @@ Statut initial : **recette en cours sur branche isolée**. Les résultats doiven
 | 1 — RLS / CSRF / quotas / RGPD | GoTrue A/B, 5 RPC, Storage, origines interdites, quota transactionnel 3 réservations/3 remboursements, export et preview RGPD sans suppression | `not_executed` |
 | 2 — Restauration mécanique | Docker PostgreSQL 17 jetable, `pg_dump` + `pg_restore`, empreinte 2 fixtures ; **pas de schéma Supabase réel** | `not_executed` |
 | 2 — Restauration schéma hébergé | `pg_dump --schema-only` du vrai staging et `pg_restore` sur **autre instance** isolée avec pgvector/extensions | `blocked_credentials` |
-| 2 — Retour version applicative | Comparaison du fichier Wrangler au SHA staging publié ; **aucun rollback Cloudflare réel** | `not_executed` |
+| 2 — Retour version applicative | Comparaison du fichier Wrangler au SHA staging publié ; **aucun rollback Cloudflare réel entre codes différents** | `not_executed` |
 | 3 — Security advisor Auth/RLS | Recenser avertissements, preuve réelle CSRF/RGPD, activation protection mots de passe compromis soumise à validation admin | `partial` |
 | 4 — Release | CI + Cloudflare sur SHA exact, contrôles après nettoyage et preuves GitHub issue #16 | `pending_evidence` |
 

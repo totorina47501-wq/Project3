@@ -1,5 +1,10 @@
 # Reprise MentionCheck — 6 novembre 2026
 
+## Rollback staging réellement vérifié — 8 novembre 2026
+
+Le [run #42522596101](https://github.com/totorina47501-wq/Project3/actions/runs/42522596101) est **SUCCESS** : version staging identique créée avec la même clé, vérification des deux bindings secrets, retour effectif au déploiement sain par `wrangler rollback`, smoke HTTP final OK. **Ce n'est pas un rollback de code différent.** La production n'a pas été modifiée. Les vraies restauration du schéma staging, validation du build Cloudflare et décision sur Auth compromises restent bloquantes. Voir le [procès-verbal](docs/receipts/2026-11-08-staging-certification.md).
+
+
 ## Diagnostic de build Cloudflare et réserve Auth — 8 novembre 2026
 
 Le build Workers rouge a été expliqué par ses logs : `npx wrangler preview` requiert un bloc `previews` absent de `wrangler.jsonc`. La PR draft #99 propose un bloc strictement isolé, **non déployé sur `main`**, validé par un garde-fou statique. Organisation Supabase vérifiée Free ; protection native anti-mots de passe compromis disponible seulement sur Pro. Rollback staging non exécuté (versions historiques potentiellement sans tous les secrets). Voir le [procès-verbal actualisé](docs/receipts/2026-11-08-staging-certification.md). Issue #16 reste ouverte.
