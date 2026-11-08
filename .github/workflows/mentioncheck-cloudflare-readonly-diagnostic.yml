@@ -6,6 +6,8 @@ on:
     paths:
       - '.github/workflows/mentioncheck-cloudflare-readonly-diagnostic.yml'
       - 'scripts/recette/staging-cloudflare-readonly.mjs'
+      - 'scripts/recette/check-cloudflare-preview-boundary.mjs'
+      - 'wrangler.jsonc'
   workflow_dispatch:
 permissions:
   contents: read
@@ -24,6 +26,8 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: node scripts/recette/check-cloudflare-staging-boundary.mjs
+      - name: Sécurité de la configuration Preview en échec fermé
+        run: node scripts/recette/check-cloudflare-preview-boundary.mjs
       - run: npm ci --ignore-scripts
       - name: Diagnostic des versions staging et logs CF (GET seulement)
         run: node scripts/recette/staging-cloudflare-readonly.mjs

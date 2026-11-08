@@ -1,5 +1,10 @@
 # Reprise MentionCheck — 6 novembre 2026
 
+## Diagnostic de build Cloudflare et réserve Auth — 8 novembre 2026
+
+Le build Workers rouge a été expliqué par ses logs : `npx wrangler preview` requiert un bloc `previews` absent de `wrangler.jsonc`. La PR draft #99 propose un bloc strictement isolé, **non déployé sur `main`**, validé par un garde-fou statique. Organisation Supabase vérifiée Free ; protection native anti-mots de passe compromis disponible seulement sur Pro. Rollback staging non exécuté (versions historiques potentiellement sans tous les secrets). Voir le [procès-verbal actualisé](docs/receipts/2026-11-08-staging-certification.md). Issue #16 reste ouverte.
+
+
 ## Point opérationnel — certification staging du 8 novembre 2026
 
 **Lire en premier** [le procès-verbal du 8 novembre](docs/receipts/2026-11-08-staging-certification.md). Le Worker staging est réellement publié, Auth A/B et 9 tests navigateur sur staging sont PASS (run #42519296878), et les données factices ont été intégralement nettoyées. La vraie restauration de schéma hébergé, le rollback distant et la décision Auth restent non exécutés. Le dernier check Cloudflare Workers Builds production associé au SHA est en échec, même si la page de connexion répond. Issue #16 ouverte ; production inchangée.

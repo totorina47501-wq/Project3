@@ -53,3 +53,13 @@
 2. Fournir par un canal de secrets sécurisé un accès PostgreSQL **staging uniquement**, préparer la restauration du vrai schéma sur une instance jetable ; vérifier policies / fonctions / contraintes.
 3. Effectuer un rollback contrôlé **staging seulement**, puis revalider la page login.
 4. Relever/valider la politique Auth compromised passwords avec administrateur et archiver la preuve. Fermer #16 seulement quand ces quatre preuves sont réunies.
+
+## Addendum diagnostic Cloudflare — 8 novembre, 20:46 UTC
+
+- [GitHub diagnostic en lecture seule #42521699568](https://github.com/totorina47501-wq/Project3/actions/runs/42521699568) : le build Cloudflare échoué exécute `npx opennextjs-cloudflare build` (**succès**) puis `npx wrangler preview` (**échec**).
+- Message exact : `Your Wrangler configuration needs a previews block to run this command.` Le fichier `wrangler.jsonc` de `main` n'a pas de bloc `previews` ; Wrangler `4.156.2` prend en charge cette configuration.
+- Correctif **proposé uniquement dans la PR draft #99** : ajouter `previews.vars` qui utilise exclusivement l'URL Supabase staging et qui désactive IA, paiement, analyse média, rétention et containers. Il n'ajoute ni secrets ni bindings vers la production. Le contrat `scripts/recette/check-cloudflare-preview-boundary.mjs` refuse toute référence Supabase production ou activation payante.
+- Cela traite l'erreur `previews` **constatée**, mais ne prouve pas que le prochain build Cloudflare fonctionnera : aucune publication de `main` ni mise à jour des paramètres Cloudflare ne sera effectuée dans ce lot.
+- Le même diagnostic recense **quatre déploiements** du Worker staging. Les versions historiques ont des états de secrets potentiellement différents ; **ne jamais** exécuter un rollback automatique aveugle vers une de ces versions. Il faut préparer deux versions complètes et vérifiées (secrets inclus), tester et restaurer le Worker staging seulement.
+- L'organisation Supabase est confirmée `plan=free` ; la protection native contre les mots de passe compromis est réservée à Pro et supérieur d'après la documentation Supabase. **Aucun changement de forfait ou activation payante** ; documenter le risque pour le lancement. `#16` reste ouverte.
+
