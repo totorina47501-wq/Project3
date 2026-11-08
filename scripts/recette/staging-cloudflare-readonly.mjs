@@ -84,3 +84,26 @@ function sanitized(s){
 }
 console.log('CF_BUILD_LOGS_READONLY_OK matching_lines='+matches.length);
 for(const line of matches.slice(-12))console.log('CF_BUILD_ERROR '+sanitized(line));
+
+
+// Inventaire STRICTEMENT lecture seule des Previews attachées au Worker staging.
+// Un incident Wrangler JSON/assets peut laisser une preview temporaire : ne pas la deviner.
+const previewEndpoint='https://api.cloudflare.com/client/v4/accounts/'+account+
+ '/workers/workers/mentioncheck-staging/previews';
+try{
+ const reply=await fetch(previewEndpoint,{method:'GET',headers:{Authorization:'Bearer '+token},
+  signal:AbortSignal.timeout(20000)});
+ if(reply.status!==200)console.log('STAGING_PREVIEW_INVENTORY_BLOCKED_HTTP_'+reply.status);
+ else{
+  const response=await reply.json();
+  const list=Array.isArray(response.result)?response.result:[];
+  const qa=list.filter(x=>String(x?.name??'').startsWith('qa-cert-'));
+  console.log('STAGING_PREVIEW_INVENTORY_OK total='+list.length+' qa='+qa.length);
+  for(const item of qa.slice(0,12)){
+   const host=Array.isArray(item.urls)?item.urls.map(u=>{
+    try{return new URL(u).hostname}catch{return 'invalid'}
+   }):[];
+   console.log('STAGING_QA_PREVIEW_FOUND name='+item.name+' id='+item.id+' hosts='+host.join(','));
+  }
+ }
+}catch{console.log('STAGING_PREVIEW_INVENTORY_NETWORK_BLOCKED');}
