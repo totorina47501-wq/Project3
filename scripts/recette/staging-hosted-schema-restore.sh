@@ -62,6 +62,11 @@ WITH items(kind,definition) AS (
  SELECT 'enums',typ.typname||':'||e.enumlabel
  FROM pg_type typ JOIN pg_namespace n ON n.oid=typ.typnamespace
  JOIN pg_enum e ON e.enumtypid=typ.oid WHERE n.nspname='public'
+ UNION ALL
+ SELECT 'private_functions',n.nspname||':'||p.proname||':'||
+        pg_get_function_identity_arguments(p.oid)||':'||md5(pg_get_functiondef(p.oid))
+ FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+ WHERE n.nspname IN ('privacy_internal','studio_private')
 )
 SELECT kind||'|'||count(*)||'|'||md5(string_agg(definition,E'\n' ORDER BY definition))
 FROM items GROUP BY kind ORDER BY kind;
@@ -77,7 +82,8 @@ docker run --rm --env MENTIONCHECK_STAGING_POSTGRES_URL \
 grep -q '^tables|27|' "$temporary/source.fingerprint" || fail unexpected_source_table_count
 grep -q '^policies|25|' "$temporary/source.fingerprint" || fail unexpected_source_policy_count
 grep -q '^functions|30|' "$temporary/source.fingerprint" || fail unexpected_source_function_count
-printf 'STAGING_REMOTE_CATALOG_READONLY_PASS tables=27 policies=25 functions=30\n'
+grep -q '^private_functions|3|' "$temporary/source.fingerprint" || fail unexpected_private_function_count
+printf 'STAGING_REMOTE_CATALOG_READONLY_PASS tables=27 policies=25 functions=30 private_functions=3\n'
 
 # The standalone CLI runs in a disposable folder, never linked to production.
 npm install --prefix "$temporary/cli" --no-audit --no-fund --silent supabase@2 \
@@ -85,7 +91,7 @@ npm install --prefix "$temporary/cli" --no-audit --no-fund --silent supabase@2 \
 (cd "$lab" && "$cli" init --yes) > "$temporary/init.log" 2>&1 || fail supabase_init
 # Supabase db dump avoids managed schemas/roles and exports schema only.
 (cd "$lab" && "$cli" db dump --db-url "$MENTIONCHECK_STAGING_POSTGRES_URL" \
- --schema public -f "$temporary/real-staging-public.sql") \
+ --schema public,privacy_internal,studio_private -f "$temporary/real-staging-public.sql") \
  > "$temporary/dump.log" 2>&1 || fail supabase_schema_dump
 test -s "$temporary/real-staging-public.sql" || fail empty_schema_dump
 # Supabase CLI `db dump` exports SCHEMA ONLY by default. Pg functions can contain
@@ -96,7 +102,7 @@ if grep -Eiq '^-- Data for Name: .*; Type: TABLE DATA;' \
 # Fail closed if no schema/table definition is present.
 if ! grep -Eq '^[[:space:]]*CREATE TABLE([[:space:]]+IF NOT EXISTS)?[[:space:]]+' \
  "$temporary/real-staging-public.sql"; then fail schema_dump_missing_tables; fi
-printf 'STAGING_REMOTE_SCHEMA_DUMP_PASS schema=public data=excluded\n'
+printf 'STAGING_REMOTE_SCHEMA_DUMP_PASS schemas=public,privacy_internal,studio_private data=excluded\n'
 
 # Start a fresh LOCAL Supabase project with Auth/Storage system catalogs.
 # Do not use linked project and NEVER use db reset / db push / apply against remote.
@@ -138,5 +144,5 @@ if ! cmp -s "$temporary/source.fingerprint" "$temporary/restored.fingerprint"; t
   fail restored_fingerprint_differs
 fi
 printf 'STAGING_REAL_PUBLIC_SCHEMA_RESTORE_PASS source=ukvgnkxgzyhswgpnvyzz dest=local_disposable\n'
-printf 'STAGING_SCHEMA_CATALOG_FINGERPRINT_PASS tables=27 policies=25 functions=30\n'
+printf 'STAGING_SCHEMA_CATALOG_FINGERPRINT_PASS tables=27 policies=25 functions=30 private_functions=3\n'
 printf 'STAGING_REAL_SCHEMA_NO_DATA_NO_PRODUCTION_WRITES_PASS\n'
