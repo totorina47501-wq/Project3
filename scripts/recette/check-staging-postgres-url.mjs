@@ -23,6 +23,14 @@ const poolerValid=poolerHost&&refInUser;
 assert.ok(refInHost||poolerValid,
  'Cible non certifiable : utiliser une URL directe db.<ref>.supabase.co ou un pooler avec postgres.<ref>');
 assert.ok(!/[^0-9]/.test(url.port||'5432'),'Port invalide');
+// GitHub Actions utilise des runners IPv4. Supabase Free expose sa connexion directe en IPv6.
+// Refuser avant le dump, et ne jamais publier l'URI sensible dans les logs.
+if(process.env.GITHUB_ACTIONS==='true' && refInHost){
+ throw new Error('STAGING_POSTGRES_DIRECT_IPV6_UNSUPPORTED_ON_GITHUB: sélectionner Session pooler (port 5432) dans Supabase Staging > Connect, puis corriger le secret GitHub');
+}
+if(poolerValid){
+ assert.equal(url.port||'5432','5432','Le Session pooler nécessite le port 5432 pour cette recette');
+}
 assert.ok(!url.searchParams.has('application_name') ||
  url.searchParams.get('application_name')?.length<100);
 console.log('STAGING_DATABASE_URL_BOUNDARY_PASS project='+reference+
