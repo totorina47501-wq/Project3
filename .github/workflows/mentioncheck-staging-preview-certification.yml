@@ -1,0 +1,55 @@
+# Exécution uniquement sur branche QA isolée. Preview temporaire du Worker staging, jamais production.
+name: MentionCheck staging Cloudflare Preview certification
+on:
+  push:
+    branches: [test/mentioncheck-staging-auth-20261108]
+    paths:
+      - '.github/workflows/mentioncheck-staging-preview-certification.yml'
+      - 'scripts/recette/staging-cloudflare-preview-certification.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mentioncheck-staging-cloudflare
+  cancel-in-progress: false
+jobs:
+  preview-staging-only:
+    if: github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/test/mentioncheck-staging-auth-20261108'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://ukvgnkxgzyhswgpnvyzz.supabase.co
+      NEXT_PUBLIC_APP_URL: https://mentioncheck-staging.toto-rina47501.workers.dev
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.MENTIONCHECK_STAGING_SUPABASE_ANON_KEY }}
+      NEXT_TELEMETRY_DISABLED: '1'
+      OPENAI_PAUSED: 'true'
+      OPENAI_TEXT_ENABLED: 'false'
+      OPENAI_VISION_ENABLED: 'false'
+      OPENAI_AUDIO_ENABLED: 'false'
+      OPENAI_EMBEDDINGS_ENABLED: 'false'
+      BILLING_ENABLED: 'false'
+      MEDIA_PROCESSING_ENABLED: 'false'
+      MEDIA_CLOUDFLARE_RUNNER_ENABLED: 'false'
+      MEDIA_AI_ENABLED: 'false'
+      MEDIA_RETENTION_ENABLED: 'false'
+      MEDIA_RUNNER_PAUSED: 'true'
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.MENTIONCHECK_STAGING_CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.MENTIONCHECK_STAGING_CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Contrats de sécurité staging et Preview
+        run: |
+          node scripts/recette/check-cloudflare-staging-boundary.mjs
+          node scripts/recette/check-cloudflare-preview-boundary.mjs
+      - name: Installer les dépendances verrouillées
+        run: npm ci --ignore-scripts
+      - name: Construire Next.js sans service payant
+        run: npm run build
+      - name: Packager OpenNext pour le seul Worker staging
+        run: npx @opennextjs/cloudflare build --skipNextBuild --config wrangler.staging.jsonc
+      - name: Vérifier une Preview staging puis la supprimer
+        run: node scripts/recette/staging-cloudflare-preview-certification.mjs
