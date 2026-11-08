@@ -68,6 +68,13 @@ try{
  console.log('STAGING_REAL_BROWSER_PASS');
 }catch(error){failure=error;}finally{
  const errors=[];
+ // Supprimer UNIQUEMENT les traces RGPD créées par ces comptes de recette,
+ // avant suppression Auth (sinon les clés de liaison deviennent NULL).
+ if(actorIds.length){
+  const res=await admin.from('privacy_erasure_runs').delete()
+   .in('user_id',actorIds).eq('mode','dry_run').eq('status','prepared_disabled');
+  if(res.error)errors.push('RGPD_AUDIT_CLEANUP');
+ }
  for(const id of [...actorIds].reverse()){
   const r=await admin.auth.admin.deleteUser(id);
   if(r.error)errors.push('AUTH_DELETE');

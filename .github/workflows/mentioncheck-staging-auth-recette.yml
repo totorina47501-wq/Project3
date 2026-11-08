@@ -8,7 +8,6 @@ on:
       - 'scripts/recette/staging-auth-ab.mjs'
       - 'scripts/recette/staging-browser-run.mjs'
       - 'tests/e2e/staging-live-recette.spec.ts'
-      - 'docs/53-staging-certification.md'
   workflow_dispatch:
 permissions:
   contents: read
