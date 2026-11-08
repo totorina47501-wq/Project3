@@ -1,0 +1,40 @@
+# Lecture seule PostgreSQL distant (STAGING), restauration sur Supabase LOCAL Docker jetable.
+name: MentionCheck staging hosted public schema restore
+on:
+  push:
+    branches: [test/mentioncheck-staging-auth-20261108]
+    paths:
+      - '.github/workflows/mentioncheck-staging-schema-restore.yml'
+      - 'scripts/recette/check-staging-postgres-url.mjs'
+      - 'scripts/recette/staging-hosted-schema-restore.sh'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mentioncheck-staging-schema-restore
+  cancel-in-progress: false
+jobs:
+  restore-real-staging-schema:
+    if: github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/test/mentioncheck-staging-auth-20261108'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://ukvgnkxgzyhswgpnvyzz.supabase.co
+      OPENAI_PAUSED: 'true'
+      OPENAI_TEXT_ENABLED: 'false'
+      OPENAI_VISION_ENABLED: 'false'
+      OPENAI_AUDIO_ENABLED: 'false'
+      OPENAI_EMBEDDINGS_ENABLED: 'false'
+      BILLING_ENABLED: 'false'
+      MEDIA_AI_ENABLED: 'false'
+      MEDIA_PROCESSING_ENABLED: 'false'
+      MENTIONCHECK_STAGING_POSTGRES_URL: ${{ secrets.MENTIONCHECK_STAGING_POSTGRES_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Bloquer toute URL Postgres autre que staging
+        run: node scripts/recette/check-staging-postgres-url.mjs
+      - name: Dump du seul schéma public distant et restauration Supabase locale
+        run: bash scripts/recette/staging-hosted-schema-restore.sh
