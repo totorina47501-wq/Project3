@@ -1,5 +1,10 @@
 # Reprise MentionCheck — 6 novembre 2026
 
+## Validation Cloudflare Preview — 9 novembre 2026
+
+Le correctif `previews` de la PR #99 a passé Next.js, OpenNext et `wrangler deploy --dry-run` sur le Worker staging. La Preview temporaire `qa-cert-11cba5d3` a été créée mais sans URL car `previews_enabled=false`. Le nettoyage ciblé a échoué en **HTTP 403**, donc cette Preview QA est encore présente (sans URL publique). Un garde-fou empêche de nouvelles créations tant que les URLs staging restent désactivées. **À traiter via Cloudflare staging uniquement** : supprimer la Preview par son nom/ID, puis choisir si les URLs de preview doivent être activées. Production toujours inchangée ; garder la PR #99 draft et l'issue #16 ouverte. [Preuves](docs/receipts/2026-11-09-cloudflare-preview-diagnostic.md).
+
+
 ## Restauration du schéma staging hébergé — VALIDÉE le 8 novembre 2026
 
 [GitHub #42528880867](https://github.com/totorina47501-wq/Project3/actions/runs/42528880867) **SUCCESS** : vraie connexion Postgres Session pooler du projet staging, dump **schema-only** de `public`, `privacy_internal`, `studio_private`, restauration sur Supabase local Docker jetable, empreintes de 9 catégories de catalogues correspondantes (27 tables, 25 policies, 30 fonctions publiques, 3 privées, 156 contraintes). Une seule contrainte de scopes API subit une normalisation textuelle ciblée des parenthèses/casts, sans assouplissement des autres 155. Aucun contenu utilisateur ni secret exporté, aucun changement sur production. Détails : [procès-verbal actualisé](docs/receipts/2026-11-08-staging-certification.md). Le build Cloudflare production et la politique Auth restent non certifiés ; issue #16 maintenue ouverte, PR #99 draft.

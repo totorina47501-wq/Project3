@@ -65,13 +65,31 @@ let attempted=false,created=false,deleted=false,problem=null;
 try{
  wrangler(['deploy','--dry-run',...configFlag]);
  console.log('STAGING_PREVIEW_PACKAGE_DRY_RUN_PASS');
+ // Le Worker staging autorise actuellement les versions mais peut refuser les URLs Preview.
+ // Vérifier AVANT d'en créer une : sinon une Preview inaccessible est laissée côté Cloudflare.
+ const subdomainUrl='https://api.cloudflare.com/client/v4/accounts/'+account+
+  '/workers/scripts/'+stagingWorker+'/subdomain';
+ const subdomainResponse=await fetch(subdomainUrl,{method:'GET',
+  headers:{Authorization:'Bearer '+process.env.CLOUDFLARE_API_TOKEN},
+  signal:AbortSignal.timeout(15000)});
+ assert.equal(subdomainResponse.status,200,'Impossible de contrôler les URLs Preview du staging');
+ const subdomainData=await subdomainResponse.json();
+ assert.equal(subdomainData.success,true,'Lecture Cloudflare refusée');
+ if(subdomainData.result?.previews_enabled!==true){
+  console.log('STAGING_PREVIEW_URLS_DISABLED — aucune Preview supplémentaire créée');
+  throw Error('STAGING_PREVIEW_PREREQUISITE_BLOCKED: activer les URLs Preview du seul Worker staging');
+ }
  attempted=true;
  const raw=wrangler(['preview',...configFlag,'--worker-name',stagingWorker,
  '--name',previewName,'--ignore-base-config','--json']);
  created=true;
  // Wrangler with assets may mix progress lines and JSON; parse the returned URL safely.
  let result=null;
- try{result=JSON.parse(raw);}catch{}
+ try{result=JSON.parse(raw);}catch{
+  // Wrangler 4.156.2 peut imprimer la progression des assets AVANT l'objet JSON.
+  const start=raw.search(/\{\s*"preview"\s*:/);
+  if(start>=0){try{result=JSON.parse(raw.slice(start));}catch{}}
+ }
  const candidates=[
  ...(Array.isArray(result?.preview?.urls)?result.preview.urls:[]),
  ...[...raw.matchAll(/https:\/\/[a-z0-9.-]+\.workers\.dev/gi)].map(m=>m[0])
