@@ -1,0 +1,45 @@
+# Aucun déploiement ni appel aux API payantes. Branche staging uniquement.
+name: MentionCheck Staging Auth AB
+on:
+  push:
+    branches: [test/mentioncheck-staging-auth-20261108]
+    paths:
+      - '.github/workflows/mentioncheck-staging-auth-recette.yml'
+      - 'scripts/recette/staging-auth-ab.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mentioncheck-staging-auth-recette
+  cancel-in-progress: false
+jobs:
+  auth-ab:
+    if: github.repository == 'totorina47501-wq/Project3' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/test/mentioncheck-staging-auth-20261108')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://ukvgnkxgzyhswgpnvyzz.supabase.co
+      NEXT_PUBLIC_APP_URL: https://mentioncheck-staging.toto-rina47501.workers.dev
+      OPENAI_PAUSED: 'true'
+      OPENAI_TEXT_ENABLED: 'false'
+      OPENAI_VISION_ENABLED: 'false'
+      OPENAI_AUDIO_ENABLED: 'false'
+      OPENAI_EMBEDDINGS_ENABLED: 'false'
+      BILLING_ENABLED: 'false'
+      MEDIA_PROCESSING_ENABLED: 'false'
+      MEDIA_AI_ENABLED: 'false'
+      MEDIA_RETENTION_ENABLED: 'false'
+      MENTIONCHECK_STAGING_SUPABASE_ANON_KEY: ${{ secrets.MENTIONCHECK_STAGING_SUPABASE_ANON_KEY }}
+      MENTIONCHECK_STAGING_SUPABASE_SERVICE_KEY: ${{ secrets.MENTIONCHECK_STAGING_SUPABASE_SERVICE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Vérifier la séparation staging/production
+        run: node scripts/recette/check-cloudflare-staging-boundary.mjs
+      - name: Installer les dépendances existantes
+        run: npm ci --ignore-scripts
+      - name: Exécuter Auth A/B, RLS, RPC et Storage privé avec nettoyage
+        run: node scripts/recette/staging-auth-ab.mjs
