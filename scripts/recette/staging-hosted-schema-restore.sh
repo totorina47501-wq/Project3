@@ -141,6 +141,10 @@ if ! cmp -s "$temporary/source.fingerprint" "$temporary/restored.fingerprint"; t
   # Only categories and counts are shown, no user data or SQL definitions.
   cut -d'|' -f1,2 "$temporary/source.fingerprint" >&2
   cut -d'|' -f1,2 "$temporary/restored.fingerprint" >&2
+  # Reveal ONLY category names; never SQL definitions or secret values.
+  awk -F'|' 'NR==FNR { source[$1]=$3; next }
+    source[$1]!=$3 {print "STAGING_FINGERPRINT_DIFFERENCE category="$1}' \
+    "$temporary/source.fingerprint" "$temporary/restored.fingerprint" >&2
   fail restored_fingerprint_differs
 fi
 printf 'STAGING_REAL_PUBLIC_SCHEMA_RESTORE_PASS source=ukvgnkxgzyhswgpnvyzz dest=local_disposable\n'
