@@ -45,7 +45,7 @@ try{body=await response.json();}catch{
 if(body.success===false){console.log('CF_BUILD_LOGS_PERMISSION_DENIED');process.exit(0);}
 const lines=Array.isArray(body.result?.lines)?body.result.lines:[];
 const matches=lines.map(line=>Array.isArray(line)?line.slice(1).join(' '):'')
- .filter(line=>/error|fail|exception|exit code|timed out|not found|denied/i.test(line));
+ .filter(line=>/error|fail|exception|exit code|timed out|not found|denied|previews|wrangler|build command|deploy command/i.test(line));
 function sanitized(s){
  return s.replace(/(?:postgres(?:ql)?:\/\/)\S+/gi,'[DB_URL_REDACTED]')
  .replace(/\b(?:sb_(?:secret|publishable)_[\w-]+|sk-proj-[\w-]+|sk-[\w-]+)\b/g,'[API_KEY_REDACTED]')
