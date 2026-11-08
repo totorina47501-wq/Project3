@@ -1,5 +1,10 @@
 # Reprise MentionCheck — 6 novembre 2026
 
+## Point opérationnel — certification staging du 8 novembre 2026
+
+**Lire en premier** [le procès-verbal du 8 novembre](docs/receipts/2026-11-08-staging-certification.md). Le Worker staging est réellement publié, Auth A/B et 9 tests navigateur sur staging sont PASS (run #42519296878), et les données factices ont été intégralement nettoyées. La vraie restauration de schéma hébergé, le rollback distant et la décision Auth restent non exécutés. Le dernier check Cloudflare Workers Builds production associé au SHA est en échec, même si la page de connexion répond. Issue #16 ouverte ; production inchangée.
+
+
 ## Worker staging Cloudflare — préparation du 8 novembre 2026
 
 Fichiers `wrangler.staging.jsonc` et `.github/workflows/mentioncheck-staging-cloudflare.yml` : Worker isolé `mentioncheck-staging`, traitements payants désactivés. Déploiement **non encore prouvé** : accès Cloudflare et secrets staging requis avant `publish`. Lire la section dédiée dans `docs/52-recette-isolee-cout-minimal.md`. Production inchangée.

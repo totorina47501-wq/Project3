@@ -1,5 +1,7 @@
 # Certification MentionCheck — staging, 8 novembre 2026
 
+**Résultats distants vérifiés** : [procès-verbal de recette 8 novembre](receipts/2026-11-08-staging-certification.md). Tests navigateur 9 PASS / 3 skips ; restauration vraie du schéma et rollback effectif non exécutés.
+
 Statut initial : **recette en cours sur branche isolée**. Les résultats doivent être confrontés aux runs, jamais déduits de l'existence du code.
 
 ## Périmètre
