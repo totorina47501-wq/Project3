@@ -136,6 +136,15 @@ docker run --rm --network host \
  psql "$local_dsn" -X -A -t -w -v ON_ERROR_STOP=1 -f /catalog.sql \
  > "$temporary/restored.fingerprint" 2> "$temporary/restored.log" \
  || fail restored_catalog
+# Individual constraint digests: names and validation flags only; no raw SQL text.
+cat > "$temporary/constraint-digest.sql" <<'SQL'
+SELECT c.relname||'|'||con.conname||'|'||md5(pg_get_constraintdef(con.oid))||
+       '|'||con.contype::text||'|'||con.convalidated::text
+FROM pg_constraint con JOIN pg_class c ON c.oid=con.conrelid
+JOIN pg_namespace n ON n.oid=c.relnamespace
+WHERE n.nspname='public'
+ORDER BY c.relname,con.conname;
+SQL
 if ! cmp -s "$temporary/source.fingerprint" "$temporary/restored.fingerprint"; then
   printf 'STAGING_SCHEMA_CATALOG_MISMATCH categories:\n' >&2
   # Only categories and counts are shown, no user data or SQL definitions.
@@ -145,6 +154,20 @@ if ! cmp -s "$temporary/source.fingerprint" "$temporary/restored.fingerprint"; t
   awk -F'|' 'NR==FNR { source[$1]=$3; next }
     source[$1]!=$3 {print "STAGING_FINGERPRINT_DIFFERENCE category="$1}' \
     "$temporary/source.fingerprint" "$temporary/restored.fingerprint" >&2
+  docker run --rm --env MENTIONCHECK_STAGING_POSTGRES_URL \
+   --env PGOPTIONS='-c default_transaction_read_only=on' \
+   -v "$temporary/constraint-digest.sql:/constraint.sql:ro" postgres:17-alpine \
+   sh -ec 'psql "$MENTIONCHECK_STAGING_POSTGRES_URL" -X -A -t -w -v ON_ERROR_STOP=1 -f /constraint.sql' \
+   > "$temporary/source-constraints" 2> "$temporary/source-constraints.log" \
+   || fail source_constraint_inspection
+  docker run --rm --network host \
+   -v "$temporary/constraint-digest.sql:/constraint.sql:ro" postgres:17-alpine \
+   psql "$local_dsn" -X -A -t -w -v ON_ERROR_STOP=1 -f /constraint.sql \
+   > "$temporary/restored-constraints" 2> "$temporary/restored-constraints.log" \
+   || fail restored_constraint_inspection
+  awk -F'|' 'NR==FNR {old[$1 FS $2]=$3; valid[$1 FS $2]=$5; next}
+   old[$1 FS $2]!=$3 {print "STAGING_CONSTRAINT_DIFFERENCE table="$1" name="$2" source_valid="valid[$1 FS $2]" dest_valid="$5}' \
+   "$temporary/source-constraints" "$temporary/restored-constraints" >&2
   fail restored_fingerprint_differs
 fi
 printf 'STAGING_REAL_PUBLIC_SCHEMA_RESTORE_PASS source=ukvgnkxgzyhswgpnvyzz dest=local_disposable\n'
