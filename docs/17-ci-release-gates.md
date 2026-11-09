@@ -13,7 +13,7 @@
 2. CI verte sur le dernier SHA et revue des migrations SQL/RLS si concernées.
 3. Vérification des secrets absents du diff et de la sortie des tests.
 4. Comparaison avec la branche Codex pour éviter les duplications.
-5. Fusion manuelle seulement après validation explicite.
+5. Fusion automatique uniquement pour les PR Copilot qui satisfont **tous** les garde-fous de `.github/workflows/mentioncheck-agent-automerge.yml` (issue explicitement approuvée, périmètre UI limité/tests/docs, session agent terminée, CI verte au SHA exact, protection GitHub intacte). Toute autre PR et toute porte de release/sécurité nécessitent une validation explicite.
 
 ## Portes avant production
 - Variables de production et domaine vérifiés, sans secrets dans le dépôt.

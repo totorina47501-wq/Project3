@@ -4,9 +4,13 @@ on:
   schedule:
     - cron: '10,40 * * * *'
   workflow_dispatch:
+  # Events wake the trusted default-branch workflow; never check out PR code.
+  # A Copilot agent can finish AFTER PR CI has already succeeded.
   workflow_run:
-    workflows: ["MentionCheck CI"]
+    workflows: ["MentionCheck CI", "Running Copilot cloud agent"]
     types: [completed]
+  pull_request_target:
+    types: [ready_for_review, edited, synchronize]
 permissions:
   contents: write
   pull-requests: write
@@ -103,10 +107,16 @@ jobs:
           github.event_name == 'schedule' ||
           github.event_name == 'workflow_dispatch' ||
           (
+            github.event_name == 'pull_request_target' &&
+            github.event.pull_request.user.login == 'Copilot' &&
+            github.event.pull_request.base.ref == 'main'
+          ) ||
+          (
             github.event_name == 'workflow_run' &&
             github.event.workflow_run.conclusion == 'success' &&
             (
               github.event.workflow_run.event == 'pull_request' ||
+              github.event.workflow_run.name == 'Running Copilot cloud agent' ||
               github.event.workflow_run.event == 'push'
               || github.event.workflow_run.event == 'workflow_dispatch'
             )
@@ -131,12 +141,41 @@ jobs:
                   pr.labels?.some(l=>l.name==='factory:auto-merge-safe')) continue;
               checked++;
               const files=await github.paginate(github.rest.pulls.listFiles,{owner,repo,pull_number:pr.number,per_page:100});
-              const safe=files.length>0 && files.length<=30 && files.every(f=>
-                ['added','modified'].includes(f.status) && f.additions<=500 && f.deletions<=500 &&
-                (/^tests\//.test(f.filename) || /^workers\/media-jobs\/tests\/[^/]+\.test\.mjs$/.test(f.filename) || /^docs\/.+\.md$/.test(f.filename) || f.filename==='docs/work-registry.json') &&
-                !/^docs\/(12-privacy-security|08-studio|04-mia-archives|42-copilot-mobile-workflow)\.md$/.test(f.filename) &&
-                !/^docs\/(security|contracts|legal)\//.test(f.filename));
-              if (!safe) continue;
+              // Invariant: one explicitly approved open issue, assigned to Copilot.
+              // No self-approved PR or unlabeled backlog may reach the merge gate.
+              const closingRefs=[...String(pr.body||'').matchAll(/\b(?:fix(?:es|ed)?|clos(?:es|ed)?|resolv(?:es|ed)?)\s+#(\d+)\b/gi)]
+                .map(match=>Number(match[1]));
+              if (new Set(closingRefs).size!==1 || closingRefs.length!==1) continue;
+              const ticket=(await github.rest.issues.get({owner,repo,issue_number:closingRefs[0]})).data;
+              if (ticket.state!=='open' || !ticket.labels?.some(l=>l.name==='agent:approved') ||
+                  ticket.labels?.some(l=>['agent:codex','release:evidence-required','security:manual'].includes(l.name)) ||
+                  !ticket.assignees?.some(a=>['Copilot','copilot-swe-agent[bot]'].includes(a.login))) continue;
+              if (pr.labels?.some(l=>['release:evidence-required','security:manual','do-not-merge','agent:codex'].includes(l.name))) continue;
+              const isDoc=(path)=> /^docs\/.+\.md$/.test(path) &&
+                !/^docs\/(12-privacy-security|08-studio|04-mia-archives|42-copilot-mobile-workflow)\.md$/.test(path) &&
+                !/^docs\/(security|contracts|legal)\//.test(path);
+              const isTest=(path)=>/^tests\//.test(path) ||
+                /^workers\/media-jobs\/tests\/[^/]+\.test\.mjs$/.test(path);
+              // Small, reviewed UI surface only. APIs, auth, security, SQL, deployment,
+              // workflows, config, dependencies and service integrations fail closed.
+              const isUi=(path)=>/^app\/dashboard\/(?:layout\.tsx|(?:check|archive|media|mia|studio|brand-deals)\/page\.tsx)$/.test(path) ||
+                /^components\/(?:DashboardMobileNavigation|AIStreamProgress|ComplianceScore|ViolationList|AIRewriteDiff|LogoutButton)\.tsx$/.test(path);
+              const unsafeChange=/(?:\b(?:fetch|XMLHttpRequest|sendBeacon|WebSocket|EventSource|eval|Function|postMessage|open)\s*\(|document\.cookie|localStorage|sessionStorage|process\.env|dangerouslySetInnerHTML|innerHTML|createBrowserSupabase|createServerSupabase|supabase\.auth|@\/lib\/(?:security|supabase)|https?:\/\/)/i;
+              const safe=files.length>0 && files.length<=30 && files.every(f=>{
+                const path=f.filename;
+                if (!['added','modified'].includes(f.status) || f.additions>500 || f.deletions>500) return false;
+                if (isTest(path) || isDoc(path) || path==='docs/work-registry.json') return true;
+                if (!isUi(path) || f.additions>250 || f.deletions>250 || !f.patch) return false;
+                const added=f.patch.split('\n').filter(line=>line.startsWith('+') && !line.startsWith('+++'))
+                  .map(line=>line.slice(1)).join('\n');
+                return !unsafeChange.test(added);
+              });
+              if (!safe) {
+                core.notice('PR #'+pr.number+' requires separate security review (unsafe file or diff); not auto-merged.');
+                continue;
+              }
+              // A successful CI is necessary but never sufficient: an approved
+              // issue, trusted Copilot identity and completed cloud session also apply.
               const sha=pr.head.sha;
               const runs=await github.paginate(github.rest.actions.listWorkflowRunsForRepo,{owner,repo,branch:pr.head.ref,per_page:100});
               const ci=runs.filter(r=>r.name==='MentionCheck CI' && r.path==='.github/workflows/ci.yml' &&
@@ -146,6 +185,8 @@ jobs:
               const agent=runs.filter(r=>r.name==='Running Copilot cloud agent')
                 .sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at))[0];
               if (!agent || agent.conclusion!=='success' || agent.status!=='completed') continue;
+              const headCommit=(await github.rest.repos.getCommit({owner,repo,ref:sha})).data;
+              if (Date.parse(agent.updated_at) < Date.parse(headCommit.commit.committer.date)) continue;
               const jobs=await github.paginate(github.rest.actions.listJobsForWorkflowRun,
                 {owner,repo,run_id:ci.id,filter:'latest',per_page:100});
               if (!['quality','Image du runner média (sans fournisseur)'].every(name=>
@@ -154,11 +195,13 @@ jobs:
                 'mutation($id: ID!){markPullRequestReadyForReview(input:{pullRequestId:$id}){pullRequest{isDraft}}}',
                 {id:pr.node_id});
               const latest=(await github.rest.pulls.get({owner,repo,pull_number:pr.number})).data;
-              if (latest.state!=='open' || latest.draft || latest.head.sha!==sha || latest.base.ref!=='main') continue;
+              if (latest.state!=='open' || latest.draft || latest.head.sha!==sha || latest.base.ref!=='main' ||
+                  latest.user?.login!=='Copilot' || latest.head.repo?.full_name!==owner+'/'+repo ||
+                  latest.labels?.some(l=>['release:evidence-required','security:manual','do-not-merge','agent:codex'].includes(l.name))) continue;
               let mergedSha;
               try {
                 const merged=await github.rest.pulls.merge({owner,repo,pull_number:pr.number,
-                  merge_method:'squash',sha,commit_title:'test: verified safe Copilot PR #'+pr.number});
+                  merge_method:'squash',sha,commit_title:'feat: verified safe Copilot PR #'+pr.number});
                 mergedSha=merged.data.sha;
                 core.notice('Merged safe Copilot PR #'+pr.number+' at '+mergedSha);
               } catch(e) {

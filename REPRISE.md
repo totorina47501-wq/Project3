@@ -1,5 +1,14 @@
 # Reprise MentionCheck — 6 novembre 2026
 
+## Auto-intégration des PR Copilot à faible risque — 9 novembre 2026
+
+- **Motif** : les PR #106 et #109 ont nécessité un passage manuel de brouillon à prêt/fusion malgré Copilot terminé et CI verte. Le workflow existant limitait volontairement l'auto-merge aux seuls tests/docs ; son réveil dépendait surtout de la CI, alors que le run cloud agent peut finir *après* elle.
+- **Correctif proposé** : le workflow de récupération sur la branche fiable `main` écoute aussi la fin de la session Copilot et les événements de PR `ready_for_review`, `edited`, `synchronize`. Aucun checkout du code de PR avec un token d'écriture. Rattrapage planifié conservé comme secours GitHub best-effort.
+- **Conditions cumulatives** : PR de l'acteur `Copilot` sur branche `copilot/` du même dépôt vers `main`; une seule issue ouverte explicitement `agent:approved`, réellement affectée à Copilot ; aucune étiquette sensible ; fichiers uniquement tests, docs autorisés, ou petites surfaces UI explicitement listées ; aucune suppression/renommage, limites de lignes, patch UI disponible et absence de nouveaux appels réseau/accès données/données sensibles dans les lignes ajoutées ; dernière CI au SHA exact `quality` + runner média SUCCESS ; dernière session agent terminée SUCCESS après le commit ; relecture de l'état et merge SHA verrouillé.
+- **Hors auto-merge** : API, Auth, RLS/SQL, billing, RGPD, sécurité, scripts et workflows, configuration, dépôts externes, déploiement, fichiers volumineux ou diff indécidable, PR Codex #94 / issue #16. Un avertissement GitHub est émis ; ne jamais contourner une protection GitHub.
+- **Post-fusion** : CI de `main` explicitement déclenchée, puis dispatcher relancé après CI `main` verte. Ce mécanisme n'autorise **ni ouverture commerciale ni activation de prestataire payant**.
+- **Portée de la preuve** : le test statique de la politique et la CI du workflow sur sa PR sont nécessaires. Le cycle complet pour une **nouvelle PR Copilot admissible** (fin agent → merge robot → CI `main` → clôture issue → prochain dispatch) reste à observer avant d'annoncer « full auto démontré ». Ne pas simuler une fusion ni consommer de crédits IA pour fabriquer une mission de test.
+
 ## Réveil événementiel des missions Copilot — 9 novembre 2026
 
 - À 12h48 (Europe/Paris), aucun run GitHub `schedule` à 12h30 n'était observable, alors que l'issue [#105](https://github.com/totorina47501-wq/Project3/issues/105) était `agent:approved` et sans affectation. Le run précédent `workflow_dispatch` était antérieur à la création de l'issue. Cause externe exacte du saut de planification non prouvée : un cron GitHub Actions est best-effort.
