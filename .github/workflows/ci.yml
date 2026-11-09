@@ -39,6 +39,11 @@ jobs:
           cache: npm
       - name: Registre anti-doublons (sans réseau)
         run: node scripts/work-inventory.mjs check && node --test scripts/work-inventory.test.mjs
+      - name: Frontières Cloudflare staging et Preview (sans réseau)
+        run: |
+          node scripts/recette/check-cloudflare-staging-boundary.mjs
+          node scripts/recette/check-cloudflare-preview-boundary.mjs
+          node --test scripts/recette/cloudflare-boundaries.test.mjs
       - name: Installer les dépendances
         run: npm ci --ignore-scripts
       - name: Audit des dépendances de production
