@@ -12,7 +12,7 @@ const docsMerge = workflow('factory-safe-automerge.yml');
 describe('Contrats statiques des workflows agents', () => {
   it('ne dispatch que les issues ouvertes explicitement approuvées et sans doublon', () => {
     expect(dispatch).toContain("cron: '0,30 * * * *'");
-    expect(dispatch).toContain('issues:\n    types: [closed]');
+    expect(dispatch).toContain('issues:\n    types: [opened, labeled, closed]');
     expect(dispatch).toContain('pull_request:\n    types: [closed]');
     expect(dispatch).toContain('default: true');
     expect(dispatch).toContain("MAX_ACTIVE: '2'");
