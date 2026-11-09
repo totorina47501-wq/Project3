@@ -90,6 +90,33 @@ describe('Contrats statiques des workflows agents', () => {
     expect(agentMerge).not.toContain('actions/checkout@');
   });
 
+  it('réveille la récupération quand Copilot finit après la CI ou met sa PR à jour', () => {
+    expect(agentMerge).toContain('workflows: ["MentionCheck CI", "Running Copilot cloud agent"]');
+    expect(agentMerge).toContain('pull_request_target:');
+    expect(agentMerge).toContain('types: [ready_for_review, edited, synchronize]');
+    expect(agentMerge).toContain("github.event.pull_request.user.login == 'Copilot'");
+    expect(agentMerge).toContain("github.event.workflow_run.name == 'Running Copilot cloud agent'");
+    expect(agentMerge).toContain("github.ref == 'refs/heads/main'");
+    expect(agentMerge).not.toContain('actions/checkout@');
+  });
+
+  it('ne fusionne le code UI limité que si issue approuvée, source et diff sûrs', () => {
+    expect(agentMerge).toContain('new Set(closingRefs).size!==1');
+    expect(agentMerge).toContain("ticket.state!=='open'");
+    expect(agentMerge).toContain("l.name==='agent:approved'");
+    expect(agentMerge).toContain("release:evidence-required");
+    expect(agentMerge).toContain("security:manual");
+    expect(agentMerge).toContain("const isUi=(path)=>");
+    expect(agentMerge).toContain('const unsafeChange=');
+    expect(agentMerge).toContain("['added','modified'].includes(f.status)");
+    expect(agentMerge).toContain('f.additions>250');
+    expect(agentMerge).toContain('!f.patch');
+    expect(agentMerge).toContain("!unsafeChange.test(added)");
+    expect(agentMerge).toContain("github.rest.repos.getCommit({owner,repo,ref:sha})");
+    expect(agentMerge).toContain("latest.head.sha!==sha");
+    expect(agentMerge).toContain("workflow_id:'ci.yml',ref:'main'");
+  });
+
   it('réserve le workflow documentaire au label explicite et aux chemins permis', () => {
     expect(docsMerge).toContain("github.event.workflow_run.conclusion == 'success'");
     expect(docsMerge).toContain('[ "$(jq -r \'.draft\' <<< "$pr")" = false ]');

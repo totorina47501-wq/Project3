@@ -98,3 +98,14 @@ Cet addendum complète l'audit avec un **deuxième cycle observé** centré sur 
 - Le dispatcher écoute désormais aussi les événements `issues.opened` et `issues.labeled`, en plus de `closed`, pour démarrer sur la création/validation sans attendre `:00` ou `:30`. Les garde-fous de la file (`agent:approved`, exclusion Codex, plafond de 2, anti-doublon et vérification post-affectation) restent inchangés. Le cron demeure un filet de sécurité, non une garantie de ponctualité.
 - Preuve à contrôler sur la prochaine **nouvelle** issue approuvée : run d'événement `issues` sur `main`, affectation persistée, puis PR agent. Cette modification ne prouve pas à elle seule ce scénario.
 
+
+
+## Auto-intégration des PR Copilot à faible risque — 9 novembre 2026
+
+- **Motif** : les PR #106 et #109 ont nécessité un passage manuel de brouillon à prêt/fusion malgré Copilot terminé et CI verte. Le workflow existant limitait volontairement l'auto-merge aux seuls tests/docs ; son réveil dépendait surtout de la CI, alors que le run cloud agent peut finir *après* elle.
+- **Correctif proposé** : le workflow de récupération sur la branche fiable `main` écoute aussi la fin de la session Copilot et les événements de PR `ready_for_review`, `edited`, `synchronize`. Aucun checkout du code de PR avec un token d'écriture. Rattrapage planifié conservé comme secours GitHub best-effort.
+- **Conditions cumulatives** : PR de l'acteur `Copilot` sur branche `copilot/` du même dépôt vers `main`; une seule issue ouverte explicitement `agent:approved`, réellement affectée à Copilot ; aucune étiquette sensible ; fichiers uniquement tests, docs autorisés, ou petites surfaces UI explicitement listées ; aucune suppression/renommage, limites de lignes, patch UI disponible et absence de nouveaux appels réseau/accès données/données sensibles dans les lignes ajoutées ; dernière CI au SHA exact `quality` + runner média SUCCESS ; dernière session agent terminée SUCCESS après le commit ; relecture de l'état et merge SHA verrouillé.
+- **Hors auto-merge** : API, Auth, RLS/SQL, billing, RGPD, sécurité, scripts et workflows, configuration, dépôts externes, déploiement, fichiers volumineux ou diff indécidable, PR Codex #94 / issue #16. Un avertissement GitHub est émis ; ne jamais contourner une protection GitHub.
+- **Post-fusion** : CI de `main` explicitement déclenchée, puis dispatcher relancé après CI `main` verte. Ce mécanisme n'autorise **ni ouverture commerciale ni activation de prestataire payant**.
+- **Portée de la preuve** : le test statique de la politique et la CI du workflow sur sa PR sont nécessaires. Le cycle complet pour une **nouvelle PR Copilot admissible** (fin agent → merge robot → CI `main` → clôture issue → prochain dispatch) reste à observer avant d'annoncer « full auto démontré ». Ne pas simuler une fusion ni consommer de crédits IA pour fabriquer une mission de test.
+
