@@ -5,8 +5,11 @@ name: MentionCheck agent dispatch
 on:
   schedule:
     - cron: '0,30 * * * *'
+  # Wake up immediately when an issue is opened or explicitly approved;
+  # GitHub's scheduled cron is best-effort and can be delayed or skipped.
+  # The job still refuses unapproved issues and enforces its capacity limit.
   issues:
-    types: [closed]
+    types: [opened, labeled, closed]
   pull_request:
     types: [closed]
   workflow_dispatch:

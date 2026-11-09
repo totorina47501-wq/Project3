@@ -89,3 +89,12 @@ Cet addendum complète l'audit avec un **deuxième cycle observé** centré sur 
 
 - **Démontré sur ce cycle** : dispatch Codex réel, exécution agent, PR créée, CI verte sur SHA de PR après intervention de politique + rafraîchissement manuel unique, fusion automatique sûre, clôture d'issue et CI `main` verte sur SHA fusionné.
 - **Non démontré à ce stade** : cycle « zéro intervention humaine » garanti pour toutes les PR futures, ni reprise événementielle immédiate universelle de tous les `workflow_run` déclenchés par l'identité Codex.
+
+
+## Réveil événementiel des missions Copilot — 9 novembre 2026
+
+- À 12h48 (Europe/Paris), aucun run GitHub `schedule` à 12h30 n'était observable, alors que l'issue [#105](https://github.com/totorina47501-wq/Project3/issues/105) était `agent:approved` et sans affectation. Le run précédent `workflow_dispatch` était antérieur à la création de l'issue. Cause externe exacte du saut de planification non prouvée : un cron GitHub Actions est best-effort.
+- Relance du **job existant** [#42606576564, tentative 2](https://github.com/totorina47501-wq/Project3/actions/runs/42606576564), `DRY_RUN=false`, statut `success` : affectation `Copilot` effectivement persistée sur #105 et ouverture de la [PR Copilot #106](https://github.com/totorina47501-wq/Project3/pull/106). Le code de l'application n'a pas été touché.
+- Le dispatcher écoute désormais aussi les événements `issues.opened` et `issues.labeled`, en plus de `closed`, pour démarrer sur la création/validation sans attendre `:00` ou `:30`. Les garde-fous de la file (`agent:approved`, exclusion Codex, plafond de 2, anti-doublon et vérification post-affectation) restent inchangés. Le cron demeure un filet de sécurité, non une garantie de ponctualité.
+- Preuve à contrôler sur la prochaine **nouvelle** issue approuvée : run d'événement `issues` sur `main`, affectation persistée, puis PR agent. Cette modification ne prouve pas à elle seule ce scénario.
+

@@ -1,5 +1,12 @@
 # Reprise MentionCheck — 6 novembre 2026
 
+## Réveil événementiel des missions Copilot — 9 novembre 2026
+
+- À 12h48 (Europe/Paris), aucun run GitHub `schedule` à 12h30 n'était observable, alors que l'issue [#105](https://github.com/totorina47501-wq/Project3/issues/105) était `agent:approved` et sans affectation. Le run précédent `workflow_dispatch` était antérieur à la création de l'issue. Cause externe exacte du saut de planification non prouvée : un cron GitHub Actions est best-effort.
+- Relance du **job existant** [#42606576564, tentative 2](https://github.com/totorina47501-wq/Project3/actions/runs/42606576564), `DRY_RUN=false`, statut `success` : affectation `Copilot` effectivement persistée sur #105 et ouverture de la [PR Copilot #106](https://github.com/totorina47501-wq/Project3/pull/106). Le code de l'application n'a pas été touché.
+- Le dispatcher écoute désormais aussi les événements `issues.opened` et `issues.labeled`, en plus de `closed`, pour démarrer sur la création/validation sans attendre `:00` ou `:30`. Les garde-fous de la file (`agent:approved`, exclusion Codex, plafond de 2, anti-doublon et vérification post-affectation) restent inchangés. Le cron demeure un filet de sécurité, non une garantie de ponctualité.
+- Preuve à contrôler sur la prochaine **nouvelle** issue approuvée : run d'événement `issues` sur `main`, affectation persistée, puis PR agent. Cette modification ne prouve pas à elle seule ce scénario.
+
 ## Point main et frontière Cloudflare — 9 novembre 2026 (mise à jour)
 
 - La **PR #99 est fusionnée** sur `main` : SHA `87f6244446600dddbe17642fc37308c6d8d62256`, [CI principale #366 verte](https://github.com/totorina47501-wq/Project3/actions/runs/42543040484) **à ne pas confondre avec le run de certification staging**. La certification Preview staging est attestée séparément dans le run [#42540861095](https://github.com/totorina47501-wq/Project3/actions/runs/42540861095) ; consulter l'historique détaillé pour les étapes antérieures.
