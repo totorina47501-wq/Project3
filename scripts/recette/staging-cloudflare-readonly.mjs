@@ -59,20 +59,21 @@ for(const id of candidateIds){
  }
 }
 
+async function inspectHistoricalBuildLogs(){
 const endpoint='https://api.cloudflare.com/client/v4/accounts/'+account+'/builds/builds/'+buildId+'/logs';
 let response;
 try{response=await fetch(endpoint,{method:'GET',headers:{Authorization:'Bearer '+token},
 signal:AbortSignal.timeout(18000)});}catch{
- console.log('CF_BUILD_LOGS_NETWORK_BLOCKED');process.exit(0);
+ console.log('CF_BUILD_LOGS_NETWORK_BLOCKED');return;
 }
 if(response.status!==200){
- console.log('CF_BUILD_LOGS_READONLY_BLOCKED_HTTP_'+response.status);process.exit(0);
+ console.log('CF_BUILD_LOGS_READONLY_BLOCKED_HTTP_'+response.status);return;
 }
 let body;
 try{body=await response.json();}catch{
- console.log('CF_BUILD_LOGS_BAD_JSON');process.exit(0);
+ console.log('CF_BUILD_LOGS_BAD_JSON');return;
 }
-if(body.success===false){console.log('CF_BUILD_LOGS_PERMISSION_DENIED');process.exit(0);}
+if(body.success===false){console.log('CF_BUILD_LOGS_PERMISSION_DENIED');return;}
 const lines=Array.isArray(body.result?.lines)?body.result.lines:[];
 const matches=lines.map(line=>Array.isArray(line)?line.slice(1).join(' '):'')
  .filter(line=>/error|fail|exception|exit code|timed out|not found|denied|previews|wrangler|build command|deploy command/i.test(line));
@@ -85,6 +86,10 @@ function sanitized(s){
 console.log('CF_BUILD_LOGS_READONLY_OK matching_lines='+matches.length);
 for(const line of matches.slice(-12))console.log('CF_BUILD_ERROR '+sanitized(line));
 
+
+
+}
+await inspectHistoricalBuildLogs();
 
 // Inventaire STRICTEMENT lecture seule des Previews attachées au Worker staging.
 // Un incident Wrangler JSON/assets peut laisser une preview temporaire : ne pas la deviner.
