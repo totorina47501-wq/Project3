@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { LogoutButton } from '@/components/LogoutButton';
-import { DashboardMobileNavigation } from '@/components/DashboardMobileNavigation';
+import { DashboardMobileNavigation, DashboardSecondaryNavigation } from '@/components/DashboardMobileNavigation';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -21,7 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="min-h-screen bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
         <nav aria-label="Navigation principale" className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-4">
-          <Link href="/" className="font-heading text-xl font-bold text-primary">
+          <Link href="/" className="whitespace-nowrap font-heading text-xl font-bold text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">
             <span className="text-accent">✓</span> MentionCheck
           </Link>
           <div className="hidden flex-wrap items-center gap-2 md:flex md:gap-5">
@@ -35,12 +35,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <Link href="/dashboard/settings" className="text-sm font-semibold hover:text-accent">Paramètres</Link>
             <LogoutButton />
           </div>
-          <div className="flex min-w-0 max-w-full flex-wrap items-center gap-3 md:hidden">
-            <Link href="/dashboard/brand-deals" className="text-sm font-semibold text-slate-700">Collaborations</Link>
-            <Link href="/dashboard/studio" className="text-sm font-semibold text-slate-700">Studio</Link>
-            <Link href="/dashboard/settings" className="text-sm font-semibold text-slate-700">Paramètres</Link>
-            <LogoutButton />
-          </div>
+          <DashboardSecondaryNavigation />
         </nav>
       </header>
       <main className="mx-auto max-w-6xl px-5 pb-28 pt-9 md:pb-9">{children}</main>
