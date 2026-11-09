@@ -1,5 +1,8 @@
 # Certification MentionCheck — staging, 8 novembre 2026
 
+**Dernière preuve Cloudflare (9 novembre 2026)** : [cycle réel Preview staging HTTP 200, refus invité, suppression par ID, restauration URLs désactivées — GitHub #42540861095](https://github.com/totorina47501-wq/Project3/actions/runs/42540861095) : **PASS**. La PR #99 reste draft ; build Workers de production non revalidé, Auth compromised passwords toujours à décider. [Procès-verbal du 9 novembre](receipts/2026-11-09-cloudflare-preview-diagnostic.md).
+
+
 **Dernière preuve (8 novembre) :** [Restauration vraie du schéma staging sur Supabase local — run #42528880867](https://github.com/totorina47501-wq/Project3/actions/runs/42528880867) : PASS pour `public`, `privacy_internal`, `studio_private`, 9 catégories d'empreintes contrôlées. [Procès-verbal complet](receipts/2026-11-08-staging-certification.md). Blocages restants : build Cloudflare hors PR draft et décision Auth. Historique de préparation conservé ci-dessous.
 
 

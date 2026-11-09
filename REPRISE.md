@@ -1,5 +1,13 @@
 # Reprise MentionCheck — 6 novembre 2026
 
+## Certification Cloudflare Preview staging — PASS le 9 novembre 2026
+
+- **Preuve réelle finale :** [GitHub Actions #42540861095](https://github.com/totorina47501-wq/Project3/actions/runs/42540861095), SUCCESS, SHA `0632cfded8c4f5958b3ffb9eb4655933736ab08b` de PR draft #99. Le token Cloudflare mis à jour est opérationnel sur **mentioncheck-staging uniquement**.
+- Suite complète : vérification préalable d'inventaire vide, OpenNext + `wrangler deploy --dry-run`, activation temporaire de Preview URLs, création de `qa-cert-0632cfde`, récupération de l'ID par l'API, GET `/login` **200**, accès invité à l'API privée refusé (**401/403**), désactivation des URLs, DELETE de **cette Preview par ID**, contrôle final **zéro orpheline**, et `previews_enabled=false` restauré.
+- La Preview temporaire **n'existe plus**. Le nouveau token a passé le précontrôle permission DELETE sur UUID inexistant ([run #42537592547](https://github.com/totorina47501-wq/Project3/actions/runs/42537592547), nouvelle tentative). Les refus 403 et 404 des runs antérieurs sont historiques et **résolus pour la Preview de staging**.
+- **Ce qui reste** : build Cloudflare de **production** corrigé seulement dans la PR non fusionnée (aucun redéploiement effectué), politique Auth mots de passe compromis indisponible nativement sur Supabase Free, éventuel rollback entre deux versions de code différentes si requis par l'audit. Conserver issue #16 ouverte avec `release:evidence-required`.
+- Aucun service externe additionnel, aucune facture OpenAI, aucun changement de production. Le nouveau jeton Admin individuel staging peut être remplacé/révoqué après recette pour réduire les privilèges.
+
 ## Statut des Previews Cloudflare — 9 novembre 2026
 
 - **Preview QA supprimée**, inventaire vérifié : `STAGING_PREVIEW_INVENTORY_OK total=0 qa=0` ([run #42534677039](https://github.com/totorina47501-wq/Project3/actions/runs/42534677039)).
