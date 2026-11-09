@@ -109,3 +109,7 @@ Cet addendum complète l'audit avec un **deuxième cycle observé** centré sur 
 - **Post-fusion** : CI de `main` explicitement déclenchée, puis dispatcher relancé après CI `main` verte. Ce mécanisme n'autorise **ni ouverture commerciale ni activation de prestataire payant**.
 - **Portée de la preuve** : le test statique de la politique et la CI du workflow sur sa PR sont nécessaires. Le cycle complet pour une **nouvelle PR Copilot admissible** (fin agent → merge robot → CI `main` → clôture issue → prochain dispatch) reste à observer avant d'annoncer « full auto démontré ». Ne pas simuler une fusion ni consommer de crédits IA pour fabriquer une mission de test.
 
+
+## Robustesse des références de PR Copilot (9 novembre 2026)
+
+Copilot peut citer une issue approuvée dans la description de sa PR **et** recopier la même instruction `Fixes #N` depuis le texte initial de l'issue. Le garde-fou refuse toujours une PR sans référence ou citant plusieurs **numéros distincts**, mais accepte les doublons du **même numéro** (`new Set(closingRefs).size === 1`). Le contrôle d'état, label `agent:approved`, assignee, SHA CI, identité Copilot, paths autorisés et absence de collecte restent obligatoires. Correction ciblée pour éviter que le premier cycle autonome post-#110 se bloque sur un détail de format, sans modifier les conditions de sécurité ni autoriser le lancement commercial.
