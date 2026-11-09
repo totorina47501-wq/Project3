@@ -145,7 +145,9 @@ jobs:
               // No self-approved PR or unlabeled backlog may reach the merge gate.
               const closingRefs=[...String(pr.body||'').matchAll(/\b(?:fix(?:es|ed)?|clos(?:es|ed)?|resolv(?:es|ed)?)\s+#(\d+)\b/gi)]
                 .map(match=>Number(match[1]));
-              if (new Set(closingRefs).size!==1 || closingRefs.length!==1) continue;
+              // One unique closing issue is required, even when the same closing ref
+              // appears both in Copilot's quoted issue text and PR summary.
+              if (new Set(closingRefs).size!==1) continue;
               const ticket=(await github.rest.issues.get({owner,repo,issue_number:closingRefs[0]})).data;
               if (ticket.state!=='open' || !ticket.labels?.some(l=>l.name==='agent:approved') ||
                   ticket.labels?.some(l=>['agent:codex','release:evidence-required','security:manual'].includes(l.name)) ||

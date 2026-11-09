@@ -102,6 +102,7 @@ describe('Contrats statiques des workflows agents', () => {
 
   it('ne fusionne le code UI limité que si issue approuvée, source et diff sûrs', () => {
     expect(agentMerge).toContain('new Set(closingRefs).size!==1');
+    expect(agentMerge).not.toContain('closingRefs.length!==1');
     expect(agentMerge).toContain("ticket.state!=='open'");
     expect(agentMerge).toContain("l.name==='agent:approved'");
     expect(agentMerge).toContain("release:evidence-required");
