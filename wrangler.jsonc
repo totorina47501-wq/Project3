@@ -71,5 +71,23 @@
   },
   "dev": {
     "enable_containers": false
+  },
+  "previews": {
+    "vars": {
+      "NEXT_PUBLIC_APP_URL": "https://mentioncheck-staging.toto-rina47501.workers.dev",
+      "NEXT_PUBLIC_SUPABASE_URL": "https://ukvgnkxgzyhswgpnvyzz.supabase.co",
+      "OPENAI_PAUSED": "true",
+      "OPENAI_TEXT_ENABLED": "false",
+      "OPENAI_VISION_ENABLED": "false",
+      "OPENAI_AUDIO_ENABLED": "false",
+      "OPENAI_EMBEDDINGS_ENABLED": "false",
+      "BILLING_ENABLED": "false",
+      "STRIPE_MODE": "test",
+      "MEDIA_PROCESSING_ENABLED": "false",
+      "MEDIA_CLOUDFLARE_RUNNER_ENABLED": "false",
+      "MEDIA_RUNNER_PAUSED": "true",
+      "MEDIA_AI_ENABLED": "false",
+      "MEDIA_RETENTION_ENABLED": "false"
+    }
   }
 }

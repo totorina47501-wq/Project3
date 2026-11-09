@@ -1,0 +1,28 @@
+# Supprimer uniquement la Preview créée pour la recette, jamais le Worker lui-même.
+name: MentionCheck staging QA Preview cleanup
+on:
+  push:
+    branches: [test/mentioncheck-staging-auth-20261108]
+    paths:
+      - '.github/workflows/mentioncheck-staging-qa-preview-cleanup.yml'
+      - 'scripts/recette/cleanup-staging-qa-preview.mjs'
+permissions:
+  contents: read
+concurrency:
+  group: mentioncheck-staging-cloudflare
+  cancel-in-progress: false
+jobs:
+  cleanup:
+    if: github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/test/mentioncheck-staging-auth-20261108'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.MENTIONCHECK_STAGING_CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.MENTIONCHECK_STAGING_CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Vérifier et supprimer seulement la Preview temporaire connue
+        run: node scripts/recette/cleanup-staging-qa-preview.mjs

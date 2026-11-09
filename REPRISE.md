@@ -1,5 +1,45 @@
 # Reprise MentionCheck — 6 novembre 2026
 
+## Certification Cloudflare Preview staging — PASS le 9 novembre 2026
+
+- **Preuve réelle finale :** [GitHub Actions #42540861095](https://github.com/totorina47501-wq/Project3/actions/runs/42540861095), SUCCESS, SHA `0632cfded8c4f5958b3ffb9eb4655933736ab08b` de PR draft #99. Le token Cloudflare mis à jour est opérationnel sur **mentioncheck-staging uniquement**.
+- Suite complète : vérification préalable d'inventaire vide, OpenNext + `wrangler deploy --dry-run`, activation temporaire de Preview URLs, création de `qa-cert-0632cfde`, récupération de l'ID par l'API, GET `/login` **200**, accès invité à l'API privée refusé (**401/403**), désactivation des URLs, DELETE de **cette Preview par ID**, contrôle final **zéro orpheline**, et `previews_enabled=false` restauré.
+- La Preview temporaire **n'existe plus**. Le nouveau token a passé le précontrôle permission DELETE sur UUID inexistant ([run #42537592547](https://github.com/totorina47501-wq/Project3/actions/runs/42537592547), nouvelle tentative). Les refus 403 et 404 des runs antérieurs sont historiques et **résolus pour la Preview de staging**.
+- **Ce qui reste** : build Cloudflare de **production** corrigé seulement dans la PR non fusionnée (aucun redéploiement effectué), politique Auth mots de passe compromis indisponible nativement sur Supabase Free, éventuel rollback entre deux versions de code différentes si requis par l'audit. Conserver issue #16 ouverte avec `release:evidence-required`.
+- Aucun service externe additionnel, aucune facture OpenAI, aucun changement de production. Le nouveau jeton Admin individuel staging peut être remplacé/révoqué après recette pour réduire les privilèges.
+
+## Statut des Previews Cloudflare — 9 novembre 2026
+
+- **Preview QA supprimée**, inventaire vérifié : `STAGING_PREVIEW_INVENTORY_OK total=0 qa=0` ([run #42534677039](https://github.com/totorina47501-wq/Project3/actions/runs/42534677039)).
+- **Activation et désactivation par API réussies**, réglage initial `previews_enabled=false` restauré ([run #42537467003](https://github.com/totorina47501-wq/Project3/actions/runs/42537467003)).
+- **Droit de suppression manquant** : DELETE d'un UUID aléatoire inexistant, inventaire initial vide, refus HTTP 403 ([run #42537592547](https://github.com/totorina47501-wq/Project3/actions/runs/42537592547)). Aucune Preview créée.
+- **URLs versionnées non validées** : metadata sans URL ; réponses HTTP 404 malgré activation temporaire, réglage rétabli et inventaire vide ([run #42537924478](https://github.com/totorina47501-wq/Project3/actions/runs/42537924478)).
+- **À faire** : limiter à `mentioncheck-staging` un jeton Cloudflare autorisé à supprimer les Previews, puis exécuter un cycle création/smoke/suppression. Ne pas étendre les autorisations au Worker production. PR #99 draft, issue #16 ouverte.
+## Validation Cloudflare Preview — 9 novembre 2026 (historique, Preview supprimée depuis)
+
+Le correctif `previews` de la PR #99 a passé Next.js, OpenNext et `wrangler deploy --dry-run` sur le Worker staging. La Preview temporaire `qa-cert-11cba5d3` a été créée mais sans URL car `previews_enabled=false`. Le nettoyage ciblé a échoué en **HTTP 403**, donc cette Preview QA est encore présente (sans URL publique). Un garde-fou empêche de nouvelles créations tant que les URLs staging restent désactivées. **À traiter via Cloudflare staging uniquement** : supprimer la Preview par son nom/ID, puis choisir si les URLs de preview doivent être activées. Production toujours inchangée ; garder la PR #99 draft et l'issue #16 ouverte. [Preuves](docs/receipts/2026-11-09-cloudflare-preview-diagnostic.md).
+
+
+## Restauration du schéma staging hébergé — VALIDÉE le 8 novembre 2026
+
+[GitHub #42528880867](https://github.com/totorina47501-wq/Project3/actions/runs/42528880867) **SUCCESS** : vraie connexion Postgres Session pooler du projet staging, dump **schema-only** de `public`, `privacy_internal`, `studio_private`, restauration sur Supabase local Docker jetable, empreintes de 9 catégories de catalogues correspondantes (27 tables, 25 policies, 30 fonctions publiques, 3 privées, 156 contraintes). Une seule contrainte de scopes API subit une normalisation textuelle ciblée des parenthèses/casts, sans assouplissement des autres 155. Aucun contenu utilisateur ni secret exporté, aucun changement sur production. Détails : [procès-verbal actualisé](docs/receipts/2026-11-08-staging-certification.md). Le build Cloudflare production et la politique Auth restent non certifiés ; issue #16 maintenue ouverte, PR #99 draft.
+
+
+## Rollback staging réellement vérifié — 8 novembre 2026
+
+Le [run #42522596101](https://github.com/totorina47501-wq/Project3/actions/runs/42522596101) est **SUCCESS** : version staging identique créée avec la même clé, vérification des deux bindings secrets, retour effectif au déploiement sain par `wrangler rollback`, smoke HTTP final OK. **Ce n'est pas un rollback de code différent.** La production n'a pas été modifiée. Les vraies restauration du schéma staging, validation du build Cloudflare et décision sur Auth compromises restent bloquantes. Voir le [procès-verbal](docs/receipts/2026-11-08-staging-certification.md).
+
+
+## Diagnostic de build Cloudflare et réserve Auth — 8 novembre 2026
+
+Le build Workers rouge a été expliqué par ses logs : `npx wrangler preview` requiert un bloc `previews` absent de `wrangler.jsonc`. La PR draft #99 propose un bloc strictement isolé, **non déployé sur `main`**, validé par un garde-fou statique. Organisation Supabase vérifiée Free ; protection native anti-mots de passe compromis disponible seulement sur Pro. Rollback staging non exécuté (versions historiques potentiellement sans tous les secrets). Voir le [procès-verbal actualisé](docs/receipts/2026-11-08-staging-certification.md). Issue #16 reste ouverte.
+
+
+## Point opérationnel — certification staging du 8 novembre 2026
+
+**Lire en premier** [le procès-verbal du 8 novembre](docs/receipts/2026-11-08-staging-certification.md). Le Worker staging est réellement publié, Auth A/B et 9 tests navigateur sur staging sont PASS (run #42519296878), et les données factices ont été intégralement nettoyées. La vraie restauration de schéma hébergé, le rollback distant et la décision Auth restent non exécutés. Le dernier check Cloudflare Workers Builds production associé au SHA est en échec, même si la page de connexion répond. Issue #16 ouverte ; production inchangée.
+
+
 ## Worker staging Cloudflare — préparation du 8 novembre 2026
 
 Fichiers `wrangler.staging.jsonc` et `.github/workflows/mentioncheck-staging-cloudflare.yml` : Worker isolé `mentioncheck-staging`, traitements payants désactivés. Déploiement **non encore prouvé** : accès Cloudflare et secrets staging requis avant `publish`. Lire la section dédiée dans `docs/52-recette-isolee-cout-minimal.md`. Production inchangée.

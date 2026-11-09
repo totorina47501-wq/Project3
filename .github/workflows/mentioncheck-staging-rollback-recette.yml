@@ -1,0 +1,39 @@
+# Rollback réel de STAGING seulement, jamais main ni production.
+name: MentionCheck Staging reversible rollback
+on:
+  push:
+    branches: [test/mentioncheck-staging-auth-20261108]
+    paths:
+      - '.github/workflows/mentioncheck-staging-rollback-recette.yml'
+      - 'scripts/recette/staging-reversible-rollback.mjs'
+permissions:
+  contents: read
+concurrency:
+  group: mentioncheck-staging-cloudflare
+  cancel-in-progress: false
+jobs:
+  rollback-staging:
+    if: github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/test/mentioncheck-staging-auth-20261108'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://ukvgnkxgzyhswgpnvyzz.supabase.co
+      NEXT_PUBLIC_APP_URL: https://mentioncheck-staging.toto-rina47501.workers.dev
+      OPENAI_PAUSED: 'true'
+      BILLING_ENABLED: 'false'
+      MEDIA_AI_ENABLED: 'false'
+      MEDIA_RETENTION_ENABLED: 'false'
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.MENTIONCHECK_STAGING_CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.MENTIONCHECK_STAGING_CLOUDFLARE_API_TOKEN }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.MENTIONCHECK_STAGING_SUPABASE_SERVICE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: node scripts/recette/check-cloudflare-staging-boundary.mjs
+      - name: Installer le CLI Wrangler verrouillé
+        run: npm ci --ignore-scripts
+      - name: Créer une deuxième version staging identique et tester le rollback vers la version saine
+        run: node scripts/recette/staging-reversible-rollback.mjs
