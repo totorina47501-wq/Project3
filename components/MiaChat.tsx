@@ -32,7 +32,15 @@ export function MiaChat({ initialVerificationId, displayName }: { initialVerific
   const [notice, setNotice] = useState('');
   const greeting = displayName ? `Hello ${displayName} !` : 'Hello !';
   const pending = useRef<AbortController | null>(null);
-  const bottom = useRef<HTMLDivElement>(null);
+  // Les brouillons restent locaux à chaque fil ; aucune écriture réseau.
+  const drafts = useRef(new Map<string, string>());
+  const messageViewport = useRef<HTMLDivElement>(null);
+  const questionInput = useRef<HTMLTextAreaElement>(null);
+  const draftKey = (id: string | null) => id ?? '__nouvelle__';
+  function updateDraft(value: string) {
+    drafts.current.set(draftKey(activeId), value);
+    setQuestion(value);
+  }
 
   async function refreshHistory(signal?: AbortSignal) {
     setLoading(true);
@@ -56,24 +64,33 @@ export function MiaChat({ initialVerificationId, displayName }: { initialVerific
   }, []);
 
   useEffect(() => {
-    bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, [messages]);
+    // Faire défiler uniquement le panneau Mia, jamais la page entière.
+    const viewport = messageViewport.current;
+    if (viewport) viewport.scrollTop = viewport.scrollHeight;
+  }, [messages, sending]);
 
   function startNew() {
     if (sending || deleting) return;
+    // « Nouvelle discussion » depuis un nouveau fil vide le champ ; depuis
+    // un fil existant, elle restaure le brouillon indépendant du nouveau fil.
+    if (activeId === null) drafts.current.delete(draftKey(null));
+    else drafts.current.set(draftKey(activeId), question);
     setActiveId(null);
     setVerificationId(initialVerificationId ?? '');
     setMessages([]);
-    setQuestion('');
+    setQuestion(drafts.current.get(draftKey(null)) ?? '');
     setError('');
     setNotice('');
   }
   function selectConversation(item: Conversation) {
     if (sending || deleting) return;
+    drafts.current.set(draftKey(activeId), question);
     setActiveId(item.id);
     setVerificationId(item.verificationId ?? '');
     setMessages(item.messages);
+    setQuestion(drafts.current.get(draftKey(item.id)) ?? '');
     setError('');
+    setNotice('');
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -87,6 +104,7 @@ export function MiaChat({ initialVerificationId, displayName }: { initialVerific
     setSending(true);
     setError('');
     setNotice('');
+    drafts.current.set(draftKey(activeId), '');
     setQuestion('');
     try {
       const response = await fetch('/api/mia/chat', {
@@ -109,6 +127,7 @@ export function MiaChat({ initialVerificationId, displayName }: { initialVerific
       await refreshHistory(controller.signal);
     } catch (cause) {
       setMessages(previous);
+      drafts.current.set(draftKey(activeId), text);
       setQuestion(text);
       if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : 'Erreur inattendue.');
     } finally {
@@ -134,10 +153,12 @@ export function MiaChat({ initialVerificationId, displayName }: { initialVerific
       const data = await response.json() as { error?: string };
       if (!response.ok) throw new Error(data.error ?? 'Suppression impossible.');
       setConversations((old) => old.filter((item) => item.id !== id));
+      drafts.current.delete(draftKey(id));
       setActiveId(null);
       setVerificationId(initialVerificationId ?? '');
       setMessages([]);
-      setQuestion('');
+      setQuestion(drafts.current.get(draftKey(null)) ?? '');
+      setNotice('');
     } catch (cause) {
       if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : 'Suppression indisponible.');
     } finally {
@@ -205,7 +226,7 @@ export function MiaChat({ initialVerificationId, displayName }: { initialVerific
           <Link href={'/dashboard/archive/' + encodeURIComponent(verificationId)}
             className="underline underline-offset-2">Discussion liée à une vérification</Link>
         </p>}
-        <div aria-live="polite" aria-label="Messages" className="min-h-72 max-h-[60vh] flex-1 space-y-5 overflow-y-auto bg-gradient-to-b from-white to-slate-50/60 px-3 py-6 sm:px-6">
+        <div ref={messageViewport} aria-live="polite" aria-label="Messages" className="min-h-72 max-h-[60vh] flex-1 space-y-5 overflow-y-auto bg-gradient-to-b from-white to-slate-50/60 px-3 py-6 sm:px-6">
           {!messages.length && <div className="mx-auto max-w-xl space-y-5 py-5 text-center sm:py-10">
             <div aria-hidden="true" className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-indigo-600 text-white shadow-lg shadow-indigo-100">
               <Sparkles className="h-8 w-8" />
@@ -221,7 +242,7 @@ export function MiaChat({ initialVerificationId, displayName }: { initialVerific
                 'Que dire pour une image retouchée ?',
                 'Quelles obligations pour un jeu concours ?',
               ].map((suggestion) => <button key={suggestion} type="button"
-                onClick={() => setQuestion(suggestion)} disabled={sending || deleting}
+                onClick={() => { updateDraft(suggestion); questionInput.current?.focus(); }} disabled={sending || deleting}
                 className="min-h-14 rounded-2xl border border-indigo-100 bg-white px-4 py-3 text-left text-sm font-medium text-slate-700 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50 focus-visible:outline-2 focus-visible:outline-indigo-500 disabled:opacity-50">
                 {suggestion}
               </button>)}
@@ -256,15 +277,14 @@ export function MiaChat({ initialVerificationId, displayName }: { initialVerific
             <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-600 text-white"><Sparkles className="h-4 w-4" /></span>
             <span className="rounded-2xl rounded-bl-md border border-slate-200 bg-white px-4 py-3">Mia prépare sa réponse…</span>
           </div>}
-          <div ref={bottom} />
         </div>
         {error && <p role="alert" className="mx-4 mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-800">{error}</p>}
         {notice && <p role="status" className="mx-4 mt-3 rounded-xl bg-slate-100 p-3 text-sm text-slate-700">{notice}</p>}
         <form onSubmit={submit} aria-busy={sending} className="border-t border-slate-100 bg-white p-3 sm:p-5">
           <label htmlFor="mia-question" className="sr-only">Ta question</label>
           <div className="flex min-w-0 items-end gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100">
-            <textarea disabled={sending || deleting} id="mia-question" value={question} rows={2} maxLength={1600}
-              onChange={(event) => setQuestion(event.target.value)}
+            <textarea ref={questionInput} disabled={sending || deleting} id="mia-question" value={question} rows={2} maxLength={1600}
+              onChange={(event) => updateDraft(event.target.value)}
               placeholder="Écris à Mia…"
               className="max-h-40 min-w-0 flex-1 resize-y bg-transparent px-2 py-2 text-base leading-relaxed text-slate-900 outline-none placeholder:text-slate-500" />
             <button disabled={sending || deleting || question.trim().length < 3} type="submit"
