@@ -15,7 +15,7 @@ for(const key of ['OPENAI_TEXT_ENABLED','OPENAI_VISION_ENABLED','OPENAI_AUDIO_EN
 }
 if(st.vars?.OPENAI_PAUSED!=='true'||st.vars?.MEDIA_RUNNER_PAUSED!=='true')deny('coupe circuit manquant');
 if(st.workers_dev!==true||st.keep_vars!==true||st.assets?.binding!=='ASSETS')deny('config Worker incomplète');
-if('SUPABASE_SERVICE_KEY' in st.vars||'NEXT_PUBLIC_SUPABASE_ANON_KEY' in st.vars)deny('clé dans le dépôt');
+for(const key of Object.keys(st.vars||{}))if(/(?:api[_-]?key|service[_-]?role|service[_-]?key|anon[_-]?key|secret|token|password|credential)/i.test(key))deny('clé dans le dépôt: '+key);
 const serialized=JSON.stringify(st);
 if(serialized.includes('zcztvberuihphqklhjsr')||serialized.includes('mentioncheck.toto-rina47501.workers.dev'))deny('référence production');
 const namespaces=new Set((prod.ratelimits||[]).map(x=>x.namespace_id));

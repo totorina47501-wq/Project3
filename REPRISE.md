@@ -1,5 +1,12 @@
 # Reprise MentionCheck — 6 novembre 2026
 
+## Point main et frontière Cloudflare — 9 novembre 2026 (mise à jour)
+
+- La **PR #99 est fusionnée** sur `main` : SHA `87f6244446600dddbe17642fc37308c6d8d62256`, [CI principale #366 verte](https://github.com/totorina47501-wq/Project3/actions/runs/42543040484) **à ne pas confondre avec le run de certification staging**. La certification Preview staging est attestée séparément dans le run [#42540861095](https://github.com/totorina47501-wq/Project3/actions/runs/42540861095) ; consulter l'historique détaillé pour les étapes antérieures.
+- Sur ce lot, la CI PR protège systématiquement les frontières `wrangler.staging.jsonc` et `wrangler.jsonc → previews`. Tests synthétiques de refus des références production, des services payants, des namespaces partagés et de toute clé `service_role`. Les validations sont **statiques et hors réseau** : elles ne déclenchent aucun déploiement, n'attestent ni la configuration réelle de Cloudflare ni un build production distant.
+- L'issue [#16](https://github.com/totorina47501-wq/Project3/issues/16) reste ouverte : preuve finale production, politique Supabase Auth « leaked password protection », éventuel rollback inter-version sont à distinguer des preuves staging. Ne pas déclarer le lancement commercial prêt sur une CI verte.
+
+
 ## Certification Cloudflare Preview staging — PASS le 9 novembre 2026
 
 - **Preuve réelle finale :** [GitHub Actions #42540861095](https://github.com/totorina47501-wq/Project3/actions/runs/42540861095), SUCCESS, SHA `0632cfded8c4f5958b3ffb9eb4655933736ab08b` de PR draft #99. Le token Cloudflare mis à jour est opérationnel sur **mentioncheck-staging uniquement**.

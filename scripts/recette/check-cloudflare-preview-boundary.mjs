@@ -17,7 +17,7 @@ for(const key of ['OPENAI_TEXT_ENABLED','OPENAI_VISION_ENABLED','OPENAI_AUDIO_EN
 }
 assert.equal(vars.MEDIA_RUNNER_PAUSED,'true');
 for(const key of Object.keys(vars)){
- assert.ok(!/(api_key|service_key|secret|token|password)/i.test(key),'Secret déclaré en Preview: '+key);
+ assert.ok(!/(?:api[_-]?key|service[_-]?role|service[_-]?key|anon[_-]?key|secret|token|password|credential)/i.test(key),'Secret déclaré en Preview: '+key);
 }
 for(const key of ['containers','durable_objects','kv_namespaces','r2_buckets','d1_databases',
 'queues','hyperdrive','services','vars_production'])assert.equal(config[key],undefined,
