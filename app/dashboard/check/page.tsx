@@ -9,13 +9,66 @@ import { AIRewriteDiff } from '@/components/AIRewriteDiff';
 import { AIStreamProgress, type Stage, type StageStatus } from '@/components/AIStreamProgress';
 import type { AnalysisResult, Platform } from '@/lib/ai/schemas';
 
-type StreamData = { status?: StageStatus; score?: number; message?: string };
+const stageNames: Stage[] = ['scan_text', 'scan_visual', 'scoring', 'rewriting'];
+const stageStatuses: StageStatus[] = ['running', 'complete', 'quota_exceeded', 'unavailable'];
 const platformNames: { value: Platform; name: string }[] = [
   { value: 'instagram', name: 'Instagram' },
   { value: 'tiktok', name: 'TikTok' },
   { value: 'youtube', name: 'YouTube' },
   { value: 'linkedin', name: 'LinkedIn' },
 ];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isAnalysisResult(value: unknown): value is AnalysisResult {
+  if (!isRecord(value)) return false;
+  const validViolation = (item: unknown) => isRecord(item)
+    && typeof item.code === 'string'
+    && typeof item.severity === 'string'
+    && ['low', 'medium', 'high', 'critical'].includes(item.severity)
+    && typeof item.title === 'string'
+    && typeof item.explanation === 'string'
+    && typeof item.source === 'string';
+  const validFlag = (item: unknown) => isRecord(item)
+    && typeof item.title === 'string'
+    && typeof item.explanation === 'string'
+    && typeof item.confidence === 'number'
+    && Number.isFinite(item.confidence)
+    && item.confidence >= 0
+    && item.confidence <= 1;
+  const validRewrite = value.rewrite === null || (isRecord(value.rewrite)
+    && typeof value.rewrite.rewrittenCaption === 'string'
+    && Array.isArray(value.rewrite.changes)
+    && value.rewrite.changes.every((change) => isRecord(change)
+      && typeof change.before === 'string'
+      && typeof change.after === 'string'
+      && typeof change.reason === 'string')
+    && typeof value.rewrite.confidence === 'number'
+    && Number.isFinite(value.rewrite.confidence)
+    && value.rewrite.confidence >= 0
+    && value.rewrite.confidence <= 1);
+  return typeof value.score === 'number'
+    && Number.isFinite(value.score)
+    && value.score >= 0
+    && value.score <= 100
+    && typeof value.riskLevel === 'string'
+    && ['low', 'medium', 'high', 'critical'].includes(value.riskLevel)
+    && Array.isArray(value.violations)
+    && value.violations.every(validViolation)
+    && Array.isArray(value.aiFlags)
+    && value.aiFlags.every(validFlag)
+    && validRewrite
+    && typeof value.hashSha256 === 'string'
+    && value.hashSha256.length > 0
+    && typeof value.verificationId === 'string'
+    && value.verificationId.length > 0
+    && typeof value.analysisMode === 'string'
+    && ['full', 'partial', 'rules_only'].includes(value.analysisMode)
+    && Array.isArray(value.warnings)
+    && value.warnings.every((warning) => typeof warning === 'string');
+}
 
 async function uploadImage(file: File, signal: AbortSignal) {
   const accepted = ['image/jpeg', 'image/png', 'image/webp'];
@@ -112,32 +165,78 @@ export default function CheckPage() {
       const decoder = new TextDecoder();
       let buffer = '';
       let receivedDone = false;
-      try {
-      while (true) {
-        const chunk = await reader.read();
-        if (chunk.done) break;
-        buffer += decoder.decode(chunk.value, { stream: true });
-        const blocks = buffer.split('\n\n');
+      const processBlock = (block: string) => {
+        let kind = '';
+        const payload: string[] = [];
+        for (const line of block.split(/\r\n|\n|\r/)) {
+          if (!line || line.startsWith(':')) continue;
+          const separator = line.indexOf(':');
+          const field = separator < 0 ? line : line.slice(0, separator);
+          const value = separator < 0 ? '' : line.slice(separator + 1).replace(/^ /, '');
+          if (field === 'event') kind = value;
+          if (field === 'data') payload.push(value);
+        }
+        if (!kind && payload.length === 0) return;
+        if (!kind || payload.length === 0) {
+          throw new Error('Le flux de vérification est invalide.');
+        }
+        if (!stageNames.includes(kind as Stage) && kind !== 'error' && kind !== 'done') return;
+
+        let data: unknown;
+        try {
+          data = JSON.parse(payload.join('\n')) as unknown;
+        } catch {
+          throw new Error('Le flux de vérification est invalide.');
+        }
+        if (stageNames.includes(kind as Stage)) {
+          if (!isRecord(data) || !stageStatuses.includes(data.status as StageStatus)) {
+            throw new Error('Le flux de vérification est invalide.');
+          }
+          const stage = kind as Stage;
+          setStages((previous) => ({
+            ...previous, [stage]: data.status as StageStatus,
+          }));
+        }
+        if (kind === 'error') {
+          if (!isRecord(data) || typeof data.message !== 'string' || !data.message.trim()) {
+            throw new Error('Le flux de vérification est invalide.');
+          }
+          throw new Error(data.message);
+        }
+        if (kind === 'done') {
+          if (!isAnalysisResult(data)) {
+            throw new Error('Le flux de vérification est invalide.');
+          }
+          receivedDone = true;
+          setResult(data);
+        }
+      };
+      const processBuffer = (atEnd = false) => {
+        const blocks = buffer.replace(/\r\n/g, '\n').split('\n\n');
         buffer = blocks.pop() ?? '';
         for (const block of blocks) {
-          const kind = block.match(/^event: (.+)$/m)?.[1];
-          const payload = block.match(/^data: (.+)$/m)?.[1];
-          if (!kind || !payload) continue;
-          const data = JSON.parse(payload) as StreamData & AnalysisResult;
-          if (['scan_text', 'scan_visual', 'scoring', 'rewriting'].includes(kind)) {
-            const stage = kind as Stage;
-            setStages((previous) => ({
-              ...previous, [stage]: data.status ?? 'complete',
-            }));
-          }
-          if (kind === 'error') throw new Error(data.message ?? 'Échec de l analyse.');
-          if (kind === 'done') {
-            receivedDone = true;
-            setResult(data);
-          }
+          processBlock(block);
+          if (receivedDone) return;
         }
-      }
-      if (!receivedDone) throw new Error('Le flux a été interrompu avant la fin du check.');
+        if (atEnd && buffer) {
+          const finalBlock = buffer;
+          buffer = '';
+          processBlock(finalBlock);
+        }
+      };
+      try {
+        while (true) {
+          const chunk = await reader.read();
+          if (chunk.done) {
+            buffer += decoder.decode();
+            processBuffer(true);
+            break;
+          }
+          buffer += decoder.decode(chunk.value, { stream: true });
+          processBuffer();
+          if (receivedDone) break;
+        }
+        if (!receivedDone) throw new Error('Le flux a été interrompu avant la fin du check.');
       } finally {
         await reader.cancel().catch(() => {});
         reader.releaseLock();
