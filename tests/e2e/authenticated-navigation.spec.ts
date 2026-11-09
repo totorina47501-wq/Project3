@@ -34,13 +34,13 @@ test('la navigation mobile authentifiée est accessible au clavier hors ligne', 
     if (url.origin === new URL(baseURL!).origin) return route.continue();
     throw new Error(`Requête externe interdite : ${url.origin}`);
   });
-  await page.setViewportSize({ width: 360, height: 740 });
-
   const session = await page.request.get('/api/mia/conversations');
   expect(session.status()).toBe(200);
+  await page.setViewportSize({ width: 360, height: 740 });
   await page.goto('/dashboard');
   const navigation = page.getByRole('navigation', { name: 'Navigation mobile' });
   await expect(navigation).toBeVisible();
+  const secondaryMenuButton = page.getByRole('button', { name: 'Menu' });
   const destinations = [
     { name: 'Cockpit', path: '/dashboard' },
     { name: 'Check', path: '/dashboard/check' },
@@ -48,6 +48,38 @@ test('la navigation mobile authentifiée est accessible au clavier hors ligne', 
     { name: 'Médias', path: '/dashboard/media' },
     { name: 'Archives', path: '/dashboard/archive' },
   ];
+
+  for (const width of [320, 360, 390]) {
+    await page.setViewportSize({ width, height: 740 });
+    await expect(secondaryMenuButton).toBeVisible();
+    for (const target of [secondaryMenuButton, ...await navigation.getByRole('link').all()]) {
+      const size = await target.evaluate((element) => {
+        const { width: targetWidth, height } = element.getBoundingClientRect();
+        return { width: targetWidth, height };
+      });
+      expect(size.width).toBeGreaterThanOrEqual(44);
+      expect(size.height).toBeGreaterThanOrEqual(44);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await secondaryMenuButton.click();
+    const secondaryNavigation = page.getByRole('navigation', { name: 'Navigation secondaire' });
+    await expect(secondaryNavigation).toBeVisible();
+    for (const target of [
+      ...await secondaryNavigation.getByRole('link').all(),
+      await secondaryNavigation.getByRole('button', { name: 'Déconnexion', exact: true }),
+    ]) {
+      const size = await target.evaluate((element) => {
+        const { width: targetWidth, height } = element.getBoundingClientRect();
+        return { width: targetWidth, height };
+      });
+      expect(size.width).toBeGreaterThanOrEqual(44);
+      expect(size.height).toBeGreaterThanOrEqual(44);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(secondaryMenuButton).toHaveAttribute('aria-expanded', 'false');
+  }
+  await page.setViewportSize({ width: 360, height: 740 });
 
   for (const [index, { name, path }] of destinations.entries()) {
     const link = navigation.getByRole('link', { name, exact: true });
@@ -76,6 +108,48 @@ test('la navigation mobile authentifiée est accessible au clavier hors ligne', 
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(new URL('/dashboard/archive', baseURL!).toString());
   await expect(navigation.getByRole('link', { name: 'Archives', exact: true })).toHaveAttribute('aria-current', 'page');
+
+  await page.goto('/dashboard');
+  await expect(secondaryMenuButton).toHaveAttribute('aria-expanded', 'false');
+  await expect(secondaryMenuButton).toHaveAttribute('aria-controls', 'dashboard-secondary-navigation');
+  const secondaryNavigation = page.getByRole('navigation', { name: 'Navigation secondaire' });
+  await secondaryMenuButton.click();
+  await expect(secondaryMenuButton).toHaveAttribute('aria-expanded', 'true');
+  await expect(secondaryNavigation).toBeVisible();
+  await secondaryMenuButton.click();
+  await expect(secondaryMenuButton).toHaveAttribute('aria-expanded', 'false');
+  await secondaryMenuButton.focus();
+  await page.keyboard.press('Enter');
+  await expect(secondaryMenuButton).toHaveAttribute('aria-expanded', 'true');
+
+  for (const name of ['Collaborations', 'Studio', 'Paramètres', 'Déconnexion']) {
+    await page.keyboard.press('Tab');
+    const target = secondaryNavigation.getByRole(name === 'Déconnexion' ? 'button' : 'link', { name, exact: true });
+    await expect(target).toBeFocused();
+    if (name === 'Collaborations') await expect(target).toHaveCSS('outline-style', 'solid');
+  }
+  await page.keyboard.press('Escape');
+  await expect(secondaryMenuButton).toHaveAttribute('aria-expanded', 'false');
+  await expect(secondaryMenuButton).toBeFocused();
+
+  for (const { name, path } of [
+    { name: 'Collaborations', path: '/dashboard/brand-deals' },
+    { name: 'Studio', path: '/dashboard/studio' },
+    { name: 'Paramètres', path: '/dashboard/settings' },
+  ]) {
+    await secondaryMenuButton.click();
+    await secondaryNavigation.getByRole('link', { name, exact: true }).click();
+    await expect(page).toHaveURL(new URL(path, baseURL!).toString());
+    await expect(secondaryMenuButton).toHaveAttribute('aria-expanded', 'false');
+  }
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(secondaryMenuButton).toBeHidden();
+  await expect(page.getByRole('link', { name: 'Collaborations', exact: true })).toBeVisible();
+  await expect(navigation).toBeHidden();
+  await page.setViewportSize({ width: 360, height: 740 });
+  await secondaryMenuButton.click();
+  await secondaryNavigation.getByRole('button', { name: 'Déconnexion', exact: true }).click();
+  await expect(page).toHaveURL(/\/login(?:\?|$)/);
 });
 
 test('archives PDF : propriétaire autorisé et compte B refusé hors ligne', async ({ browser, request, baseURL }) => {

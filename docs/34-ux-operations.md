@@ -15,6 +15,13 @@ sont exclus. Les noms d’événements et codes sont bornés ; les retours aux
 utilisateurs n’exposent pas d’erreur SDK. Cette frontière est utilisée dans
 les échecs d’authentification, de PDF et d’IA existants.
 
+## Navigation secondaire du dashboard mobile
+
+Sur mobile, Collaborations, Studio, Paramètres et Déconnexion sont regroupés
+dans le bouton « Menu » de l’en-tête. Le panneau expose son état ouvert/fermé,
+se ferme avec Échap ou après une navigation, et garde des cibles tactiles d’au
+moins 44 px. La navigation principale reste dans la barre inférieure existante.
+
 ## Restauration locale vérifiable
 
 1. Sauvegarder hors Git les seuls lots locaux nécessaires dans un répertoire
