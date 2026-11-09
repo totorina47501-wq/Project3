@@ -36,16 +36,33 @@ try{
  console.log('STAGING_VERSIONED_URLS_TEMPORARY_ENABLED');
  const suffix='-mentioncheck-staging.toto-rina47501.workers.dev';
  // Cloudflare docs: <VERSION_PREFIX>-<WORKER_NAME>.<SUBDOMAIN>.workers.dev.
+ let apiUrls=[];
+ try{
+  const versionData=await cf('/workers/workers/'+worker+'/versions/'+version);
+  apiUrls=Array.isArray(versionData?.urls)?versionData.urls:[];
+  console.log('STAGING_VERSION_METADATA_URL_COUNT='+apiUrls.length);
+ }catch(e){console.log('STAGING_VERSION_METADATA_READ_UNAVAILABLE');}
  const prefixes=[version.slice(0,8),version.replaceAll('-',''),version];
+ const candidates=[...apiUrls.map(s=>String(s).replace(/\\/$/,'')+'/login'),
+  ...prefixes.map(prefix=>'https://'+prefix+suffix+'/login')];
  let passed=false;
- for(const prefix of prefixes){
-  const url='https://'+prefix+suffix+'/login';
-  try{
-   const resp=await fetch(url,{redirect:'manual',signal:AbortSignal.timeout(8500)});
-   if(resp.status!==200)continue;
-   const body=await resp.text();
-   if(/MentionCheck/i.test(body)){passed=true;console.log('STAGING_VERSIONED_LOGIN_HTTP_PASS prefix_len='+prefix.length);break;}
-  }catch{}
+ for(let attempt=0;attempt<4&&!passed;attempt++){
+  for(const url of candidates){
+   let u;
+   try{u=new URL(url);}catch{continue;}
+   // Reject any worker URL that is not the staging Worker.
+   if(u.protocol!=='https:'||!u.hostname.includes('-mentioncheck-staging.')||
+      !u.hostname.endsWith('.workers.dev'))continue;
+   try{
+    const resp=await fetch(u,{redirect:'manual',signal:AbortSignal.timeout(8500)});
+    console.log('STAGING_VERSION_URL_CHECK status='+resp.status+' attempt='+attempt+
+      ' host_prefix_len='+u.hostname.split('-mentioncheck-staging.')[0].length);
+    if(resp.status!==200)continue;
+    const body=await resp.text();
+    if(/MentionCheck/i.test(body)){passed=true;console.log('STAGING_VERSIONED_LOGIN_HTTP_PASS');break;}
+   }catch{console.log('STAGING_VERSION_URL_CHECK_NETWORK attempt='+attempt);}
+  }
+  if(!passed&&attempt<3)await new Promise(resolve=>setTimeout(resolve,3000));
  }
  if(!passed)throw Error('STAGING_VERSIONED_URL_SMOKE_NOT_CONFIRMED');
  const main=await fetch(expected,{signal:AbortSignal.timeout(14000)});
