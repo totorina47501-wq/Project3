@@ -24,6 +24,25 @@ function events(value: ReturnType<typeof result>) {
   return `event: scan_text\ndata: {"status":"complete"}\n\nevent: scoring\ndata: {"status":"complete"}\n\nevent: done\ndata: ${JSON.stringify(value)}\n\n`;
 }
 
+async function mockCheckChunks(page: import('@playwright/test').Page, responses: string[][]) {
+  await page.addInitScript((attempts) => {
+    const originalFetch = window.fetch.bind(window);
+    let checkAttempt = 0;
+    window.fetch = async (input, init) => {
+      const url = new URL(input instanceof Request ? input.url : String(input), window.location.href);
+      if (url.pathname !== '/api/check') return originalFetch(input, init);
+      const chunks = attempts[Math.min(checkAttempt++, attempts.length - 1)] ?? [];
+      const body = new ReadableStream({
+        start(controller) {
+          for (const chunk of chunks) controller.enqueue(new TextEncoder().encode(chunk));
+          controller.close();
+        },
+      });
+      return new Response(body, { headers: { 'Content-Type': 'text/event-stream' } });
+    };
+  }, responses);
+}
+
 test('le check mobile choisit sans IA et explique le score provisoire', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 740 });
   let submitted: Record<string, unknown> | undefined;
@@ -43,6 +62,39 @@ test('le check mobile choisit sans IA et explique le score provisoire', async ({
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
+test('le flux Check accepte CRLF, chunks fractionnés et un done final à EOF', async ({ page }) => {
+  const finalEvent = `event: done\r\ndata: ${JSON.stringify(result())}`;
+  const doneDataPrefix = 'event: done\r\ndata: ';
+  await mockCheckChunks(page, [[
+    'event: scan_text\r',
+    '\ndata: {"status":"complete"}\r\n\r\nevent: scoring\r\ndata: {"status":"complete"}\r\n\r\n',
+    doneDataPrefix,
+    finalEvent.slice(doneDataPrefix.length),
+  ]]);
+  await page.goto('/dashboard/check');
+  await page.getByLabel('Légende sponsorisée').fill('Ma légende fictive.');
+  await page.getByRole('button', { name: 'Vérifier sans IA' }).click();
+  await expect(page.getByRole('heading', { name: 'Contrôle automatique des mentions terminé' })).toBeVisible();
+  await expect(page.getByText('Analyse du texte')).toBeVisible();
+  await expect(page.getByText('Calcul du score')).toBeVisible();
+  expect(finalEvent).not.toContain('\r\n\r\n');
+});
+
+test('un événement malformé est masqué et une nouvelle tentative peut réussir', async ({ page }) => {
+  await mockCheckChunks(page, [
+    ['event: done\ndata: {"score":90,"internal":"private'],
+    [events(result())],
+  ]);
+  await page.goto('/dashboard/check');
+  await page.getByLabel('Légende sponsorisée').fill('Ma légende fictive.');
+  await page.getByRole('button', { name: 'Vérifier sans IA' }).click();
+  await expect(page.getByRole('main').getByRole('alert')).toHaveText('Le flux de vérification est invalide.');
+  await expect(page.getByText('Score de conformité estimé')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Vérifier sans IA' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Vérifier sans IA' }).click();
+  await expect(page.getByRole('heading', { name: 'Contrôle automatique des mentions terminé' })).toBeVisible();
+});
+
 test('un repli après erreur IA ne prétend pas être un choix sans IA', async ({ page }) => {
   await page.route('**/api/check', async (route) => {
     await route.fulfill({ contentType: 'text/event-stream', body: events(result()) });
@@ -56,8 +108,12 @@ test('un repli après erreur IA ne prétend pas être un choix sans IA', async (
 });
 
 test('un flux interrompu rend le formulaire utilisable sans afficher de score', async ({ page }) => {
+  let attempts = 0;
   await page.route('**/api/check', async (route) => {
-    await route.fulfill({ contentType: 'text/event-stream', body: 'event: scan_text\ndata: {"status":"running"}\n\n' });
+    attempts += 1;
+    await route.fulfill({ contentType: 'text/event-stream', body: attempts === 1
+      ? 'event: scan_text\ndata: {"status":"running"}\n\n'
+      : events(result()) });
   });
   await page.goto('/dashboard/check');
   await page.getByLabel('Légende sponsorisée').fill('Ma légende fictive.');
@@ -65,6 +121,8 @@ test('un flux interrompu rend le formulaire utilisable sans afficher de score', 
   await expect(page.getByRole('main').getByRole('alert')).toContainText('interrompu');
   await expect(page.getByRole('button', { name: 'Vérifier sans IA' })).toBeEnabled();
   await expect(page.getByText('Score de conformité estimé')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Vérifier sans IA' }).click();
+  await expect(page.getByRole('heading', { name: 'Contrôle automatique des mentions terminé' })).toBeVisible();
 });
 
 test('arrêter l’attente du check restaure les contrôles', async ({ page }) => {
