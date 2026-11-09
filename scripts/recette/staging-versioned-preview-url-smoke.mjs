@@ -43,7 +43,7 @@ try{
   console.log('STAGING_VERSION_METADATA_URL_COUNT='+apiUrls.length);
  }catch(e){console.log('STAGING_VERSION_METADATA_READ_UNAVAILABLE');}
  const prefixes=[version.slice(0,8),version.replaceAll('-',''),version];
- const candidates=[...apiUrls.map(s=>String(s).replace(/\\/$/,'')+'/login'),
+ const candidates=[...apiUrls.map(value=>String(value).replace(/[/]$/,'')+'/login'),
   ...prefixes.map(prefix=>'https://'+prefix+suffix+'/login')];
  let passed=false;
  for(let attempt=0;attempt<4&&!passed;attempt++){
