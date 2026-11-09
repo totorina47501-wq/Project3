@@ -29,3 +29,12 @@
 La restauration réelle du schéma staging (run #42528880867), l'Auth A/B (run #42519296878) et le rollback staging entre versions équivalentes (run #42522596101) restent des preuves PASS indépendantes. Issue #16 **ouverte**, label `release:evidence-required`. Aucune dépense IA payante.
 
 **Verdict : Cloudflare Preview STAGING PARTIEL / nettoyage bloqué par HTTP 403, certification globale toujours ouverte.**
+
+## Addendum : contrôle API confirmé après nettoyage
+
+- La Preview temporaire `qa-cert-11cba5d3` a été supprimée dans Cloudflare puis son absence **vérifiée** : [run #42534677039](https://github.com/totorina47501-wq/Project3/actions/runs/42534677039), `STAGING_PREVIEW_INVENTORY_OK total=0 qa=0`. L'ancien statut d'orphelin dans les paragraphes précédents n'est plus actuel.
+- L'activation et la désactivation des Preview URLs de `mentioncheck-staging` via POST Cloudflare ont été testées avec succès puis rétablies à `previews_enabled=false` : [run #42537467003](https://github.com/totorina47501-wq/Project3/actions/runs/42537467003).
+- Le jeton CI reçoit HTTP **403** à une requête DELETE sur UUID aléatoire inexistant lorsque l'inventaire est vide. Aucun objet réel supprimé, aucune nouvelle Preview créée : [run #42537592547](https://github.com/totorina47501-wq/Project3/actions/runs/42537592547). Le script a restauré le réglage désactivé.
+- Les URLs de versions existantes n'étaient pas exposées dans la réponse metadata Cloudflare et les candidates ont renvoyé HTTP **404**. Le test a rétabli les URLs désactivées et confirmé un inventaire vide : [run #42537924478](https://github.com/totorina47501-wq/Project3/actions/runs/42537924478).
+- Verdict : **activation API validée ; suppression autorisée et preview HTTP non validées**. Ne pas créer de Preview jetable tant que le jeton CI n'a pas un droit de suppression limité à staging. Preview URLs publiques par défaut ; garder la désactivation après les tests.
+- Cloudflare production et `main` n'ont pas été modifiés. La PR #99 reste draft, l'issue #16 ouverte, aucun appel OpenAI payant.

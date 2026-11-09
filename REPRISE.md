@@ -1,6 +1,13 @@
 # Reprise MentionCheck — 6 novembre 2026
 
-## Validation Cloudflare Preview — 9 novembre 2026
+## Statut des Previews Cloudflare — 9 novembre 2026
+
+- **Preview QA supprimée**, inventaire vérifié : `STAGING_PREVIEW_INVENTORY_OK total=0 qa=0` ([run #42534677039](https://github.com/totorina47501-wq/Project3/actions/runs/42534677039)).
+- **Activation et désactivation par API réussies**, réglage initial `previews_enabled=false` restauré ([run #42537467003](https://github.com/totorina47501-wq/Project3/actions/runs/42537467003)).
+- **Droit de suppression manquant** : DELETE d'un UUID aléatoire inexistant, inventaire initial vide, refus HTTP 403 ([run #42537592547](https://github.com/totorina47501-wq/Project3/actions/runs/42537592547)). Aucune Preview créée.
+- **URLs versionnées non validées** : metadata sans URL ; réponses HTTP 404 malgré activation temporaire, réglage rétabli et inventaire vide ([run #42537924478](https://github.com/totorina47501-wq/Project3/actions/runs/42537924478)).
+- **À faire** : limiter à `mentioncheck-staging` un jeton Cloudflare autorisé à supprimer les Previews, puis exécuter un cycle création/smoke/suppression. Ne pas étendre les autorisations au Worker production. PR #99 draft, issue #16 ouverte.
+## Validation Cloudflare Preview — 9 novembre 2026 (historique, Preview supprimée depuis)
 
 Le correctif `previews` de la PR #99 a passé Next.js, OpenNext et `wrangler deploy --dry-run` sur le Worker staging. La Preview temporaire `qa-cert-11cba5d3` a été créée mais sans URL car `previews_enabled=false`. Le nettoyage ciblé a échoué en **HTTP 403**, donc cette Preview QA est encore présente (sans URL publique). Un garde-fou empêche de nouvelles créations tant que les URLs staging restent désactivées. **À traiter via Cloudflare staging uniquement** : supprimer la Preview par son nom/ID, puis choisir si les URLs de preview doivent être activées. Production toujours inchangée ; garder la PR #99 draft et l'issue #16 ouverte. [Preuves](docs/receipts/2026-11-09-cloudflare-preview-diagnostic.md).
 
