@@ -26,3 +26,10 @@ Statut : plan non déployé.
 - Playwright vérifie le canonical de l’accueil, son absence sur les tarifs, les règles robots et l’unicité de l’URL du sitemap.
 - Les contrôles clavier/mobile existants restent couverts par `tests/e2e/authenticated-navigation.spec.ts` ; aucune refonte UI n’est requise par cet audit.
 - Le build local de cette révision mesure l’accueil à 185 B et 106 kB de JavaScript au premier chargement (103 kB partagés). Aucun défaut de bundle supplémentaire n’est établi ; aucun code client n’a été modifié.
+
+## Préparation éditoriale et vérification landing — 9 novembre 2026
+
+- `docs/marketing/guide-mentions-commerciales-influence.md` est un brouillon interne daté, fondé sur des sources officielles et explicitement soumis à validation juridique avant toute diffusion.
+- Le guide n’est pas publié, n’est pas lié depuis la landing et ne constitue ni un avis juridique ni une certification de conformité.
+- Les tests Playwright existants de landing vérifient les CTA, le caractère indicatif des tarifs, l’absence de collecte et de requêtes tierces sur l’accueil, la navigation clavier/mobile et les liens légaux.
+- Aucun formulaire de prospect, tracker, intégration SaaS Factory, attribution ou CRM n’est ajouté ; le canonical et le sitemap existants restent inchangés.
