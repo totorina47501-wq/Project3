@@ -267,3 +267,10 @@ Après `npm run mia:review`, un relecteur vérifie dans la source officielle les
 ## Phase 4 : plan d'import en lecture seule
 
 `scripts/mia/plan-approved-import.mjs` compare un manifeste approuvé à un instantané explicite de `law_documents` fourni par l'opérateur. `planApprovedImport(manifest, existing)` produit uniquement un diff `insert`, `update`, `unchanged`, avec indication des embeddings nécessaires. Les références inchangées ne doivent jamais être réindexées. La source URL d'une référence existante est immuable ; une divergence exige une revue manuelle. La validation limite volontairement les sources à Légifrance et economie.gouv.fr, comme `validatedLawSource` dans Mia ; les découvertes CNIL et EUR-Lex restent en attente d'une décision explicite sur les citations. Aucun accès à Supabase, aucune migration ni écriture distante dans cette phase. Les limites de cinq documents de l'indexeur et trente documents de la recherche vectorielle restent à lever avant tout import effectif. Tests : `node --test scripts/mia/*.test.mjs`.
+
+## Brouillons Mia par discussion — correctif du 9 novembre 2026
+
+- L'éditeur garde un brouillon **par conversation** et un brouillon distinct pour la nouvelle discussion, dans la mémoire du composant uniquement. Le passage d'un fil à un autre ne propose plus le texte du mauvais fil. Aucun brouillon n'est enregistré côté serveur, conservé après rechargement ou transmis à un fournisseur.
+- En cas d'échec d'envoi, le brouillon reste disponible dans son fil ; supprimer une conversation efface aussi son brouillon local. Les questions suggérées replacent le focus dans la saisie pour une navigation clavier fluide.
+- Le défilement automatique suit les messages dans le panneau de discussion, sans forcer le déplacement de la page. Deux scénarios Playwright hors ligne ont été ajoutés à `tests/e2e/check-chat-offline.spec.ts` ; aucun appel IA, migration, quota ou déploiement n'est modifié.
+- Les scénarios testent uniquement l'interface avec la fixture locale. Ils ne prouvent pas une session distante ni une réponse OpenAI en production.

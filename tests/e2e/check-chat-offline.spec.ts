@@ -126,3 +126,46 @@ test('arrêter l’attente de Mia conserve le brouillon', async ({ page }) => {
   await expect(page.getByLabel('Ta question')).toHaveValue('Comment déclarer une publicité ?');
   await expect(page.getByRole('button', { name: 'Envoyer à Mia' })).toBeEnabled();
 });
+
+
+test('Mia isole les brouillons entre deux discussions et une nouvelle discussion', async ({ page }) => {
+  const conversations = [
+    { id: '11111111-1111-4111-8111-111111111111', verificationId: null,
+      updatedAt: '2026-11-08T10:00:00.000Z',
+      messages: [{ role: 'user', content: 'Question Alpha sur publicité' },
+        { role: 'assistant', content: 'Réponse Alpha.' }] },
+    { id: '22222222-2222-4222-8222-222222222222', verificationId: null,
+      updatedAt: '2026-11-08T11:00:00.000Z',
+      messages: [{ role: 'user', content: 'Question Beta sur partenariat' },
+        { role: 'assistant', content: 'Réponse Beta.' }] },
+  ];
+  await page.route('**/api/mia/conversations', async route =>
+    route.fulfill({ json: { conversations } }));
+  await page.goto('/dashboard/mia');
+  const input = page.getByLabel('Ta question');
+  await page.getByRole('button', { name: /Question Alpha sur publicité/ }).click();
+  await input.fill('Mon brouillon Alpha');
+  await page.getByRole('button', { name: /Question Beta sur partenariat/ }).click();
+  await expect(input).toHaveValue('');
+  await input.fill('Mon brouillon Beta');
+  await page.getByRole('button', { name: /Question Alpha sur publicité/ }).click();
+  await expect(input).toHaveValue('Mon brouillon Alpha');
+  await page.getByRole('button', { name: 'Nouvelle discussion' }).click();
+  await expect(input).toHaveValue('');
+  await input.fill('Mon brouillon sans discussion');
+  await page.getByRole('button', { name: /Question Beta sur partenariat/ }).click();
+  await expect(input).toHaveValue('Mon brouillon Beta');
+  await page.getByRole('button', { name: 'Nouvelle discussion' }).click();
+  await expect(input).toHaveValue('Mon brouillon sans discussion');
+});
+
+test('une suggestion Mia remplit le brouillon et redonne le focus au champ', async ({ page }) => {
+  await page.route('**/api/mia/conversations', async route =>
+    route.fulfill({ json: { conversations: [] } }));
+  await page.goto('/dashboard/mia');
+  await page.getByRole('button', { name: 'Comment signaler un partenariat rémunéré ?' }).click();
+  await expect(page.getByLabel('Ta question')).toHaveValue('Comment signaler un partenariat rémunéré ?');
+  await expect(page.getByLabel('Ta question')).toBeFocused();
+  await page.getByRole('button', { name: 'Nouvelle discussion' }).click();
+  await expect(page.getByLabel('Ta question')).toHaveValue('');
+});
