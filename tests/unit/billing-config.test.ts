@@ -65,6 +65,22 @@ describe('Commercialisation strictement fermée par défaut',()=>{
     }
     expect(billingGate({...validLive,OPENAI_PAUSED:'true'}).enabled).toBe(false);
   });
+  it('accepte une clé Stripe RESTREINTE rk_live_ uniquement si toutes les portes commerciales sont attestées',()=>{
+    expect(billingGate({...validLive,STRIPE_SECRET_KEY:'rk_live_fixture'}))
+      .toMatchObject({enabled:true,mode:'live'});
+    expect(billingGate({...validLive,STRIPE_SECRET_KEY:'rk_live_fixture',BILLING_ENABLED:'false'}).enabled).toBe(false);
+    expect(billingGate({...validLive,STRIPE_SECRET_KEY:'rk_live_fixture',STRIPE_LIVE_APPROVED:'false'}).enabled).toBe(false);
+    expect(billingGate({...validLive,STRIPE_SECRET_KEY:'rk_live_fixture',STRIPE_WEBHOOK_SECRET:''},'webhook').enabled).toBe(false);
+    expect(billingGate({...validLive,STRIPE_SECRET_KEY:'rk_test_fixture'}).enabled).toBe(false);
+    expect(billingGate({...validLive,STRIPE_SECRET_KEY:'rk_live_fixture',STRIPE_LIVE_LEGAL_REGISTRATION:''}).enabled).toBe(false);
+  });
+  it('accepte une clé restreinte rk_test_ uniquement en sandbox et refuse un mélange de modes',()=>{
+    expect(billingGate({...testEnv,STRIPE_SECRET_KEY:'rk_test_fixture'}))
+      .toMatchObject({enabled:true,mode:'test'});
+    expect(billingGate({...testEnv,STRIPE_SECRET_KEY:'rk_live_fixture'}).enabled).toBe(false);
+    expect(billingGate({...testEnv,STRIPE_MODE:'live',STRIPE_SECRET_KEY:'rk_test_fixture'}).enabled).toBe(false);
+    expect(billingGate({...testEnv,STRIPE_SECRET_KEY:'rk_test_fixture',STRIPE_WEBHOOK_SECRET:''}).enabled).toBe(false);
+  });
   it('n’autorise live qu’avec tous les prérequis expressément attestés',()=>{
     expect(billingGate(validLive)).toMatchObject({enabled:true,mode:'live',priceSolo:'price_C3'});
     expect(billingGate({...validLive,BILLING_ENABLED:'false'}).enabled).toBe(false);

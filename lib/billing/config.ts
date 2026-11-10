@@ -35,9 +35,9 @@ export function billingGate(env:BillingEnv, purpose:'checkout'|'webhook'='checko
     : env.BILLING_ENABLED==='true';
   if(!authorized) return disabled('Paiements désactivés : lancement commercial non autorisé.');
   let mode:BillingMode;
-  if(env.STRIPE_MODE==='test' && env.STRIPE_SECRET_KEY?.startsWith('sk_test_')) {
+  if(env.STRIPE_MODE==='test' && /^(?:sk|rk)_test_[A-Za-z0-9_]+$/.test(env.STRIPE_SECRET_KEY ?? '')) {
     mode='test';
-  } else if(env.STRIPE_MODE==='live' && env.STRIPE_SECRET_KEY?.startsWith('sk_live_')) {
+  } else if(env.STRIPE_MODE==='live' && /^(?:sk|rk)_live_[A-Za-z0-9_]+$/.test(env.STRIPE_SECRET_KEY ?? '')) {
     // Un SIREN (9 chiffres) ou un SIRET (14 chiffres) vérifié est exigé pour le lancement FR.
     if(env.STRIPE_LIVE_APPROVED!=='true' ||
        !/^(?:[0-9]{9}|[0-9]{14})$/.test(env.STRIPE_LIVE_LEGAL_REGISTRATION??'') ||
