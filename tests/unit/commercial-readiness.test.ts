@@ -48,7 +48,7 @@ describe('Préparation commerciale sans activation ni divulgation', () => {
     expect(result.canOpenCommercial).toBe(false);
     expect(result.capabilities.billing).toBe('disabled');
     expect(result.blockers.map(blocker => blocker.code)).toEqual(expect.arrayContaining([
-      'BILLING_LIVE_UNSUPPORTED', 'BILLING_WEBHOOK_REVIEW', 'PERSONAL_DATA_ERASURE_REVIEW',
+      'BILLING_LIVE_NOT_APPROVED', 'BILLING_CARD_PAYMENT_TEST_MISSING', 'PERSONAL_DATA_ERASURE_REVIEW',
     ]));
     expect(complete).toEqual(before);
     expect(assessCommercialReadiness(complete)).toEqual(result);

@@ -212,3 +212,31 @@ Résultat local : **8 tests réussis**.
 ## Complément du 6 novembre — atomicité
 
 La limitation transactionnelle décrite plus haut est corrigée dans la migration `20261105122000_billing_atomic_sync.sql` et le webhook utilise ce RPC service-only. Le verrou du profil sérialise abonnement et droits dans une transaction. Les anciennes souscriptions, dates d'événement périmées et résurrections d'abonnements annulés sont refusées. Les lignes historiques sans date de création fournisseur nécessitent une réconciliation explicite avant remplacement : aucune date n'est inventée. SQL testé exclusivement sur PostgreSQL local ; facturation toujours désactivée.
+
+## Complément Stripe Sandbox — 10 novembre 2026
+
+Catalogue de test vérifié dans le Sandbox `acct_1UZzebCZ5rRirUf6` : Solo 9 €, Pro 19 €, Studio 49 € par mois, prix inclusifs
+et `livemode=false`. Le portail de test est configuré. Les références sont
+isolées dans `wrangler.staging.jsonc`, où `BILLING_ENABLED=false` demeure.
+La recette distante, la livraison des webhooks, les secrets Cloudflare et
+l'immatriculation fiscale réelle ne sont pas attestés. Aucune société n'est
+créée à ce jour ; encaissement commercial interdit.
+Procédure et configuration exacte : [Stripe Sandbox](60-stripe-sandbox-runbook.md).
+## Préparation activation live — 10 novembre 2026
+
+Le code proposé dans PR #114 prépare un mode live mais le refuse tant que
+l'immatriculation SIREN/SIRET, la vérification fiscale, les CGV publiées,
+l'E2E signé et l'approbation de lancement ne sont pas explicitement attestés
+dans le Worker de production. **Aucun de ces prérequis n'est déclaré accompli**.
+Le Sandbox Stripe et les tests CI ne prouvent pas l'activation commerciale.
+Guide précis : `docs/60-stripe-sandbox-runbook.md`.
+
+## État certifié Stripe, mise à jour du 10 novembre 2026
+
+Les affirmations plus anciennes « live non pris en charge » ou « webhook non
+certifié » dans ce fichier décrivaient l'état initial et non la version de
+la PR #114. Le code actuel prépare un mode live **sous validations** et les
+webhooks signés, le Checkout authentifié sans carte et le portail Sandbox sont
+validés sur staging. Une vraie transaction par carte de test, les règles de
+rétractation, l'immatriculation et l'activation des services IA restent à
+valider. Voir [dossier de lancement](61-dossier-lancement-commercial-2026.md).

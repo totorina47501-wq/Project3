@@ -105,3 +105,25 @@ describe('Webhooks Stripe isolés du fournisseur', () => {
     expect(mocks.stripe).not.toHaveBeenCalled();
   });
 });
+it('refuse un événement test lorsque les prérequis live sont attestés', async()=>{
+  for(const [name,value] of Object.entries({
+    STRIPE_MODE:'live',STRIPE_SECRET_KEY:'sk_live_fixture',
+    STRIPE_LIVE_APPROVED:'true',STRIPE_LIVE_LEGAL_REGISTRATION:'123456789',
+    STRIPE_LIVE_TAX_REVIEW:'approved',STRIPE_LIVE_TERMS_REVIEW:'approved',
+    STRIPE_LIVE_E2E_REVIEW:'passed',
+    OPENAI_PAUSED:'false',OPENAI_TEXT_ENABLED:'true',OPENAI_VISION_ENABLED:'true',OPENAI_API_KEY:'sk-proj-fixture',
+    NEXT_PUBLIC_APP_URL:'https://mentioncheck.toto-rina47501.workers.dev'
+  }))vi.stubEnv(name,value);
+  const response=await POST(request());
+  expect(response.status).toBe(400);
+  expect(mocks.admin).not.toHaveBeenCalled();
+});
+
+it('accepte un événement Sandbox signé avec le Checkout coupé et le webhook ouvert',async()=>{
+  vi.stubEnv('BILLING_ENABLED','false');
+  vi.stubEnv('STRIPE_WEBHOOK_ENABLED','true');
+  const response=await POST(request());
+  expect(response.status).toBe(200);
+  expect(mocks.construct).toHaveBeenCalledTimes(1);
+  expect(writes.find(x=>x.table==='atomic_rpc')).toMatchObject({values:{p_subscription:'sub_current'}});
+});

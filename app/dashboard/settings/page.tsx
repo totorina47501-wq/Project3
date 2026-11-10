@@ -7,15 +7,27 @@ import { SocialAccounts } from '@/components/SocialAccounts';
 import { AIPreferences } from '@/components/AIPreferences';
 import { SOCIAL_COLUMNS, SOCIAL_PAGE_SIZE, type SocialAccount } from '@/lib/social/model';
 import { toneSchema } from '@/lib/ai/schemas';
+import { subscriptionAccessTier } from '@/lib/billing/events';
+import { planEntitlements } from '@/lib/billing/plans';
+import { BillingPortal } from '@/components/BillingPortal';
+import { billingGate } from '@/lib/billing/config';
 
 export const dynamic = 'force-dynamic';
 export default async function SettingsPage() {
   const supabase = await createServerSupabase();
   const ai = openaiReadiness(process.env);
+  const stripe = billingGate(process.env);
   const { data: authData } = await supabase.auth.getUser();
   const isMiaAdmin = Boolean(authData.user && (process.env.MIA_ADMIN_USER_IDS ?? '').split(',').map(v => v.trim()).includes(authData.user.id));
   const { data: userData, error } = await supabase.from('users')
-    .select('id,plan,ai_training_opt_in,created_at').single();
+    .select('id,plan,ai_training_opt_in,created_at,stripe_customer_id').single();
+  const { data: subscription, error: subscriptionError } = userData
+    ? await supabase.from('subscriptions')
+      .select('stripe_subscription_id,plan,status,current_period_end')
+      .eq('user_id', userData.id).maybeSingle()
+    : { data:null, error:null };
+  const tier = subscriptionError ? null : subscriptionAccessTier(subscription);
+  const rights = tier ? planEntitlements(tier) : null;
   const { data: usage, error: usageError } = await supabase.from('usage_monthly')
     .select('checks_used,rewrites_used,mia_messages_used,period_start')
     .order('period_start', { ascending:false }).limit(1).maybeSingle();
@@ -39,24 +51,31 @@ export default async function SettingsPage() {
     </p> : <>
       <section className="rounded-2xl border border-slate-200 bg-white p-6">
         <h2 className="font-heading text-xl font-bold">Mon abonnement actuel</h2>
-        <p className="mt-3 text-lg font-semibold capitalize">{userData.plan}</p>
-        <p className="mt-1 text-sm text-slate-500">Les paiements ne sont pas encore activés.</p>
+        <p className="mt-3 text-lg font-semibold">{tier === null ? 'Statut indisponible' : tier === 'free' ? 'Gratuit' : tier === 'solo' ? 'Solo (abonnement test)' : tier === 'pro' ? 'Pro (abonnement test)' : 'Studio (abonnement test)'}</p>
+        <p className="mt-1 text-sm text-slate-500">
+          {tier === 'free' ? 'Aucun abonnement payant actif : quotas gratuits appliqués.' :
+           tier === null ? 'Le statut de facturation ne peut pas être vérifié actuellement.' :
+           'Abonnement Stripe Sandbox : aucun encaissement réel.'}
+        </p>
         {usageError ? <p role="alert" className="mt-5 text-sm text-red-800">Quotas momentanément indisponibles.{' '}
           <a className="font-semibold underline" href="/dashboard/settings">Réessayer le chargement</a>
         </p> : <div className="mt-5 grid gap-3 sm:grid-cols-3">
           {[
-            { label:'Checks', value:usage?.checks_used ?? 0 },
-            { label:'Réécritures', value:usage?.rewrites_used ?? 0 },
-            { label:'Messages Mia', value:usage?.mia_messages_used ?? 0 },
+            { label:'Checks', value:usage?.checks_used ?? 0, limit:rights?.checksMonthly },
+            { label:'Réécritures', value:usage?.rewrites_used ?? 0, limit:rights?.rewritesMonthly },
+            { label:'Messages Mia', value:usage?.mia_messages_used ?? 0, limit:rights?.miaMonthly },
           ].map((entry) => <div key={entry.label} className="rounded-xl bg-slate-50 p-4">
             <p className="text-xs text-slate-500">{entry.label}</p>
-            <p className="mt-1 text-2xl font-bold">{entry.value}</p>
+            <p className="mt-1 text-2xl font-bold">{entry.value}{entry.limit !== undefined ? <span className="text-sm font-normal text-slate-600"> / {entry.limit}</span> : null}</p>
           </div>)}
         </div>}
         <p className="mt-3 text-xs text-slate-500">Dernière période enregistrée. Les contrôles sans IA ne consomment pas de quota de vérifications payantes.</p>
+        {stripe.enabled && stripe.mode && userData.stripe_customer_id &&
+          <BillingPortal mode={stripe.mode} />}
+        {!stripe.enabled && tier !== 'free' && <p className="mt-3 text-sm text-slate-600">La gestion de facturation est momentanément indisponible. Les droits existants restent consultables.</p>}
       </section>
       <SocialAccounts initialItems={(social?.data??[]) as unknown as SocialAccount[]} initialTotal={social?.count??0}
-        initialUnavailable={!social||!!social.error} plan={userData.plan} />
+        initialUnavailable={!social||!!social.error} plan={tier ?? 'free'} />
       <AIPreferences initialTone={tone.success?tone.data:'naturel'} initialUnavailable={!preferences||!!preferences.error} />
       <PrivacySettings initialOptIn={userData.ai_training_opt_in ?? false} />
       <section className="rounded-2xl border border-slate-200 bg-white p-6">

@@ -24,7 +24,7 @@ test('les autres migrations restent identiques octet pour octet',()=>{
 test('une évolution du schéma initial bloque le harnais au lieu de masquer du SQL',()=>{
   assert.throws(()=>migrationForOffline('202611032001_initial_schema.sql','create table public.brand_deals(id uuid);'),/Déclaration vectorielle attendue/);
 });
-test('les réservations concurrentes locales ne dépassent pas le quota mensuel', async()=>{
+test('les réservations concurrentes locales ne dépassent pas le quota gratuit mensuel', async()=>{
   const db=await createOfflineDatabase();
   const actor='b2000000-0000-4000-8000-000000000001';
   try{
@@ -34,7 +34,7 @@ test('les réservations concurrentes locales ne dépassent pas le quota mensuel'
       'select public.reserve_usage_quota($1::uuid,$2::text) as period',[actor,'check'])));
     const reserved=attempts.filter(({rows})=>rows[0]?.period!==null&&rows[0]?.period!==undefined);
     const {rows}=await db.query('select checks_used from public.usage_monthly where user_id=$1',[actor]);
-    assert.equal(reserved.length,30);
-    assert.equal(rows[0]?.checks_used,30);
+    assert.equal(reserved.length,3);
+    assert.equal(rows[0]?.checks_used,3);
   }finally{await db.close();}
 });

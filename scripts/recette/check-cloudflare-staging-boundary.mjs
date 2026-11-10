@@ -13,6 +13,8 @@ for(const key of forbidden)if(Object.hasOwn(st,key))deny('binding interdit: '+ke
 for(const key of ['OPENAI_TEXT_ENABLED','OPENAI_VISION_ENABLED','OPENAI_AUDIO_ENABLED','OPENAI_EMBEDDINGS_ENABLED','BILLING_ENABLED','MEDIA_PROCESSING_ENABLED','MEDIA_CLOUDFLARE_RUNNER_ENABLED','MEDIA_AI_ENABLED','MEDIA_RETENTION_ENABLED']){
  if(st.vars?.[key]!=='false')deny('feature payante active: '+key);
 }
+if(st.vars?.STRIPE_WEBHOOK_ENABLED!=='true'||st.vars?.STRIPE_MODE!=='test')
+  deny('le webhook staging ne doit traiter que Stripe Sandbox');
 if(st.vars?.OPENAI_PAUSED!=='true'||st.vars?.MEDIA_RUNNER_PAUSED!=='true')deny('coupe circuit manquant');
 if(st.workers_dev!==true||st.keep_vars!==true||st.assets?.binding!=='ASSETS')deny('config Worker incomplète');
 for(const key of Object.keys(st.vars||{}))if(/(?:api[_-]?key|service[_-]?role|service[_-]?key|anon[_-]?key|secret|token|password|credential)/i.test(key))deny('clé dans le dépôt: '+key);
@@ -21,4 +23,4 @@ if(serialized.includes('zcztvberuihphqklhjsr')||serialized.includes('mentionchec
 const namespaces=new Set((prod.ratelimits||[]).map(x=>x.namespace_id));
 if((st.ratelimits||[]).some(x=>namespaces.has(x.namespace_id)))deny('rate limit partagé avec la production');
 for(const n of ['API_SOLO_LIMITER','API_PAID_LIMITER'])if(!(st.ratelimits||[]).some(x=>x.name===n))deny('binding limiteur absent');
-console.log('STAGING_BOUNDARY_OK : Worker distinct, RLS Supabase indépendant, IA/facturation/containers/purge off');
+console.log('STAGING_BOUNDARY_OK : Worker distinct, RLS Supabase indépendant, IA/Checkout live/containers/purge off ; webhook Sandbox signé');

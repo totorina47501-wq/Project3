@@ -98,8 +98,8 @@ export function assessCommercialReadiness(input: CommercialReadinessInput = {}):
     checks,
     // Ces limites décrivent le code livré. Compléter un dossier n'active rien.
     blockers: [
-      { code: 'BILLING_LIVE_UNSUPPORTED', description: 'La facturation refuse les clés live. Un parcours de production validé reste à livrer avant tout encaissement.' },
-      { code: 'BILLING_WEBHOOK_REVIEW', description: 'La recette distante et l’atomicité abonnement/droits lors de webhooks concurrents restent à valider avant activation.' },
+      { code: 'BILLING_LIVE_NOT_APPROVED', description: 'Le code prépare Stripe live derrière les validations obligatoires (éditeur immatriculé, fiscalité, conditions, services IA actifs, clés live et domaine). Aucune validation d’ouverture n’est attestée.' },
+      { code: 'BILLING_CARD_PAYMENT_TEST_MISSING', description: 'Checkout authentifié, portail et webhooks signés sont certifiés en Sandbox. Le paiement par carte test, SCA/3DS, facture payée, erreur de paiement et rétractation restent à contrôler.' },
       { code: 'PERSONAL_DATA_ERASURE_REVIEW', description: 'Le parcours d’effacement global et les conservations chez les prestataires doivent être opérés et validés ; la demande actuelle ne supprime rien.' },
       { code: 'EMAIL_DELIVERY_UNIMPLEMENTED', description: 'Les emails sont rendus localement ; transport, domaine expéditeur, déclencheurs, suivi et accord Resend restent à préparer avant tout envoi.' },
     ],

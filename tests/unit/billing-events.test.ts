@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { paidPlanFromPrices, effectivePlan, stripeStatus, subscriptionPeriodEnd } from '../../lib/billing/events';
+import { paidPlanFromPrices, effectivePlan, subscriptionAccessTier, stripeStatus, subscriptionPeriodEnd } from '../../lib/billing/events';
 const config={pro:'price_PRO',studio:'price_STUDIO'};
 describe('Droits Stripe test — sans appel API',()=>{
   it('reconnaît Solo configuré et refuse une collision de tarifs',()=>{
@@ -13,9 +13,9 @@ describe('Droits Stripe test — sans appel API',()=>{
   });
   it('enlève les droits payants après fin ou impayé',()=>{
     expect(effectivePlan('active','studio')).toBe('studio');
-    expect(effectivePlan('past_due','studio')).toBe('solo');
-    expect(effectivePlan('canceled','pro')).toBe('solo');
-    expect(effectivePlan('active',null)).toBe('solo');
+    expect(effectivePlan('past_due','studio')).toBe('free');
+    expect(effectivePlan('canceled','pro')).toBe('free');
+    expect(effectivePlan('active',null)).toBe('free');
   });
   it('n invente aucun état de facturation',()=>{
     expect(stripeStatus('active')).toBe('active');
@@ -30,4 +30,15 @@ describe('Droits Stripe test — sans appel API',()=>{
     expect(subscriptionPeriodEnd({items:{data:[{current_period_end:Infinity}]}})).toBeNull();
     expect(subscriptionPeriodEnd({current_period_end:-1})).toBeNull();
   });
+});
+it('ne confond pas le compte gratuit et Solo payé, même si le profil historique est Solo',()=>{
+  const now = Date.parse('2026-11-10T10:00:00Z');
+  expect(subscriptionAccessTier(null, now)).toBe('free');
+  const subscribed = {stripe_subscription_id:'sub_sandbox',plan:'solo' as const,status:'active',current_period_end:'2026-12-10T00:00:00Z'};
+  expect(subscriptionAccessTier(subscribed, now)).toBe('solo');
+  expect(subscriptionAccessTier({...subscribed,status:'past_due'}, now)).toBe('free');
+  expect(subscriptionAccessTier({...subscribed,status:'canceled'}, now)).toBe('free');
+  expect(subscriptionAccessTier({...subscribed,current_period_end:'2026-11-01T00:00:00Z'}, now)).toBe('free');
+  expect(subscriptionAccessTier({...subscribed,stripe_subscription_id:null}, now)).toBe('free');
+  expect(subscriptionAccessTier({...subscribed,current_period_end:null}, now)).toBe('free');
 });

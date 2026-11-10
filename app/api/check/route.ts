@@ -8,6 +8,7 @@ import { requireUser, HttpError, publicError } from '@/lib/security/auth';
 import { consumeQuota, refundQuota } from '@/lib/security/quota';
 import { checkRateLimit } from '@/lib/security/rate-limit';
 import { runRulesOnlyCheck } from '@/lib/ai/rules-only-engine';
+import { openaiReadiness } from '@/lib/openai/config';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -19,6 +20,16 @@ export async function POST(request: Request) {
     const payload = checkInputSchema.safeParse(await request.json());
     if (!payload.success) {
       return Response.json({ error: 'Publication ou plateforme invalide.' }, { status: 400 });
+    }
+    // Aucune réservation de quota ni écriture média tant que le service IA est en pause.
+    if (payload.data.execution === 'ai') {
+      const ai = openaiReadiness(process.env);
+      if (!ai.textEnabled || !ai.keyConfigured) {
+        throw new HttpError(503, 'Les analyses IA sont temporairement indisponibles. Choisis le contrôle sans IA.');
+      }
+      if (payload.data.mediaType === 'image' && !ai.visionEnabled) {
+        throw new HttpError(503, 'L’analyse IA des images est indisponible. Utilise le contrôle de légende sans IA.');
+      }
     }
     if (payload.data.execution === 'rules_only' && payload.data.mediaType !== 'none') {
       throw new HttpError(422, 'Le contrôle sans IA utilise uniquement la légende.');
