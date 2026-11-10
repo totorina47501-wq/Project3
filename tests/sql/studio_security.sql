@@ -127,9 +127,6 @@ begin
    raise exception 'Clé expirée encore valide';
  exception when insufficient_privilege then null; end;
  perform public.studio_execute(owner_id,ws,'save_check',jsonb_build_object('caption','Texte partagé équipe A','platform','instagram','result',jsonb_build_object('analysisMode','rules_only')));
- update public.users set plan='solo' where id=owner_id;
- perform pg_temp.expect_denied(owner_id,ws,'checks');
- perform pg_temp.expect_denied(member_id,ws,'overview');
  -- Vérifier explicitement le quota partagé sur toutes les clés API de l'espace.
  key_id := (public.studio_execute(owner_id,ws,'create_key',
    jsonb_build_object('name','quota','token_hash',repeat('e',64),
@@ -165,6 +162,9 @@ begin
     or has_table_privilege('anon','public.studio_api_usage_monthly','select')
     or has_function_privilege('authenticated','studio_private.has_active_studio_subscription(uuid)','execute')
  then raise exception 'Compteur API ou helper privilégié exposé'; end if;
+ update public.users set plan='solo' where id=owner_id;
+ perform pg_temp.expect_denied(owner_id,ws,'checks');
+ perform pg_temp.expect_denied(member_id,ws,'overview');
  -- Une équipe supprimée localement ne laisse aucune capacité utilisable.
  perform public.studio_execute(other_id,other_ws,'invite',jsonb_build_object('email','studio-five@example.test','role','member','token_hash',repeat('ab',32)));
  perform public.studio_execute(other_id,other_ws,'create_key',jsonb_build_object('name','deleted-workspace','token_hash',repeat('cd',32),'prefix','mc_studio_123456782','scopes',jsonb_build_array('checks:read')));
