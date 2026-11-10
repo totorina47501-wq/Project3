@@ -12,7 +12,9 @@ describe('Configuration Cloudflare sécurisée',()=>{
       MEDIA_AI_SCHEMA_READY:'true',OPENAI_AUDIO_ENABLED:'false',
       OPENAI_PAUSED:'false',OPENAI_TEXT_ENABLED:'true',
       OPENAI_VISION_ENABLED:'true',OPENAI_EMBEDDINGS_ENABLED:'false',
+      PROMO_SOLO_ENABLED:'false',
     });
+    expect(config.previews.vars.PROMO_SOLO_ENABLED).toBe('false');
     expect(config.previews.vars.OPENAI_PAUSED).toBe('true');
     expect(config.previews.vars.OPENAI_TEXT_ENABLED).toBe('false');
     expect(config.previews.vars.OPENAI_VISION_ENABLED).toBe('false');
