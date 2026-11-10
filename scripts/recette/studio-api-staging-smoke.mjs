@@ -14,6 +14,7 @@ if(env.GITHUB_REF!=='refs/heads/feat/mentioncheck-studio-api-entitlements-202611
  !env.SUPABASE_SERVICE_KEY)throw Error('STAGING_STUDIO_API_BOUNDARY_FAILURE');
 const admin=createClient(DB,env.SUPABASE_SERVICE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
 const created=[];
+const createdWorkspaces=[];
 function idToken(){return randomBytes(16).toString('hex');}
 async function newTestOwner(label){
  const email='studio-api-'+String(env.GITHUB_RUN_ID||'local')+'-'+label+'-'+idToken()+'@example.invalid';
@@ -69,6 +70,7 @@ try{
  await setSubscription(a.id,'a');await setSubscription(b.id,'b');
  const wa=assertOk(await sessionAction(a,{action:'create_workspace',name:'Equipe A'}),'workspace A').workspace.id;
  const wb=assertOk(await sessionAction(b,{action:'create_workspace',name:'Equipe B'}),'workspace B').workspace.id;
+ createdWorkspaces.push({id:wa,owner:a.id},{id:wb,owner:b.id});
  assert.notEqual(wa,wb);
  const keyA=assertOk(await sessionAction(a,{action:'create_key',workspaceId:wa,name:'intégration A',
   scopes:['checks:read','checks:write']}),'key A').secret;
@@ -105,8 +107,14 @@ try{
  assertOk(await sessionAction(a,{action:'revoke_key',workspaceId:wa,id:dbKey.id}),'revoke key');
  assert.equal((await api(keyA,'/api/v1/verifications')).status,403);
  console.log('STAGING_API_KEY_REVOKE_DENIED_PASS');
-}finally{
+ }finally{
  let failed=false;
+ // FK workspaces.owner_id est RESTRICT. Supprimer UNIQUEMENT les workspaces
+ // que CETTE recette vient de créer, puis leurs propriétaires synthétiques.
+ for(const ws of createdWorkspaces){
+  const {error}=await admin.from('workspaces').delete().eq('id',ws.id).eq('owner_id',ws.owner);
+  if(error)failed=true;
+ }
  for(const id of created){
   const {error}=await admin.auth.admin.deleteUser(id);
   if(error)failed=true;
