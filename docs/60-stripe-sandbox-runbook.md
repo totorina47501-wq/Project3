@@ -233,3 +233,12 @@ préparés dans [le dossier de lancement](61-dossier-lancement-commercial-2026.m
 Le texte est un **projet à compléter et à revoir**, pas des conditions
 contractuelles publiables tant que l'exploitant n'est pas immatriculé.
 Le mode réel reste verrouillé et les prestations IA payantes restent en pause.
+
+## Contrôle indépendant des bases — 10 novembre 2026
+
+Contrôle en lecture seule via Supabase sur les **deux projets distincts** :
+
+- **Staging** `ukvgnkxgzyhswgpnvyzz` : migration `free_vs_paid_solo_quotas` présente dans l'historique (version `20261110090032`). La fonction actuelle `public.consume_usage_quota(uuid,text)` contient les bornes Solo=30, Gratuit=3, et exige une souscription Stripe identifiée pour attribuer les droits payants ; les trois tables `users`, `subscriptions`, `usage_monthly` existent.
+- **Production** `zcztvberuihphqklhjsr` : cette migration est absente de l'historique. La fonction en production conserve le quota Solo sans condition de souscription Stripe. **Aucune modification de cette base n'a été effectuée par ce contrôle.**
+
+Le correctif est donc **préparé et appliqué sur staging, pas en production**. Avant tout merge de la PR #114 ou déploiement commercial, coordonner la migration production avec le nouveau code de quotas, l'analyse d'impact sur les comptes existants et les vérifications post-déploiement. Ne pas déclarer un palier Gratuit techniquement effectif en production tant que ces opérations ne sont pas attestées. La CI GitHub `42814096059` est verte sur le SHA `4143618af3f3e599a33f98ae7890eed523391588` (quality + image runner média) ; cela **ne remplace pas** les preuves Stripe/Supabase distantes.
