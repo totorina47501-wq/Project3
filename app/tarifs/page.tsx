@@ -23,7 +23,7 @@ const plans = ([
   { id: 'pro', name: 'Pro', audience: 'Pour publier régulièrement', price: BRAND.plans.pro.priceMonthlyEur,
     highlights: ['Pour les créateurs actifs', 'Réécritures de contenus', 'Assistant Mia pour vos questions'] },
   { id: 'studio', name: 'Studio', audience: 'Pour les volumes importants', price: BRAND.plans.studio.priceMonthlyEur,
-    highlights: ['5 sièges, propriétaire compris', 'API de contrôle sans IA', 'Rapports sur les contrôles partagés'] },
+    highlights: ['5 sièges, propriétaire compris', 'API sans IA : 2 000 contrôles/mois par espace', 'Rapports sur les contrôles partagés'] },
 ] as const).map(plan => ({ ...plan, rights: planEntitlements(plan.id) }));
 
 const faq = (live:boolean) => [
@@ -90,6 +90,11 @@ export default function PricingPage() {
         </div>
       </section>)}
     </div>
+    <section aria-labelledby="studio-api-title" className="mt-12 rounded-3xl border border-indigo-200 bg-indigo-50 p-6 sm:p-8">
+      <h2 id="studio-api-title" className="font-heading text-2xl font-bold">Une API pour automatiser les contrôles de votre studio</h2>
+      <p className="mt-3 leading-7 text-slate-700">Incluse dans Studio : jusqu’à 2 000 contrôles de texte sans IA par mois et par espace, intégration serveur avec clés révocables. Pas d’accès API en Solo ou Pro.</p>
+      <Link href="/developpeurs" className="mt-4 inline-flex font-semibold text-indigo-800 underline">Découvrir l’API MentionCheck</Link>
+    </section>
     <section className="mt-16 rounded-3xl bg-slate-50 p-6 sm:p-9" aria-labelledby="comparison-title">
       <h2 id="comparison-title" className="font-heading text-2xl font-bold">Comparer les offres</h2>
       <p className="mt-2 text-sm text-slate-600">{live?'Volumes inclus dans chaque abonnement mensuel.':'Volumes prévisionnels par mois, susceptibles d’évoluer avant lancement.'}</p>

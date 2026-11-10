@@ -36,6 +36,13 @@ export function createStatefulFixture({ users, sessionFor }) {
             users.set(id,user);
             await connection.query('insert into auth.users(id,email,email_confirmed_at) values($1,$2,now())',[id,email]);
             await connection.query("update public.users set plan=$2::public.account_plan where id=$1",[id,role==='owner'?'studio':'solo']);
+            // Un profil Studio historique seul ne suffit plus : abonnement fictif
+            // strictement dans PostgreSQL WASM local, jamais chez Stripe/Supabase.
+            if(role==='owner')await connection.query(
+              `insert into public.subscriptions(user_id,stripe_subscription_id,plan,status,current_period_end)
+                values($1,$2,'studio','active',now()+interval '30 days')`,
+              [id,'sub_fixture_offline_'+id.replaceAll('-','')],
+            );
             const verification = randomUUID(); verificationIds[role] = verification;
             await connection.query(`insert into public.verifications(id,user_id,platform,content_text,ai_score,ai_risk_level,hash_sha256,status,completed_at)
               values($1,$2,'instagram','PUBLICITÉ — Fixture privée',100,'low',$3,'completed',now())`,[verification,id,'a'.repeat(64)]);

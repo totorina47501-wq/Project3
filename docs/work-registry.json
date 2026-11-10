@@ -454,10 +454,13 @@
         "app/api/v1/check/route.ts",
         "app/api/v1/verifications/route.ts"
       ],
-      "migrations": [],
+      "migrations": [
+        "supabase/migrations/20261110180000_studio_api_subscription_gate.sql"
+      ],
       "next": [
         "Migration appliquée : internal_completion, version distante 20261104184723 ; Stripe et IA restent inactifs.",
-        "Parcours navigateur invitation/clé et collaboration validés contre PostgreSQL local : docs/33-studio-e2e.md."
+        "Parcours navigateur invitation/clé et collaboration validés contre PostgreSQL local : docs/33-studio-e2e.md.",
+        "Porte API Studio Stripe réellement actif + quota atomique 2 000 checks API/mois UTC/espace ; test HTTP authentifié staging requis avant vente live. Aucun appel IA."
       ]
     },
     {

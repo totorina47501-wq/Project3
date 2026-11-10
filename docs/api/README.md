@@ -6,7 +6,7 @@ L'API Studio existante expose uniquement le contrôle textuel **sans IA**. Ne pa
 
 ## Prérequis
 
-Un propriétaire disposant du plan Studio actif crée un espace puis une clé via le tableau de bord Studio. La clé doit porter `checks:write` pour POST et `checks:read` pour GET. Elle expire après 90 jours au maximum et peut être révoquée. La validité, les scopes, le plan et l'appartenance sont vérifiés côté serveur. Conserver la clé dans les secrets de votre backend, **jamais** dans le navigateur, Git ou une application mobile distribuée.
+Un propriétaire disposant d'un **abonnement Stripe Studio actif et non expiré** crée un espace puis une clé via le tableau de bord Studio. La clé doit porter `checks:write` pour POST et `checks:read` pour GET. Elle expire après 90 jours au maximum et peut être révoquée. La validité, les scopes, le plan et l'appartenance sont vérifiés côté serveur. Conserver la clé dans les secrets de votre backend, **jamais** dans le navigateur, Git ou une application mobile distribuée.
 
 ## Exemple HTTP
 
@@ -48,3 +48,14 @@ Le SDK est **un fichier source local**, non publié sur npm. Copier ou importer 
 ## Avant ouverture commerciale
 
 Vérifier l'API authentifiée sur l'environnement cible avec un compte Studio de recette, les scopes, l'expiration, les erreurs, les limites, les quotas, l'isolation inter-équipes, l'observabilité et les conditions contractuelles. Ne pas activer de paiement live par ce lot.
+
+## Quotas et garanties commerciales avant lancement
+
+L'API REST `v1` est **incluse uniquement dans Studio (49 €/mois, tarif indicatif)**, non dans Gratuit, Solo ou Pro. Une simple valeur historique `users.plan=studio` ne donne plus accès : les RPC exigent une souscription Stripe Studio (`active` ou `trialing`), non échue. Les webhooks et la date d'échéance sont vérifiés à chaque action et la clé ne peut survivre à une expiration, révocation ou rétrogradation du créateur.
+
+L'offre Studio comprend **2 000 créations de vérifications API sans IA par mois UTC et par espace**, partagées entre toutes les clés et les collaborateurs ; le compteur PostgreSQL est atomique, il n'y a **pas de facturation au dépassement**. HTTP 429 à la saturation. Une protection Cloudflare complémentaire limite à **120 appels/minute par clé**, sans engagement de SLA. Les analyses IA personnelles conservent leurs quotas distincts ; ces contrôles API n'appellent jamais OpenAI.
+
+**État du déploiement :** vérifier migration `20261110180000_studio_api_subscription_gate.sql`, tests SQL, recette authentifiée avec clés sur staging, SHA réellement déployé et retour 401/403/429 avant de promettre la disponibilité publique. Aucun paiement live n'est ouvert pour réaliser ces tests, et aucune clé n'est publiée.
+
+## Page publique développeurs
+La page `/developpeurs` présente l’API Studio, un exemple curl, les droits et les limites. Elle reste **noindex** et annonce « en préparation commerciale » jusqu’à la validation des prérequis Stripe Live. Le footer de l’accueil et la page Tarifs pointent vers elle.

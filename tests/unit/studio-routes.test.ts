@@ -152,3 +152,10 @@ describe('Studio lecture HTTP réellement bornée', () => {
     expect((await apiCheck(apiRequest(JSON.stringify({ caption: 'é'.repeat(10000), platform: 'instagram' })))).status).toBe(201);
   });
 });
+
+it('distingue un quota API épuisé d une panne et ne révèle aucun identifiant',async()=>{
+ mocks.rpc.mockResolvedValue({data:null,error:{code:'P0001',message:'private quota details'}});
+ const response=await apiCheck(new Request(url,{method:'POST',headers:{authorization:'Bearer '+secret},body:JSON.stringify({caption:'Publicité',platform:'instagram'})}));
+ expect(response.status).toBe(429);
+ expect(JSON.stringify(await response.json())).not.toContain('private quota details');
+});

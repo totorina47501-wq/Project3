@@ -39,6 +39,7 @@ it('présente les limites réellement accordées, dont cinq sièges Studio propr
  }
  expect(markup).toContain('5 sièges, propriétaire compris');
  expect(markup).toContain('Comptes déclarés manuellement');
- expect(markup).toContain('API de contrôle sans IA');
+ expect(markup).toContain('API sans IA : 2 000 contrôles/mois par espace');
+ expect(markup).toContain('href="/developpeurs"');
  expect(markup).not.toMatch(/illimité|brand safety certifié/i);
 });
