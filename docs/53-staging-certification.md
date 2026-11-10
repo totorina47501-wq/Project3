@@ -41,3 +41,7 @@ La clé `sb_secret_...` Supabase n'est **pas** un mot de passe PostgreSQL pour `
 - Tester un retour arrière **du Worker staging seulement** et vérifier l'URL ; ne pas tester un rollback de production.
 - Déterminer avec l'administrateur la politique Auth « leaked password protection disabled », vérifier configuration et conserver preuve.
 - Laisser issue #16 ouverte et label `release:evidence-required` tant que des portes restent sans preuve.
+
+## Consolidation des six chantiers — 10 novembre 2026
+
+Le procès-verbal [2026-11-10 — certification technique interne](receipts/2026-11-10-final-internal-certification.md) réconcilie les preuves existantes avec les migrations Studio/promotion et le SHA courant de `main`. Aucun des six chantiers n'est déclaré complètement certifié : le rollback interversions de code est **BLOCKED** ; les cinq autres sont **PARTIAL** avec leurs limites détaillées. La restauration du schéma et les recettes API/Auth antérieures restent valides pour leur SHA, pas pour le schéma/runtime courant. Conserver `release:evidence-required` et ne pas ouvrir commercialement.
