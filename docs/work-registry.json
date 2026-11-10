@@ -348,10 +348,10 @@
     },
     {
       "id": "oauth-social",
-      "name": "Comptes sociaux déclarés et préférences",
-      "status": "implemented_code",
-      "anchor": "lib/social/model.ts",
-      "test": "tests/unit/social-routes.test.ts",
+      "name": "Comptes sociaux manuels et socle OAuth désactivé",
+      "status": "prepared_disabled",
+      "anchor": "lib/social/oauth/protocol.ts",
+      "test": "tests/unit/social-oauth.test.ts",
       "doc": "docs/09-internal-settings.md",
       "aliases": [
         "social",
@@ -365,9 +365,11 @@
         "app/api/social-accounts/[id]/route.ts",
         "app/api/social-accounts/preferences/route.ts"
       ],
-      "migrations": [],
+      "migrations": [
+        "supabase/migrations/20261110210000_social_oauth_transactions.sql"
+      ],
       "next": [
-        "Déclaration manuelle disponible ; OAuth fournisseur non activé."
+        "Déclarations manuelles inchangées. État OAuth serveur à usage unique et métadonnées des quatre fournisseurs préparés hors ligne ; aucun échange de code, jeton Vault, route ni bouton de connexion n’est activé."
       ]
     },
     {
