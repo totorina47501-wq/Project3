@@ -14,11 +14,11 @@ it('partage la limite IP entre inscription et connexion sans enregistrer son adr
  await requireAuthAttemptLimit(req('203.0.113.5'));
  await requireAuthAttemptLimit(req('203.0.113.5'));
  expect(calls.limit).toHaveBeenCalledTimes(2);
- const [key,plan]=calls.limit.mock.calls[0];
+ const [key,plan]=calls.limit.mock.calls[0]!;
  expect(key).toMatch(/^auth:[a-f0-9]{64}$/);
  expect(key).not.toContain('203.0.113.5');
  expect(plan).toBe('solo');
- expect(calls.limit.mock.calls[1][0]).toBe(key);
+ expect(calls.limit.mock.calls[1]![0]).toBe(key);
 });
 it('ne dépend pas du rate limiter de production hors Worker',async()=>{
  vi.stubEnv('NODE_ENV','test');
