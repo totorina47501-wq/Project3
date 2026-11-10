@@ -77,3 +77,16 @@ Compensations préparées : nouvelle inscription application au moins 12 caract�
 - [OpenAI API project limits](https://help.openai.com/en/articles/9186755-managing-projects-in-the-api-platform)
 - [Dossier de lancement](61-dossier-lancement-commercial-2026.md)
 - [Portes de livraison](17-ci-release-gates.md)
+
+
+## Preuve technique : staging Supabase, 10 novembre 2026
+La migration `legacy_solo_promotion_30d` a été **exécutée** sur le projet de
+**staging exclusivement** `ukvgnkxgzyhswgpnvyzz` (version d'historique
+`20261110155234`). Contrôle SQL en lecture seule après migration :
+`table_present=true`, `rls_enabled=true`, `anon_can_read=false`,
+`authenticated_can_read=false`, `service_can_read=true`,
+`promotions_issued=0`, `quota_uses_promotion=true`.
+
+Cette preuve ne vaut ni test unitaire local vert, ni validation E2E
+authentifiée, ni migration de production. La base de production
+`zcztvberuihphqklhjsr` **n'a pas été modifiée** pour ce lot.
