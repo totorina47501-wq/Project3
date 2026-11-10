@@ -12,18 +12,27 @@ it('propose Solo en bac à sable seulement si son tarif est configuré',()=>{
  vi.stubEnv('STRIPE_PRICE_SOLO','');expect(renderToStaticMarkup(PricingPage())).not.toContain('Paiement test solo');
  vi.stubEnv('STRIPE_PRICE_SOLO','price_SOLO');vi.stubEnv('BILLING_ENABLED','false');expect(renderToStaticMarkup(PricingPage())).not.toContain('Paiement test');
 });
+it('signale la pause IA sans promettre une analyse indisponible',()=>{
+ vi.stubEnv('BILLING_ENABLED','false');
+ vi.stubEnv('OPENAI_PAUSED','true');
+ const markup=renderToStaticMarkup(PricingPage());
+ expect(markup).toContain('fonctionnalités d’analyse et de réécriture IA sont temporairement indisponibles');
+ expect(markup).not.toContain('Paiement test');
+});
 it('présente les trois prix indicatifs et les états sans paiement quand Stripe est désactivé',()=>{
  vi.stubEnv('BILLING_ENABLED','false');
  const markup=renderToStaticMarkup(PricingPage());
  for(const price of [9,19,49])expect(markup).toContain(`${price} €`);
  expect(markup).toContain('Démonstration gratuite disponible');
- expect(markup.match(/Abonnement bientôt disponible/g)).toHaveLength(2);
+ expect(markup.match(/Abonnement bientôt disponible/g)).toHaveLength(3);
+ expect(markup).toContain('Gratuit — 0 € / mois');
+ expect(markup).toContain('sans carte bancaire ni abonnement Stripe');
  expect(markup).not.toContain('Paiement test');
 });
 it('présente les limites réellement accordées, dont cinq sièges Studio propriétaire compris',()=>{
  vi.stubEnv('BILLING_ENABLED','false');
  const markup=renderToStaticMarkup(PricingPage());
- for(const plan of ['solo','pro','studio'] as const){
+ for(const plan of ['free','solo','pro','studio'] as const){
   const rights=planEntitlements(plan);
   for(const limit of [rights.checksMonthly,rights.rewritesMonthly,rights.miaMonthly])
    expect(markup).toContain(limit.toLocaleString('fr-FR'));

@@ -22,13 +22,35 @@ export async function POST(request: Request) {
     // Valider le prix avant toute création de client ou session fournisseur.
     const price = paidPriceId(parsed.data.plan, gate);
     const admin = createAdminSupabase();
+    // Refuser une seconde souscription tant que la précédente existe.
+    // Les modifications d'offre passent par le portail Stripe.
+    const { data: existing, error: subscriptionError } = await admin.from('subscriptions')
+      .select('stripe_subscription_id,status').eq('user_id', user.id).maybeSingle();
+    if (subscriptionError) throw new Error('Subscription lookup unavailable.');
+    if (existing?.stripe_subscription_id &&
+        existing.status !== 'canceled' && existing.status !== 'incomplete_expired') {
+      throw new HttpError(409, 'Un abonnement existe déjà. Modifiez votre offre depuis la facturation.');
+    }
     const { data: profile, error } = await admin.from('users')
       .select('stripe_customer_id').eq('id', user.id).single();
     if (error || !profile || !user.email) throw new Error('Compte inaccessible.');
     const stripe = getStripe();
+    // Vérifier la tarification directement dans Stripe lors du lancement live.
+    // Le montant final ne dépend jamais d'une donnée envoyée par le navigateur.
+    if (gate.mode === 'live') {
+      const priceDetails = await stripe.prices.retrieve(price);
+      const expected = {solo:900,pro:1900,studio:4900}[parsed.data.plan];
+      if (!priceDetails.livemode || !priceDetails.active ||
+          priceDetails.currency !== 'eur' || priceDetails.unit_amount !== expected ||
+          priceDetails.recurring?.interval !== 'month' ||
+          priceDetails.tax_behavior !== 'inclusive') {
+        throw new HttpError(503,'Prix Stripe incompatible avec les offres publiées.');
+      }
+    }
     let customerId: string | undefined = profile.stripe_customer_id ?? undefined;
     if (!customerId) {
-      const customer = await stripe.customers.create({ email: user.email });
+      const customer = await stripe.customers.create({ email: user.email },
+        { idempotencyKey: 'mentioncheck_customer_'+user.id });
       customerId = customer.id;
       const { error: savedError } = await admin.from('users')
         .update({ stripe_customer_id: customerId }).eq('id', user.id);
@@ -43,7 +65,8 @@ export async function POST(request: Request) {
       cancel_url: base + '/tarifs?checkout=cancel',
       metadata: { user_id: user.id, selected_plan: parsed.data.plan },
       subscription_data: { metadata: { user_id: user.id, plan: parsed.data.plan } },
-    });
+      ...(gate.mode==='live' ? {consent_collection:{terms_of_service:'required' as const}} : {}),
+    }, {idempotencyKey:'mentioncheck_checkout_'+user.id+'_'+parsed.data.plan+'_'+Math.floor(Date.now()/600000)});
     if (!session.url) throw new Error('Session Stripe indisponible.');
     return Response.json({ url: session.url }, {
       headers: { 'Cache-Control': 'no-store' },

@@ -18,6 +18,8 @@ describe('Abonnements simulés et droits des trois offres',()=>{
     expect(planEntitlements('studio')).toMatchObject({checksMonthly:2000,rewritesMonthly:2000,miaMonthly:1500,studioApi:true,studioSeats:5});
     expect(simulatedPlanQuote('studio').chargedCents).toBe(0);
     expect(()=>planEntitlements('admin' as 'solo')).toThrow();
+    expect(planEntitlements('free')).toMatchObject({checksMonthly:3,rewritesMonthly:1,miaMonthly:3});
+    expect(remainingPlanQuota('free','check',4)).toBe(0);
   });
   it('applique une seule fois, ignore le périmé et refuse une collision idempotente',()=>{
     const simulation=createBillingSimulation({accountId:'owner',customerId:'cus_local',prices});
@@ -31,14 +33,14 @@ describe('Abonnements simulés et droits des trois offres',()=>{
     const simulation=createBillingSimulation({accountId:'owner',customerId:'cus_local',prices,usage:{check:100,rewrite:8,mia:60}});
     simulation.apply(event('evt_first',10,'price_STUDIO'));
     const change=simulation.apply(event('evt_cancel',20,'price_STUDIO','canceled'));
-    expect(change.state.plan).toBe('solo');expect(change.state.usage.check).toBe(100);
-    expect(change.entitlements.studioApi).toBe(false);expect(remainingPlanQuota('solo','check',100)).toBe(0);
+    expect(change.state.plan).toBe('free');expect(change.state.usage.check).toBe(100);
+    expect(change.entitlements.studioApi).toBe(false);expect(remainingPlanQuota('free','check',100)).toBe(0);
     expect(remainingPlanQuota('pro','check',100)).toBe(400);
   });
   it('ne ressuscite pas une souscription supprimée et ignore les égalités temporelles ambiguës',()=>{
     const simulation=createBillingSimulation({accountId:'owner',customerId:'cus_local',prices});
     simulation.apply(event('evt_active',10));
-    expect(simulation.apply({...event('evt_deleted',20),type:'customer.subscription.deleted'}).state.plan).toBe('solo');
+    expect(simulation.apply({...event('evt_deleted',20),type:'customer.subscription.deleted'}).state.plan).toBe('free');
     expect(simulation.apply(event('evt_resurrect',21)).outcome).toBe('terminal');
     expect(simulation.apply(event('evt_new_sub',30,'price_STUDIO','active','sub_two')).state.plan).toBe('studio');
     expect(simulation.apply({...event('evt_old_delete',40),type:'customer.subscription.deleted'}).outcome).toBe('superseded');
@@ -49,7 +51,7 @@ describe('Abonnements simulés et droits des trois offres',()=>{
     const simulation=createBillingSimulation({accountId:'owner',customerId:'cus_local',prices});
     for(const incoming of [{...event('evt_wrong',1),customerId:'cus_other'},event('evt_price',1,'price_unknown'),{...event('evt_live',1),livemode:true},{...event('evt_mix',1),priceIds:['price_PRO','price_STUDIO']}])
       expect(()=>simulation.apply(incoming)).toThrow();
-    expect(simulation.snapshot().plan).toBe('solo');
+    expect(simulation.snapshot().plan).toBe('free');
     expect(()=>createBillingSimulation({accountId:'owner',customerId:'cus_local',prices:{pro:'price_SAME',studio:'price_SAME'}})).toThrow();
   });
 });

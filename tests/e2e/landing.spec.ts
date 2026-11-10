@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
 test('accueil public MentionCheck', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 }))
-    .toContainText("L'IA qui check vos mentions légales");
+    .toContainText("avant publication.");
   await expect(page.getByRole('link', { name: 'Créer un compte' })).toHaveAttribute('href', '/register');
   await expect(page.getByRole('link', { name: 'Connexion' })).toHaveAttribute('href', '/login');
   await expect(page.getByRole('link', { name: 'Check ma publication' })).toHaveAttribute('href', '/register');

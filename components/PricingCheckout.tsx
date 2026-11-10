@@ -1,7 +1,7 @@
 // CTA uniquement pour le bac à sable Stripe.
 'use client';
 import { useState } from 'react';
-export function PricingCheckout({plan}: {plan:'solo'|'pro'|'studio'}) {
+export function PricingCheckout({plan,mode='test'}: {plan:'solo'|'pro'|'studio';mode?:'test'|'live'}) {
   const [pending,setPending]=useState(false);
   const [message,setMessage]=useState('');
   async function start() {
@@ -25,8 +25,9 @@ export function PricingCheckout({plan}: {plan:'solo'|'pro'|'studio'}) {
   return <div className="space-y-2">
     <button onClick={() => void start()} type="button" disabled={pending}
       className="w-full rounded-xl bg-accent px-4 py-3 font-bold text-white disabled:opacity-50">
-      {pending?'Ouverture…':'Essayer le paiement Stripe test'}
+      {pending?'Ouverture…':mode==='live'?'Souscrire maintenant':'Essayer le paiement Stripe test'}
     </button>
+    {mode==='live'&&<p className="text-xs text-slate-600">Abonnement mensuel reconduit automatiquement. Consultez les <a href="/legal/cgu" className="underline">conditions d’abonnement</a> avant de payer.</p>}
     {message&&<p role="alert" className="text-sm text-red-700">{message}</p>}
   </div>;
 }

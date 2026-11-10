@@ -1,0 +1,220 @@
+# Branche Stripe exclusivement ; n'a jamais de droit de publier le Worker de production.
+# One-shot staging preflight. Never run on pull_request_target or main.
+name: MentionCheck Stripe Sandbox Staging
+on:
+  push:
+    branches: [feat/stripe-sandbox-mentioncheck-20261110]
+permissions:
+  contents: read
+concurrency:
+  group: mentioncheck-stripe-staging
+  cancel-in-progress: false
+jobs:
+  stage:
+    if: github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/feat/stripe-sandbox-mentioncheck-20261110'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://ukvgnkxgzyhswgpnvyzz.supabase.co
+      NEXT_PUBLIC_APP_URL: https://mentioncheck-staging.toto-rina47501.workers.dev
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.MENTIONCHECK_STAGING_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.MENTIONCHECK_STAGING_SUPABASE_SERVICE_KEY }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.MENTIONCHECK_STAGING_CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.MENTIONCHECK_STAGING_CLOUDFLARE_API_TOKEN }}
+      OPENAI_PAUSED: 'true'
+      OPENAI_TEXT_ENABLED: 'false'
+      OPENAI_VISION_ENABLED: 'false'
+      OPENAI_AUDIO_ENABLED: 'false'
+      OPENAI_EMBEDDINGS_ENABLED: 'false'
+      BILLING_ENABLED: 'false'
+      STRIPE_MODE: test
+      MEDIA_RETENTION_ENABLED: 'false'
+      MEDIA_PROCESSING_ENABLED: 'false'
+      MEDIA_AI_ENABLED: 'false'
+      MEDIA_CLOUDFLARE_RUNNER_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Refuser toute absence de secrets staging Github
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in NEXT_PUBLIC_SUPABASE_ANON_KEY SUPABASE_SERVICE_KEY CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN; do
+            if [[ -z "$(printenv "$name" || true)" ]]; then
+              echo "::error::Configuration staging incomplète (variable manquante : $name)"
+              exit 1
+            fi
+          done
+      - name: Vérifier les frontières isolation et désactivation
+        run: |
+          node scripts/recette/check-cloudflare-staging-boundary.mjs
+          node scripts/recette/check-cloudflare-preview-boundary.mjs
+      - name: Installer les dépendances verrouillées
+        run: npm ci --ignore-scripts
+      - name: Vérifier sécurité du billing hors ligne
+        run: |
+          npm run typecheck
+          npx vitest run tests/unit/billing-config.test.ts tests/unit/billing-events.test.ts tests/unit/stripe-webhook.test.ts tests/unit/stripe-solo-checkout.test.ts tests/unit/stripe-staging-config.test.ts
+      - name: Compiler Next et le Worker staging
+        run: |
+          npm run build
+          npx @opennextjs/cloudflare build --skipNextBuild --config wrangler.staging.jsonc
+          npx wrangler deploy --config wrangler.staging.jsonc --dry-run
+      - name: Confirmer présence des secrets Stripe sur le Worker staging (noms seuls)
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp)"
+          trap 'rm -f "$tmp"' EXIT
+          npx wrangler secret list --config wrangler.staging.jsonc --format json > "$tmp"
+          node -e '
+            const fs = require("node:fs");
+            const names = new Set(JSON.parse(fs.readFileSync(process.argv[1],"utf8")).map(x=>x.name));
+            for (const name of ["STRIPE_SECRET_KEY","STRIPE_WEBHOOK_SECRET"]) {
+              if (!names.has(name)) {
+                console.error("Missing staging Stripe secret: "+name);
+                process.exitCode = 1;
+              }
+            }
+            if (!process.exitCode) console.log("STRIPE_SECRETS_PRESENT_NAMES_ONLY");
+          ' "$tmp"
+      - name: Publier seulement mentioncheck-staging avec paiements désactivés
+        run: npx @opennextjs/cloudflare deploy --config wrangler.staging.jsonc -- --keep-vars
+      - name: Recontrôler les secrets après publication (aucune valeur dans les logs)
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp)"
+          trap 'rm -f "$tmp"' EXIT
+          npx wrangler secret list --config wrangler.staging.jsonc --format json > "$tmp"
+          node -e '
+            const fs = require("node:fs");
+            const names = new Set(JSON.parse(fs.readFileSync(process.argv[1],"utf8")).map(x=>x.name));
+            if (!["STRIPE_SECRET_KEY","STRIPE_WEBHOOK_SECRET"].every(x=>names.has(x))) {
+              console.error("Missing Stripe secret after staging deployment");
+              process.exit(1);
+            }
+            console.log("STRIPE_SECRETS_PRESERVED_NAMES_ONLY");
+          ' "$tmp"
+      - name: Smoke HTTP staging — Checkout fermé / signature webhook obligatoire
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://mentioncheck-staging.toto-rina47501.workers.dev'
+          code="$(curl --silent --show-error --retry 3 --max-time 25 --output /dev/null --write-out '%{http_code}' "$base/login")"
+          if [[ "$code" != 200 ]]; then echo "::error::login staging HTTP $code, attendu 200"; exit 1; fi
+          checkout="$(curl --silent --show-error --max-time 25 --output /dev/null --write-out '%{http_code}' \
+            -X POST -H "Origin: $base" -H 'Content-Type: application/json' \
+            --data '{"plan":"pro"}' "$base/api/stripe/checkout")"
+          webhook="$(curl --silent --show-error --max-time 25 --output /dev/null --write-out '%{http_code}' \
+            -X POST -H 'Content-Type: application/json' --data '{}' "$base/api/stripe/webhook")"
+          if [[ "$checkout" != 503 || "$webhook" != 400 ]]; then
+            echo "::error::Checkout or webhook signature policy unexpected (checkout=$checkout, webhook=$webhook)"
+            exit 1
+          fi
+          echo "STAGING_CHECKOUT_CLOSED_WEBHOOK_SIGNATURE_ENFORCED"
+
+      - name: Recette Checkout authentifiée sans paiement (activation Sandbox temporaire)
+        shell: bash
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == "refs/heads/feat/stripe-sandbox-mentioncheck-20261110" ]]
+          node --check scripts/recette/stripe-checkout-authenticated.mjs
+          cp wrangler.staging.jsonc "$RUNNER_TEMP/stripe-staging-original.jsonc"
+          restore_checkout_off() {
+            local original_status=$?
+            cp "$RUNNER_TEMP/stripe-staging-original.jsonc" wrangler.staging.jsonc
+            # Cloudflare keep-vars conserve les valeurs du Dashboard, y compris un flag
+            # temporaire. Pour la restauration, imposer les vars du fichier.
+            node --input-type=module -e '
+              import fs from "node:fs";
+              const path="wrangler.staging.jsonc";
+              const c=JSON.parse(fs.readFileSync(path,"utf8"));
+              if(c.name!=="mentioncheck-staging"||c.vars.BILLING_ENABLED!=="false"||
+                 c.vars.STRIPE_MODE!=="test")process.exit(1);
+              c.keep_vars=false;
+              fs.writeFileSync(path,JSON.stringify(c,null,2)+"\n");
+            '
+            if ! npx @opennextjs/cloudflare deploy --config wrangler.staging.jsonc >/dev/null; then
+              echo "::error::Restauration immédiate du Checkout désactivé KO"
+              exit 1
+            fi
+            cp "$RUNNER_TEMP/stripe-staging-original.jsonc" wrangler.staging.jsonc
+            echo "STAGING_CHECKOUT_RESTORED_DISABLED"
+            return "$original_status"
+          }
+          trap restore_checkout_off EXIT
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const path="wrangler.staging.jsonc";
+            const c=JSON.parse(fs.readFileSync(path,"utf8"));
+            if(c.name!=="mentioncheck-staging"||c.vars.BILLING_ENABLED!=="false"||
+              c.vars.STRIPE_MODE!=="test"||c.vars.OPENAI_PAUSED!=="true"||
+              c.vars.STRIPE_WEBHOOK_ENABLED!=="true")process.exit(1);
+            c.vars.BILLING_ENABLED="true";
+            fs.writeFileSync(path,JSON.stringify(c,null,2)+"\n");
+          '
+          npx @opennextjs/cloudflare deploy --config wrangler.staging.jsonc -- --keep-vars >/dev/null
+          node scripts/recette/stripe-checkout-authenticated.mjs
+      - name: Restauration de secours et vérification du Checkout fermé
+        if: always()
+        shell: bash
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          node -e '
+            const fs=require("node:fs"); const c=JSON.parse(fs.readFileSync("wrangler.staging.jsonc","utf8"));
+            if(c.name!=="mentioncheck-staging"||c.vars.BILLING_ENABLED!=="false"||
+              c.vars.STRIPE_MODE!=="test")process.exit(1);
+          '
+          base='https://mentioncheck-staging.toto-rina47501.workers.dev'
+          checkout_status() {
+            node --input-type=module -e '
+              const base="https://mentioncheck-staging.toto-rina47501.workers.dev";
+              try {
+                const response=await fetch(base+"/api/stripe/checkout",{
+                  method:"POST",
+                  signal:AbortSignal.timeout(25000),
+                  headers:{Origin:base,"Content-Type":"application/json"},
+                  body:JSON.stringify({plan:"solo"})
+                });
+                process.stdout.write(String(response.status));
+              } catch {
+                process.stdout.write("NETWORK_ERROR");
+              }
+            '
+          }
+          code="$(checkout_status)"
+          echo "STAGING_CHECKOUT_POST_RESTORE_HTTP_$code"
+          if [[ "$code" != 503 ]]; then
+            echo "Checkout distant non encore fermé ; publication forcée staging"
+            if [[ ! -f .open-next/worker.js ]]; then
+              npm run build
+              npx @opennextjs/cloudflare build --skipNextBuild --config wrangler.staging.jsonc
+            fi
+            cp wrangler.staging.jsonc "$RUNNER_TEMP/stripe-staging-failsafe-original.jsonc"
+            node --input-type=module -e '
+              import fs from "node:fs";
+              const path="wrangler.staging.jsonc";
+              const c=JSON.parse(fs.readFileSync(path,"utf8"));
+              if(c.name!=="mentioncheck-staging"||c.vars.BILLING_ENABLED!=="false"||
+                 c.vars.STRIPE_MODE!=="test")process.exit(1);
+              c.keep_vars=false;
+              fs.writeFileSync(path,JSON.stringify(c,null,2)+"\n");
+            '
+            npx @opennextjs/cloudflare deploy --config wrangler.staging.jsonc >/dev/null
+            cp "$RUNNER_TEMP/stripe-staging-failsafe-original.jsonc" wrangler.staging.jsonc
+            code="$(checkout_status)"
+          fi
+          if [[ "$code" != 503 ]]; then
+            echo "::error::Checkout Sandbox est resté accessible : HTTP $code"
+            exit 1
+          fi
+          echo "STAGING_CHECKOUT_FINAL_FAIL_CLOSED_OK"

@@ -6,12 +6,21 @@ vi.mock('../../lib/supabase/admin',()=>({createAdminSupabase:mocks.admin}));
 vi.mock('../../lib/billing/stripe',()=>({getStripe:mocks.stripe}));
 import { POST } from '../../app/api/stripe/checkout/route';
 const actor='10000000-0000-4000-8000-000000000001';
+let existingSubscription: {stripe_subscription_id:string;status:string}|null=null;
+let lookupFailure=false;
 const request=()=>new Request('https://mentioncheck.test/api/stripe/checkout',{method:'POST',headers:{origin:'https://mentioncheck.test','content-type':'application/json'},body:JSON.stringify({plan:'solo'})});
 beforeEach(()=>{
  vi.clearAllMocks();
+ existingSubscription=null;lookupFailure=false;
  for(const [key,value] of Object.entries({BILLING_ENABLED:'true',STRIPE_MODE:'test',STRIPE_SECRET_KEY:'sk_test_fixture',STRIPE_WEBHOOK_SECRET:'whsec_fixture',STRIPE_PRICE_PRO:'price_PRO',STRIPE_PRICE_STUDIO:'price_STUDIO',STRIPE_PRICE_SOLO:''}))vi.stubEnv(key,value);
  mocks.user.mockResolvedValue({user:{id:actor,email:'fixture@example.test'}});
- mocks.admin.mockReturnValue({from:()=>({select:()=>({eq:()=>({single:async()=>({data:{stripe_customer_id:null},error:null})})}),update:()=>({eq:async()=>({error:null})})})});
+ mocks.admin.mockReturnValue({from:(table:string)=>{
+  if(table==='subscriptions')return {select:()=>({eq:()=>({maybeSingle:async()=>({
+    data:existingSubscription,error:lookupFailure?{message:'private db error'}:null
+  })})})};
+  if(table==='users')return {select:()=>({eq:()=>({single:async()=>({data:{stripe_customer_id:null},error:null})})}),update:()=>({eq:async()=>({error:null})})};
+  throw new Error('Unexpected table');
+ }});
  mocks.customer.mockResolvedValue({id:'cus_fixture'});mocks.session.mockResolvedValue({url:'https://checkout.stripe.test/fixture'});
  mocks.stripe.mockReturnValue({customers:{create:mocks.customer},checkout:{sessions:{create:mocks.session}}});
 });
@@ -25,13 +34,14 @@ it('refuse le checkout avant authentification lorsque la facturation est désact
  expect(mocks.user).not.toHaveBeenCalled();expect(mocks.admin).not.toHaveBeenCalled();expect(mocks.stripe).not.toHaveBeenCalled();
 });
 it('refuse une origine tierce avant authentification ou accès aux services',async()=>{
+ vi.stubEnv('STRIPE_PRICE_SOLO','price_SOLO');
  const response=await POST(new Request('https://mentioncheck.test/api/stripe/checkout',{method:'POST',headers:{origin:'https://outside.test','content-type':'application/json'},body:JSON.stringify({plan:'solo'})}));
  expect(response.status).toBe(403);
  expect(mocks.user).not.toHaveBeenCalled();expect(mocks.admin).not.toHaveBeenCalled();expect(mocks.stripe).not.toHaveBeenCalled();
 });
 it('utilise le prix Solo configuré et l’identité serveur dans une session simulée',async()=>{
  vi.stubEnv('STRIPE_PRICE_SOLO','price_SOLO');expect((await POST(request())).status).toBe(200);
- expect(mocks.session).toHaveBeenCalledWith(expect.objectContaining({line_items:[{price:'price_SOLO',quantity:1}],metadata:{user_id:actor,selected_plan:'solo'}}));
+ expect(mocks.session).toHaveBeenCalledWith(expect.objectContaining({line_items:[{price:'price_SOLO',quantity:1}],metadata:{user_id:actor,selected_plan:'solo'}}),expect.objectContaining({idempotencyKey:expect.stringContaining('mentioncheck_checkout_')}));
 });
 it('masque les détails du fournisseur si la création de session échoue',async()=>{
  vi.stubEnv('STRIPE_PRICE_SOLO','price_SOLO');
@@ -41,4 +51,34 @@ it('masque les détails du fournisseur si la création de session échoue',async
  const payload=await response.json();
  expect(payload).toEqual({error:'Le service est momentanément indisponible.'});
  expect(JSON.stringify(payload)).not.toContain('private provider diagnostic');
+});
+
+it('empêche le doublon de souscription et renvoie vers le portail sans appel Stripe',async()=>{
+ vi.stubEnv('STRIPE_PRICE_SOLO','price_SOLO');
+ existingSubscription={stripe_subscription_id:'sub_existing',status:'active'};
+ const response=await POST(request());
+ expect(response.status).toBe(409);
+ expect(mocks.customer).not.toHaveBeenCalled();
+ expect(mocks.session).not.toHaveBeenCalled();
+ expect(mocks.stripe).not.toHaveBeenCalled();
+});
+it('refuse aussi une souscription impayée pour empêcher un abonnement parallèle',async()=>{
+ vi.stubEnv('STRIPE_PRICE_SOLO','price_SOLO');
+ existingSubscription={stripe_subscription_id:'sub_unpaid',status:'past_due'};
+ expect((await POST(request())).status).toBe(409);
+ expect(mocks.stripe).not.toHaveBeenCalled();
+});
+it('refuse en cas de lecture de souscription indisponible',async()=>{
+ vi.stubEnv('STRIPE_PRICE_SOLO','price_SOLO');
+ lookupFailure=true;
+ const response=await POST(request());
+ expect(response.status).toBe(503);
+ expect(JSON.stringify(await response.json())).not.toContain('private db error');
+ expect(mocks.stripe).not.toHaveBeenCalled();
+});
+it('autorise une nouvelle souscription quand la précédente est annulée',async()=>{
+ vi.stubEnv('STRIPE_PRICE_SOLO','price_SOLO');
+ existingSubscription={stripe_subscription_id:'sub_canceled',status:'canceled'};
+ expect((await POST(request())).status).toBe(200);
+ expect(mocks.session).toHaveBeenCalledTimes(1);
 });

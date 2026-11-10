@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updated": "2026-11-06",
+  "updated": "2026-11-10",
   "scope": "Code de la branche, non preuve de déploiement ni de commercialisation.",
   "features": [
     {
@@ -49,7 +49,8 @@
       ],
       "migrations": [],
       "next": [
-        "Texte, réécriture et Vision validés réellement en mode complet sur 0d8aec2 ; tests E2E locaux passants. Vidéo/carrousel distants non actifs ; voir docs/37-real-openai-validation.md."
+        "Texte, réécriture et Vision validés réellement en mode complet sur 0d8aec2 ; tests E2E locaux passants. Vidéo/carrousel distants non actifs ; voir docs/37-real-openai-validation.md.",
+        "Précommercialisation : accueil cohérent avec OPENAI_PAUSED, mode rules_only explicite et refus anticipé des demandes IA avant toute réservation de quota (PR #114, tests dédiés)."
       ]
     },
     {
@@ -268,13 +269,15 @@
         "app/api/stripe/webhook/route.ts"
       ],
       "migrations": [
-        "supabase/migrations/202611042003_stripe_event_inbox.sql"
+        "supabase/migrations/202611042003_stripe_event_inbox.sql",
+        "supabase/migrations/20261110093000_free_vs_paid_solo_quotas.sql"
       ],
       "next": [
         "Les trois offres sont raccordées dans le code de test, dont Solo ; tarif validé avant création d’un client.",
-        "Le mode live reste refusé ; aucune activation ni requête de paiement réelle.",
         "Page /tarifs améliorée : cartes responsives, comparaison accessible, FAQ et positionnement Pro ; prix et quotas restent indicatifs, Stripe live désactivé.",
-        "CTA de test Solo disponible uniquement avec prix Solo configuré ; aucun service de paiement activé. Voir docs/39-technical-reliability.md."
+        "Gratuit 3/1/3 distinct de Solo payant 30/5/20 ; migration SQL et tests locaux sur PR #114, staging à certifier avant tout déploiement production.",
+        "Staging : Checkout Solo/Pro/Studio authentifié + portail et vrais événements Stripe signés création/résiliation certifiés ; sans carte ni vente. Code live prêt derrière garde-fous légaux/fiscaux/IA ; paiement par carte test non certifié.",
+        "Dossier juridique de pré-lancement à compléter : docs/61-dossier-lancement-commercial-2026.md. TVA française : mention CIBS de septembre 2026, 293 B en tolérance jusqu'à fin 2027."
       ]
     },
     {

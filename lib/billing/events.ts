@@ -1,5 +1,6 @@
 // Traduction contrôlée des offres et statuts Stripe en droits applicatifs.
 import type { PaidPlan } from './config';
+import type { AccessTier } from './plans';
 import { isBillableStatus } from './config';
 
 export function paidPlanFromPrices(priceIds: string[], config: {
@@ -10,9 +11,23 @@ export function paidPlanFromPrices(priceIds: string[], config: {
   const matched = (['solo','pro','studio'] as const).filter(plan => config[plan] && match.has(config[plan]!));
   return matched.length === 1 ? matched[0]! : null;
 }
-export function effectivePlan(status: string, paidPlan: PaidPlan | null):
-  'solo' | PaidPlan {
-  return paidPlan && isBillableStatus(status) ? paidPlan : 'solo';
+export function effectivePlan(status: string, paidPlan: PaidPlan | null): AccessTier {
+  return paidPlan && isBillableStatus(status) ? paidPlan : 'free';
+}
+
+// Un plan historique en base ne suffit pas à accorder les droits d'un abonnement.
+// Les dates, le statut et la référence fournisseur doivent tous être valides.
+export function subscriptionAccessTier(subscription: {
+  stripe_subscription_id: string | null;
+  plan: PaidPlan;
+  status: string;
+  current_period_end: string | null;
+} | null, now = Date.now()): AccessTier {
+  if (!subscription?.stripe_subscription_id || !isBillableStatus(subscription.status)) return 'free';
+  const expiry = subscription.current_period_end ? Date.parse(subscription.current_period_end) : NaN;
+  if (!Number.isFinite(expiry) || expiry <= now) return 'free';
+  if (!['solo','pro','studio'].includes(subscription.plan)) return 'free';
+  return subscription.plan;
 }
 export function stripeStatus(status: string):
   'incomplete' | 'incomplete_expired' | 'trialing' | 'active' |

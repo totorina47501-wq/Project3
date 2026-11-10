@@ -2,12 +2,20 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { BRAND } from '@/lib/branding';
+import { openaiReadiness } from '@/lib/openai/config';
+import { billingGate } from '@/lib/billing/config';
 
 export const metadata: Metadata = {
   alternates: { canonical: '/' },
 };
 
+export const dynamic = 'force-dynamic';
 export default function Home() {
+  // La landing doit annoncer seulement les capacités effectivement disponibles.
+  // Aucune clé ni secret ne sort vers le navigateur.
+  const ai = openaiReadiness(process.env);
+  const aiAvailable = ai.keyConfigured && ai.textEnabled;
+  const commercial = billingGate(process.env).mode === 'live';
   return (
     <main className="min-h-screen overflow-hidden bg-slate-50">
       <div className="mx-auto max-w-6xl px-6 py-8">
@@ -32,15 +40,21 @@ export default function Home() {
             Conçu pour les créateurs français
           </span>
           <h1 className="mt-6 font-heading text-5xl font-bold leading-tight tracking-tight text-primary sm:text-7xl">
-            L&apos;IA qui check vos mentions légales <span className="text-accent">avant publication.</span>
+            {aiAvailable ? <>L&apos;IA qui check vos mentions légales </> :
+              <>Repérez les mentions commerciales </>}
+            <span className="text-accent">avant publication.</span>
           </h1>
           <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-600">
-            Mia analyse vos légendes et images, explique les risques de transparence
-            commerciale et propose une réécriture qui respecte votre style.
+            {aiAvailable ?
+              'MentionCheck vous aide à relire vos publications et à identifier les mentions commerciales à clarifier.' :
+              'Contrôlez gratuitement vos légendes grâce aux règles automatiques de transparence commerciale, sans utiliser de crédit IA.'}
           </p>
           <Link href="/register" className="mt-10 rounded-2xl bg-accent px-7 py-4 font-bold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700">
             Check ma publication
           </Link>
+          {!aiAvailable && <p role="status" className="mt-5 max-w-2xl rounded-xl border border-amber-300 bg-amber-50 px-5 py-3 text-sm text-amber-950">
+            Analyses IA, réécritures et assistant Mia temporairement indisponibles. Le contrôle de légende sans IA reste accessible.
+          </p>}
           <p className="mt-5 text-sm text-slate-500">
             Une aide à la relecture, pas une certification juridique automatique.
           </p>
@@ -48,8 +62,12 @@ export default function Home() {
         <section id="fonctionnement" className="grid gap-5 pb-20 md:grid-cols-3">
           {[
             { title: 'Mention', text: 'Repérez les indications commerciales qui doivent être clairement signalées.' },
-            { title: 'Check', text: 'Analysez une légende et son visuel, et consultez un score explicable.' },
-            { title: 'IA', text: 'Mia vous propose une réécriture fidèle à votre voix, sous votre contrôle.' },
+            { title: 'Check', text: aiAvailable ?
+                'Analysez une légende et consultez un score explicable.' :
+                'Vérifiez les mentions d’une légende avec des règles automatiques explicables, sans IA.' },
+            aiAvailable ?
+              { title: 'IA', text: 'Des recommandations assistées par IA sont accessibles lorsque les capacités sont actives.' } :
+              { title: 'Sans IA', text: 'Le contrôle déterministe reste accessible et ne consomme aucun crédit IA.' },
           ].map(({ title, text }) => (
             <article key={title} className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
               <h2 className="font-heading text-2xl font-bold text-primary">{title}</h2>
@@ -79,21 +97,22 @@ export default function Home() {
         <section aria-labelledby="offres" className="mb-16 rounded-3xl bg-indigo-50 px-6 py-10 text-center sm:px-10">
           <h2 id="offres" className="font-heading text-3xl font-bold text-primary">Des offres selon votre rythme</h2>
           <p className="mx-auto mt-4 max-w-2xl leading-7 text-slate-600">
-            Découvrez les formules Solo, Pro et Studio. Les tarifs sont indicatifs et les abonnements
-            payants ne sont pas encore ouverts.
+            {commercial ? 'Découvrez les abonnements mensuels Solo, Pro et Studio.' :
+              'Découvrez les formules Solo, Pro et Studio. Les tarifs sont indicatifs et les abonnements payants ne sont pas encore ouverts.'}
           </p>
           <Link href="/tarifs" className="mt-6 inline-flex rounded-xl bg-primary px-6 py-3 font-semibold text-white hover:bg-slate-800">
-            Comparer les tarifs indicatifs
+            {commercial ? 'Comparer les tarifs' : 'Comparer les tarifs indicatifs'}
           </Link>
         </section>
         <footer className="border-t border-slate-200 py-7 text-center text-sm text-slate-500">
           <nav aria-label="Informations publiques" className="mb-4 flex flex-wrap justify-center gap-5">
-            <Link href="/tarifs" className="underline hover:text-accent">Tarifs indicatifs</Link>
+            <Link href="/tarifs" className="underline hover:text-accent">{commercial ? 'Tarifs' : 'Tarifs indicatifs'}</Link>
             <Link href="/legal/confidentialite" className="underline hover:text-accent">Confidentialité</Link>
             <Link href="/legal/mentions-legales" className="underline hover:text-accent">Mentions légales</Link>
           </nav>
-          © 2026 {BRAND.publicName} — {BRAND.tagline}
-          <p className="mt-2 text-xs">Plateforme en préparation commerciale. Pas un service de certification juridique.</p>
+          © 2026 {BRAND.publicName} — {aiAvailable ? BRAND.tagline : 'Relecture des mentions commerciales avant publication'}
+          <p className="mt-2 text-xs">{commercial ? 'Service de relecture, pas une certification juridique.' :
+            'Plateforme en préparation commerciale. Aucun abonnement payant ouvert.'}</p>
         </footer>
       </div>
     </main>

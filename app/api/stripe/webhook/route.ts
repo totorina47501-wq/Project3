@@ -9,7 +9,7 @@ import { createAdminSupabase } from '@/lib/supabase/admin';
 export const runtime='nodejs';
 
 async function syncSubscription(subscription: Stripe.Subscription, eventAt:number, deleted = false) {
-  const gate=billingGate(process.env);
+  const gate=billingGate(process.env,'webhook');
   const plan=paidPlanFromPrices(subscription.items.data.map(item=>item.price.id),{
     solo:gate.priceSolo,pro:gate.pricePro,studio:gate.priceStudio,
   });
@@ -29,7 +29,7 @@ async function handleEvent(event: Stripe.Event) {
       event.type === 'customer.subscription.updated') {
     const source = event.data.object as Stripe.Subscription;
     // Relecture de l'état actuel pour éviter qu'un ancien événement rétrograde l'abonnement.
-    const current = await getStripe().subscriptions.retrieve(source.id);
+    const current = await getStripe('webhook').subscriptions.retrieve(source.id);
     await syncSubscription(current,event.created);
   } else if (event.type === 'customer.subscription.deleted') {
     const deleted = event.data.object as Stripe.Subscription;
@@ -40,20 +40,21 @@ async function handleEvent(event: Stripe.Event) {
 }
 
 export async function POST(request: Request) {
-  const gate = billingGate(process.env);
+  const gate = billingGate(process.env,'webhook');
   if (!gate.enabled || !process.env.STRIPE_WEBHOOK_SECRET)
     return Response.json({error:'Stripe désactivé.'},{status:503});
   const signature = request.headers.get('stripe-signature');
   if (!signature) return Response.json({error:'Signature manquante.'},{status:400});
   let event: Stripe.Event;
   try {
-    event = getStripe().webhooks.constructEvent(
+    event = getStripe('webhook').webhooks.constructEvent(
       await request.text(),signature,process.env.STRIPE_WEBHOOK_SECRET,
     );
   } catch {
     return Response.json({error:'Signature invalide.'},{status:400});
   }
-  if (event.livemode) return Response.json({error:'Événement Stripe de production refusé.'},{status:400});
+  if (event.livemode !== (gate.mode === 'live'))
+    return Response.json({error:'Événement d’un environnement Stripe incompatible.'},{status:400});
   const admin = createAdminSupabase();
   const { data: existing, error: existingError } = await admin.from('stripe_webhook_events')
     .select('status').eq('event_id',event.id).maybeSingle();

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { effectivePlan, paidPlanFromPrices, stripeStatus } from './events';
-import { planEntitlements, type AccountPlan, type PlanQuota } from './plans';
+import { planEntitlements, type AccountPlan, type AccessTier, type PlanQuota } from './plans';
 const localId=z.string().regex(/^[A-Za-z0-9_:-]{1,128}$/);
 const eventSchema=z.object({
   id:z.string().regex(/^evt_[A-Za-z0-9_]{1,100}$/),created:z.number().int().min(0).max(253402300799),
@@ -13,7 +13,7 @@ const eventSchema=z.object({
 export type SimulatedBillingEvent=z.input<typeof eventSchema>;
 export type SimulatedBillingState={
   accountId:string;customerId:string;subscriptionId:string|null;status:ReturnType<typeof stripeStatus>|null;
-  subscribedPlan:AccountPlan|null;plan:AccountPlan;lastEventCreated:number|null;
+  subscribedPlan:AccountPlan|null;plan:AccessTier;lastEventCreated:number|null;
   usage:Record<PlanQuota,number>;chargedCents:0;
 };
 export type BillingSimulationOutcome='applied'|'duplicate'|'stale'|'terminal'|'superseded'|'ambiguous'|'conflict';
@@ -28,7 +28,7 @@ export function createBillingSimulation(options:{accountId:string;customerId:str
   const prices={...options.prices};
   const usage={check:0,rewrite:0,mia:0,...options.usage};
   for(const value of Object.values(usage))z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).parse(value);
-  let state:SimulatedBillingState={accountId:options.accountId,customerId:options.customerId,subscriptionId:null,status:null,subscribedPlan:null,plan:'solo',lastEventCreated:null,usage,chargedCents:0};
+  let state:SimulatedBillingState={accountId:options.accountId,customerId:options.customerId,subscriptionId:null,status:null,subscribedPlan:null,plan:'free',lastEventCreated:null,usage,chargedCents:0};
   const receipts=new Map<string,Receipt>();const terminalSubscriptions=new Set<string>();
   const snapshot=():SimulatedBillingState=>structuredClone(state);
   function result(outcome:BillingSimulationOutcome){return {outcome,state:snapshot(),entitlements:planEntitlements(state.plan),mode:'local-simulation' as const};}
@@ -51,7 +51,7 @@ export function createBillingSimulation(options:{accountId:string;customerId:str
     if(state.subscriptionId&&state.subscriptionId!==event.subscriptionId&&state.status!=='canceled'&&state.status!=='incomplete_expired')return record('conflict');
     const status=event.type==='customer.subscription.deleted'?'canceled':stripeStatus(event.status);
     // Une seule affectation après validation : profil et droits locaux ne divergent pas.
-    state={...state,subscriptionId:event.subscriptionId,status,subscribedPlan:paidPlan,plan:paidPlan==='solo'?'solo':effectivePlan(status,paidPlan),lastEventCreated:event.created};
+    state={...state,subscriptionId:event.subscriptionId,status,subscribedPlan:paidPlan,plan:effectivePlan(status,paidPlan),lastEventCreated:event.created};
     if(status==='canceled'||status==='incomplete_expired')terminalSubscriptions.add(event.subscriptionId);
     return record('applied');
   }
