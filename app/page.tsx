@@ -107,6 +107,7 @@ export default function Home() {
         <footer className="border-t border-slate-200 py-7 text-center text-sm text-slate-500">
           <nav aria-label="Informations publiques" className="mb-4 flex flex-wrap justify-center gap-5">
             <Link href="/tarifs" className="underline hover:text-accent">{commercial ? 'Tarifs' : 'Tarifs indicatifs'}</Link>
+            <Link href="/developpeurs" className="underline hover:text-accent">API Studio</Link>
             <Link href="/legal/confidentialite" className="underline hover:text-accent">Confidentialité</Link>
             <Link href="/legal/mentions-legales" className="underline hover:text-accent">Mentions légales</Link>
           </nav>

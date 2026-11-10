@@ -56,3 +56,6 @@ L'API REST `v1` est **incluse uniquement dans Studio (49 €/mois, tarif indicat
 L'offre Studio comprend **2 000 créations de vérifications API sans IA par mois UTC et par espace**, partagées entre toutes les clés et les collaborateurs ; le compteur PostgreSQL est atomique, il n'y a **pas de facturation au dépassement**. HTTP 429 à la saturation. Une protection Cloudflare complémentaire limite à **120 appels/minute par clé**, sans engagement de SLA. Les analyses IA personnelles conservent leurs quotas distincts ; ces contrôles API n'appellent jamais OpenAI.
 
 **État du déploiement :** vérifier migration `20261110180000_studio_api_subscription_gate.sql`, tests SQL, recette authentifiée avec clés sur staging, SHA réellement déployé et retour 401/403/429 avant de promettre la disponibilité publique. Aucun paiement live n'est ouvert pour réaliser ces tests, et aucune clé n'est publiée.
+
+## Page publique développeurs
+La page `/developpeurs` présente l’API Studio, un exemple curl, les droits et les limites. Elle reste **noindex** et annonce « en préparation commerciale » jusqu’à la validation des prérequis Stripe Live. Le footer de l’accueil et la page Tarifs pointent vers elle.
