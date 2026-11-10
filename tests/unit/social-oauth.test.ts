@@ -22,6 +22,7 @@ const now = new Date('2026-11-10T12:00:00.000Z');
 const config = (provider: SocialOAuthProvider) => ({
   provider,
   clientId: 'offline-client',
+  clientSecret: 'offline-secret',
   redirectUri: `https://local.test/api/social-accounts/oauth/callback/${provider}`,
   allowedOrigins: ['https://local.test'],
 });
@@ -63,6 +64,7 @@ describe('Socle OAuth social désactivé', () => {
     expect(
       socialOAuthConfig('instagram', {
         SOCIAL_OAUTH_ENABLED: 'true',
+        SOCIAL_OAUTH_INSTAGRAM_ENABLED: 'true',
         SOCIAL_OAUTH_INSTAGRAM_CLIENT_ID: 'client',
         SOCIAL_OAUTH_PUBLIC_ORIGIN: 'https://local.test',
         SOCIAL_OAUTH_ALLOWED_ORIGINS: 'https://local.test',
@@ -71,14 +73,23 @@ describe('Socle OAuth social désactivé', () => {
     expect(
       socialOAuthConfig('instagram', {
         SOCIAL_OAUTH_ENABLED: 'true',
+        SOCIAL_OAUTH_INSTAGRAM_ENABLED: 'true',
         SOCIAL_OAUTH_INSTAGRAM_CLIENT_ID: 'client',
         SOCIAL_OAUTH_INSTAGRAM_CLIENT_SECRET: 'server-secret',
         SOCIAL_OAUTH_PUBLIC_ORIGIN: 'https://local.test',
         SOCIAL_OAUTH_ALLOWED_ORIGINS: 'https://local.test',
       }),
     ).toMatchObject({
+      clientSecret: 'server-secret',
       redirectUri: 'https://local.test/api/social-accounts/oauth/callback/instagram',
     });
+    expect(socialOAuthConfig('instagram', {
+      SOCIAL_OAUTH_ENABLED: 'true',
+      SOCIAL_OAUTH_INSTAGRAM_CLIENT_ID: 'client',
+      SOCIAL_OAUTH_INSTAGRAM_CLIENT_SECRET: 'server-secret',
+      SOCIAL_OAUTH_PUBLIC_ORIGIN: 'https://local.test',
+      SOCIAL_OAUTH_ALLOWED_ORIGINS: 'https://local.test',
+    })).toBeNull();
   });
 
   it('déclare quatre adaptateurs distincts avec des scopes sans publication', () => {
@@ -94,6 +105,7 @@ describe('Socle OAuth social désactivé', () => {
   it('refuse une origine non HTTPS ou non allowlistée avant de créer un état', async () => {
     const env = {
       SOCIAL_OAUTH_ENABLED: 'true',
+      SOCIAL_OAUTH_INSTAGRAM_ENABLED: 'true',
       SOCIAL_OAUTH_INSTAGRAM_CLIENT_ID: 'client',
       SOCIAL_OAUTH_INSTAGRAM_CLIENT_SECRET: 'server-secret',
       SOCIAL_OAUTH_PUBLIC_ORIGIN: 'https://other.test',
@@ -143,6 +155,9 @@ describe('Socle OAuth social désactivé', () => {
       SOCIAL_OAUTH_STATE_TTL_SECONDS * 1000,
     );
     expect(transaction.pkceVerifier).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(authorizationUrl.searchParams.get('scope')).toBe(
+      'https://www.googleapis.com/auth/youtube.readonly',
+    );
 
     const callbackUrl = `${config('youtube').redirectUri}?code=simulated-code&state=${state}`;
     await expect(

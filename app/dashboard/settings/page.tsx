@@ -47,6 +47,9 @@ export default async function SettingsPage() {
   const { data: usage, error: usageError } = await supabase.from('usage_monthly')
     .select('checks_used,rewrites_used,mia_messages_used,period_start')
     .order('period_start', { ascending:false }).limit(1).maybeSingle();
+  if(userData&&process.env.SOCIAL_OAUTH_ENABLED==='true'){
+    await supabase.rpc('expire_social_oauth_accounts',{p_user:userData.id});
+  }
   const [social,preferences] = userData ? await Promise.all([
     supabase.from('social_accounts').select(SOCIAL_COLUMNS,{count:'exact'}).eq('user_id',userData.id)
       .order('connected_at',{ascending:false}).order('id',{ascending:false}).range(0,SOCIAL_PAGE_SIZE-1),

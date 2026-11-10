@@ -118,7 +118,10 @@ export async function beginSocialOAuth(input: {
   authorizationUrl.searchParams.set(definition.clientIdParameter, config.clientId);
   authorizationUrl.searchParams.set('redirect_uri', redirect.toString());
   authorizationUrl.searchParams.set('response_type', 'code');
-  authorizationUrl.searchParams.set('scope', definition.scopes.join(' '));
+  authorizationUrl.searchParams.set(
+    'scope',
+    definition.scopes.join(definition.scopeSeparator),
+  );
   authorizationUrl.searchParams.set('state', state);
   if (verifier) {
     authorizationUrl.searchParams.set('code_challenge', await pkceChallenge(verifier));

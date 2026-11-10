@@ -7,8 +7,15 @@ describe('Paramètres rendus sans fournisseur',()=>{
   it('affiche une déclaration sans prétendre à une connexion et bloque visuellement le quatrième Solo',()=>{
     const html=renderToStaticMarkup(createElement(SocialAccounts,{plan:'solo',initialTotal:3,initialItems:[{id:'local',platform:'instagram',handle:'camille',connection_kind:'manual',connected_at:'2026-11-04'}]}));
     expect(html).toContain('aucune connexion OAuth');expect(html).toContain('Plan Solo : 3 comptes maximum');
+    expect(html).toContain('Connexion indisponible');expect(html).not.toContain('Connecter Instagram');
     expect(html).toMatch(/<button disabled=""[^>]*>Ajouter la déclaration<\/button>/);
     expect(html).toContain('Retirer la déclaration @camille');
+  });
+  it('identifie une connexion expirée sans la présenter comme OAuth active',()=>{
+    const html=renderToStaticMarkup(createElement(SocialAccounts,{plan:'pro',initialTotal:1,initialItems:[{id:'expired',platform:'youtube',handle:'channel',connection_kind:'expired',connected_at:'2026-11-04'}]}));
+    expect(html).toContain('Connexion expirée ou déconnectée');
+    expect(html).not.toContain('Déconnecter');
+    expect(html).toContain('Retirer la déclaration @channel');
   });
   it('conserve les comptes historiques en lecture seule',()=>{
     const html=renderToStaticMarkup(createElement(SocialAccounts,{plan:'pro',initialTotal:1,initialItems:[{id:'legacy',platform:'youtube',handle:'archive',connection_kind:'unknown',connected_at:'2026-11-04'}]}));
