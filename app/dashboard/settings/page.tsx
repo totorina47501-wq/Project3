@@ -67,10 +67,10 @@ export default async function SettingsPage() {
            tier === null ? 'Le statut de facturation ne peut pas être vérifié actuellement.' :
            promotionalSolo ? 'Accès Solo promotionnel gratuit, sans abonnement ni prélèvement Stripe.' :
            'Abonnement Stripe Sandbox : aucun encaissement réel.'}
+        </p>
         {promotionalSolo && promotion && <p className="mt-1 text-sm text-slate-500">
           Offre de bienvenue valable jusqu’au {new Date(promotion.expires_at).toLocaleDateString('fr-FR')}.
         </p>}
-        </p>
         {usageError ? <p role="alert" className="mt-5 text-sm text-red-800">Quotas momentanément indisponibles.{' '}
           <a className="font-semibold underline" href="/dashboard/settings">Réessayer le chargement</a>
         </p> : <div className="mt-5 grid gap-3 sm:grid-cols-3">
