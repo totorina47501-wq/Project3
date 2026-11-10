@@ -1,0 +1,32 @@
+name: MentionCheck AI Production Read-Only
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mentioncheck-ai-production-readonly.yml'
+      - 'scripts/recette/production-ai-readonly.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mentioncheck-ai-production-readonly
+  cancel-in-progress: true
+jobs:
+  inspect:
+    if: github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.MENTIONCHECK_STAGING_CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.MENTIONCHECK_STAGING_CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Vérifier localement que le diagnostic ne peut pas modifier Cloudflare
+        run: node --test scripts/recette/production-ai-readonly.test.mjs
+      - name: Lecture seule Cloudflare — jamais déployer ni exposer de secret
+        run: node scripts/recette/production-ai-readonly.mjs
