@@ -89,7 +89,7 @@ après essais. Ne pas modifier `wrangler.jsonc` production.
 
 ## Matrice de contrôle BILLING-FINAL-001 (hors Live)
 
-Référence CI branche : `5a1a71bd1b811e261eac3d9446b6e6da9e18c856` (run `42906259266`, `action_required`, aucun job exécuté).
+Référence CI branche : `e612c4f2f1448d801c526f7ea5844ab87719491e` (run `42907332548`, `action_required`, aucun job exécuté).
 
 | Contrôle | Statut | Preuve |
 | --- | --- | --- |
