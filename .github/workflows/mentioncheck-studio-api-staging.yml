@@ -1,0 +1,72 @@
+# Recette API Studio uniquement staging. Aucun Stripe, OpenAI ni Worker production.
+name: MentionCheck Studio API Staging
+on:
+  push:
+    branches: [feat/mentioncheck-studio-api-entitlements-20261110]
+permissions:
+  contents: read
+concurrency:
+  group: mentioncheck-staging-cloudflare
+  cancel-in-progress: false
+jobs:
+  studio-api-staging:
+    if: github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/feat/mentioncheck-studio-api-entitlements-20261110'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://ukvgnkxgzyhswgpnvyzz.supabase.co
+      NEXT_PUBLIC_APP_URL: https://mentioncheck-staging.toto-rina47501.workers.dev
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.MENTIONCHECK_STAGING_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.MENTIONCHECK_STAGING_SUPABASE_SERVICE_KEY }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.MENTIONCHECK_STAGING_CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.MENTIONCHECK_STAGING_CLOUDFLARE_API_TOKEN }}
+      OPENAI_PAUSED: 'true'
+      OPENAI_TEXT_ENABLED: 'false'
+      OPENAI_VISION_ENABLED: 'false'
+      OPENAI_AUDIO_ENABLED: 'false'
+      OPENAI_EMBEDDINGS_ENABLED: 'false'
+      BILLING_ENABLED: 'false'
+      PROMO_SOLO_ENABLED: 'false'
+      MEDIA_RETENTION_ENABLED: 'false'
+      MEDIA_PROCESSING_ENABLED: 'false'
+      MEDIA_AI_ENABLED: 'false'
+      MEDIA_CLOUDFLARE_RUNNER_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Refuser les secrets absents
+        shell: bash
+        run: |
+          set -euo pipefail
+          for key in NEXT_PUBLIC_SUPABASE_ANON_KEY SUPABASE_SERVICE_KEY CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN; do
+            if [[ -z "$(printenv "$key" || true)" ]]; then
+              echo "::error::Missing staging secret: $key"
+              exit 1
+            fi
+          done
+      - name: Frontières staging et aucun crédit IA
+        run: |
+          node scripts/recette/check-cloudflare-staging-boundary.mjs
+          node scripts/recette/check-cloudflare-preview-boundary.mjs
+          node --check scripts/recette/studio-api-staging-smoke.mjs
+      - run: npm ci --ignore-scripts
+      - name: TypeScript et tests API/RLS hors ligne
+        run: |
+          npm run typecheck
+          npx vitest run tests/unit/studio-routes.test.ts tests/unit/mentioncheck-sdk.test.ts
+          npm run test:sql:offline
+      - name: Construire seulement Worker staging
+        run: |
+          npm run build
+          npx @opennextjs/cloudflare build --skipNextBuild --config wrangler.staging.jsonc
+          npx wrangler deploy --config wrangler.staging.jsonc --dry-run
+      - name: Publier seulement mentioncheck-staging, billing et IA off
+        run: npx @opennextjs/cloudflare deploy --config wrangler.staging.jsonc -- --keep-vars
+      - name: Recette HTTP de deux équipes, scopes, quotas et expiration
+        run: node scripts/recette/studio-api-staging-smoke.mjs

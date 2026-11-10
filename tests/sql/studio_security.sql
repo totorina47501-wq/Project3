@@ -148,10 +148,10 @@ begin
  begin
    perform public.studio_execute_api(repeat('e',64),'save_check',
       '{"caption":"Quota dépassé","platform":"instagram","result":{"analysisMode":"rules_only"}}');
-   raise exception 'Le plafond API 2k a été dépassé';
+   raise exception 'Le plafond API 2k a été dépassé' using errcode='XX000';
  exception when raise_exception then
-   -- Accepter uniquement le refus métier P0001.
-   if SQLSTATE<>'P0001' then raise; end if;
+   -- Uniquement le refus levé par le garde-fou SQL, pas une erreur de notre fixture.
+   if SQLERRM<>'Quota API Studio atteint' then raise; end if;
  end;
  update public.subscriptions set current_period_end=now()-interval '1 second'
    where user_id=owner_id;
