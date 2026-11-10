@@ -65,13 +65,22 @@ try {
   });
   const html=await settings.text();
   // N'émettre que des marqueurs : jamais HTML, email, cookie ou information sensible.
+  const {data:adminProfile,error:adminProfileError}=await admin.from('users')
+    .select('id').eq('id',userId).maybeSingle();
+  const {data:selfProfile,error:selfProfileError}=await ssr.from('users')
+    .select('id').eq('id',userId).maybeSingle();
   console.log('STAGING_SETTINGS_DIAGNOSTIC',JSON.stringify({
     status:settings.status,
     loginCookiePresent:loginCookie.includes('sb-'),
     ssrCookiePresent:ssrCookie.includes('sb-'),
+    adminProfilePresent:!adminProfileError&&adminProfile?.id===userId,
+    selfProfileVisible:!selfProfileError&&selfProfile?.id===userId,
     settingsHeading:html.includes('Mon abonnement actuel'),
+    settingsRoot:html.includes('Ton compte'),
+    accountUnavailable:html.includes('Les informations du compte sont momentanément indisponibles'),
     loginPage:html.includes('Content de te retrouver'),
     settingsNav:html.includes('Paramètres'),
+    nextDigest:html.includes('digest'),
     serverError:html.includes('Application error')||html.includes('Internal Server Error'),
     bodyLength:html.length,
   }));
