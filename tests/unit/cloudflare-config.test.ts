@@ -3,11 +3,24 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 describe('Configuration Cloudflare sécurisée',()=>{
   it('préserve les variables runtime créées depuis le tableau de bord',()=>{
-    const config=JSON.parse(readFileSync(resolve(process.cwd(),'wrangler.jsonc'),'utf8')) as Record<string,unknown>;
+    const config=JSON.parse(readFileSync(resolve(process.cwd(),'wrangler.jsonc'),'utf8')) as {name:string;keep_vars:boolean;vars:Record<string,string>;previews:{vars:Record<string,string>}};
     expect(config.name).toBe('mentioncheck');
     expect(config.keep_vars).toBe(true);
-    expect(config.vars).toEqual({MEDIA_JOBS_SCHEMA_READY:'true',MEDIA_PROCESSING_ENABLED:'true',MEDIA_CLOUDFLARE_RUNNER_ENABLED:'true',MEDIA_AI_ENABLED:'true',MEDIA_AI_SCHEMA_READY:'true',OPENAI_AUDIO_ENABLED:'true'});
-    // Seuls ces flags d'activation sont déclarés : les secrets runtime sont préservés.
+    expect(config.vars).toEqual({
+      MEDIA_JOBS_SCHEMA_READY:'true',MEDIA_PROCESSING_ENABLED:'true',
+      MEDIA_CLOUDFLARE_RUNNER_ENABLED:'true',MEDIA_AI_ENABLED:'false',
+      MEDIA_AI_SCHEMA_READY:'true',OPENAI_AUDIO_ENABLED:'false',
+      OPENAI_PAUSED:'false',OPENAI_TEXT_ENABLED:'true',
+      OPENAI_VISION_ENABLED:'true',OPENAI_EMBEDDINGS_ENABLED:'false',
+    });
+    expect(config.previews.vars.OPENAI_PAUSED).toBe('true');
+    expect(config.previews.vars.OPENAI_TEXT_ENABLED).toBe('false');
+    expect(config.previews.vars.OPENAI_VISION_ENABLED).toBe('false');
+    expect(config.previews.vars.BILLING_ENABLED).toBe('false');
+    expect(config.vars).not.toHaveProperty('OPENAI_API_KEY');
+    expect(config.vars).not.toHaveProperty('BILLING_ENABLED');
+    // Activation à la demande sans audio / embeddings ni média IA automatique.
+    // La clé reste un secret du Worker, jamais une variable publiée dans Git.
   });
   it('génère le dossier standalone nécessaire au packaging OpenNext',()=>{
     const config=readFileSync(resolve(process.cwd(),'next.config.mjs'),'utf8');
