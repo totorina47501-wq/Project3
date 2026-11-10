@@ -12,6 +12,14 @@ export function migrationForOffline(name,original) {
   if(name==='202611032003_pgvector_match.sql')return {
     sql:null,omissions:['Fonction match_law_documents et privilèges pgvector : non testés.'],
   };
+  if(name==='20261110220000_social_oauth_vault_accounts.sql') {
+    const extension='create extension if not exists supabase_vault with schema vault;';
+    if(!original.includes(extension))throw new Error('Déclaration Vault attendue absente de la migration OAuth.');
+    return {
+      sql:original.replace(extension,''),
+      omissions:['Chiffrement, clés et privilèges natifs de Supabase Vault remplacés par un stub éphémère.'],
+    };
+  }
   if(name!=='202611032001_initial_schema.sql')return {sql:original,omissions:[]};
   const omissions=[];
   let sql=original;
@@ -37,6 +45,7 @@ export async function installSupabaseStubs(db) {
     create schema auth;
     create schema storage;
     create schema extensions;
+    create schema vault;
     grant usage on schema auth to anon,authenticated,service_role;
     create table auth.users (
       id uuid primary key,
@@ -45,6 +54,23 @@ export async function installSupabaseStubs(db) {
     );
     create function auth.uid() returns uuid language sql stable as $$
       select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid
+    $$;
+    create table vault.secrets (
+      id uuid primary key default gen_random_uuid(),
+      secret text not null,
+      name text,
+      description text
+    );
+    create view vault.decrypted_secrets as
+      select id,secret as decrypted_secret from vault.secrets;
+    create function vault.create_secret(p_secret text,p_name text default null,p_description text default null)
+      returns uuid language plpgsql security definer set search_path='' as $$
+      declare v_id uuid;
+      begin
+        insert into vault.secrets(secret,name,description)
+        values(p_secret,p_name,p_description) returning id into v_id;
+        return v_id;
+      end
     $$;
     create table storage.buckets (
       id text primary key,name text,public boolean,
@@ -96,7 +122,7 @@ export async function runSqlOffline() {
       if(!rows[0]?.present)throw new Error('Migration interne manquante pour '+table+'. Aucun SQL temporaire non versionné n’est exécuté.');
     }
     let suites=0;
-    for(const name of ['studio_security.sql','settings_security.sql','social_oauth_security.sql','collaborations_security.sql','privacy_regressions.sql','media_jobs_security.sql','ai_usage_security.sql','quota_period_security.sql','media_outputs_security.sql','law_controlled_import.sql','media_ai_security.sql','billing_sync_security.sql','free_paid_tiers_security.sql','legacy_solo_promotion_security.sql']) {
+    for(const name of ['studio_security.sql','settings_security.sql','social_oauth_security.sql','social_oauth_accounts_security.sql','collaborations_security.sql','privacy_regressions.sql','media_jobs_security.sql','ai_usage_security.sql','quota_period_security.sql','media_outputs_security.sql','law_controlled_import.sql','media_ai_security.sql','billing_sync_security.sql','free_paid_tiers_security.sql','legacy_solo_promotion_security.sql']) {
       try {await db.exec(await readFile(new URL(name,regressionDir),'utf8'));}catch(error) {
         throw new Error('Échec régression '+name+': '+(error instanceof Error?error.message:String(error)),{cause:error});
       }

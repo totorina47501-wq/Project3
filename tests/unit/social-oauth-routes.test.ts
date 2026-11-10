@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('server-only', () => ({}));
+
 const mocks = vi.hoisted(() => {
   const transactions: Array<Record<string, unknown>> = [];
   return {
@@ -98,6 +100,20 @@ describe('Routes OAuth sociales', () => {
     });
   });
 
+  it('refuse le démarrage sans activation globale et propre au fournisseur', async () => {
+    const response = await startOAuth(new Request(
+      'https://local.test/api/social-accounts/oauth/start',
+      {
+        method: 'POST',
+        headers: { Origin: 'https://local.test', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'youtube' }),
+      },
+    ));
+    expect(response.status).toBe(503);
+    expect(await response.text()).not.toContain('offline-secret');
+    expect(mocks.transactions).toHaveLength(0);
+  });
+
   it('protège le démarrage contre le CSRF et réalise un callback simulé une seule fois', async () => {
     enableYouTube();
     const foreign = await startOAuth(new Request(
@@ -110,6 +126,13 @@ describe('Routes OAuth sociales', () => {
     ));
     expect(foreign.status).toBe(403);
     expect(mocks.transactions).toHaveLength(0);
+
+    const invalidHost = await callbackOAuth(
+      new Request('https://attacker.invalid/api/social-accounts/oauth/callback/youtube'),
+      { params: Promise.resolve({ provider: 'youtube' }) },
+    );
+    expect(invalidHost.status).toBe(303);
+    expect(invalidHost.headers.get('location')).toMatch(/^https:\/\/local\.test\//);
 
     const enabled = await listProviders();
     expect(await enabled.json()).toMatchObject({
@@ -152,6 +175,32 @@ describe('Routes OAuth sociales', () => {
       handle: 'uc_channel',
     }));
     expect(mocks.transactions).toHaveLength(0);
+
+    mocks.save.mockRejectedValueOnce(new Error('Vault internal detail'));
+    const retryStart = await startOAuth(new Request(
+      'https://local.test/api/social-accounts/oauth/start',
+      {
+        method: 'POST',
+        headers: { Origin: 'https://local.test', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'youtube' }),
+      },
+    ));
+    const retryAuthorization = new URL(
+      (await retryStart.json() as { authorizationUrl: string }).authorizationUrl,
+    );
+    const retryCallback = new URL(callbackPath);
+    retryCallback.searchParams.set('code', 'simulated-code');
+    retryCallback.searchParams.set('state', retryAuthorization.searchParams.get('state')!);
+    const failedPersistence = await callbackOAuth(
+      new Request(retryCallback),
+      { params: Promise.resolve({ provider: 'youtube' }) },
+    );
+    expect(failedPersistence.headers.get('location')).toContain('social_oauth=unavailable');
+    expect(failedPersistence.headers.get('location')).not.toContain('Vault internal detail');
+    expect(mocks.revoke).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'youtube',
+      tokenSecret: expect.stringContaining('simulated-access'),
+    }));
   });
 
   it('déconnecte selon le propriétaire, masque le secret et confirme la révocation simulée', async () => {

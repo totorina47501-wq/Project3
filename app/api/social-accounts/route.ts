@@ -6,10 +6,12 @@ export const dynamic='force-dynamic';
 export async function GET(request:Request){
   try {
     const {user,client}=await requireUser();
-    if(process.env.SOCIAL_OAUTH_ENABLED==='true'){
+    let expiryFailed=false;
+    try{
       const {error}=await client.rpc('expire_social_oauth_accounts',{p_user:user.id});
-      if(error)throw new Error('Comptes indisponibles.');
-    }
+      expiryFailed=!!error;
+    }catch{expiryFailed=true;}
+    if(expiryFailed&&process.env.SOCIAL_OAUTH_ENABLED==='true')throw new Error('Comptes indisponibles.');
     let page:number;try{page=socialPage(request);}catch{throw new HttpError(400,'Page invalide.');}
     const offset=(page-1)*SOCIAL_PAGE_SIZE;
     const {data,error,count}=await client.from('social_accounts').select(SOCIAL_COLUMNS,{count:'exact'})

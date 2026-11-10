@@ -64,11 +64,5 @@ export function createSocialOAuthAccountStore(
       });
       if (error) throw new Error('Social OAuth account unavailable.');
     },
-    async expireDue(userId: string): Promise<void> {
-      const { error } = await admin.rpc('expire_social_oauth_accounts', {
-        p_user: userId,
-      });
-      if (error) throw new Error('Social OAuth account unavailable.');
-    },
   };
 }

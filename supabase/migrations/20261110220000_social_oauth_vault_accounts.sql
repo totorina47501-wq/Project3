@@ -2,6 +2,56 @@ begin;
 
 create extension if not exists supabase_vault with schema vault;
 
+create function public.create_social_oauth_transaction(
+  p_user uuid,
+  p_session uuid,
+  p_provider public.social_platform,
+  p_state_hash text,
+  p_pkce_verifier text,
+  p_redirect_uri text,
+  p_expires_at timestamptz
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if p_user is null or p_session is null then
+    raise exception 'OAuth session unavailable' using errcode = '42501';
+  end if;
+  perform 1 from public.users where id = p_user for update;
+  if not found then
+    raise exception 'OAuth owner unavailable' using errcode = '42501';
+  end if;
+  delete from public.social_oauth_transactions
+  where user_id = p_user and expires_at <= clock_timestamp();
+  if (
+    select count(*)
+    from public.social_oauth_transactions
+    where user_id = p_user
+      and session_id = p_session
+      and provider = p_provider
+      and consumed_at is null
+      and expires_at > clock_timestamp()
+  ) >= 5 then
+    raise exception 'Too many pending OAuth transactions' using errcode = 'P0001';
+  end if;
+  insert into public.social_oauth_transactions (
+    user_id, session_id, provider, state_hash, pkce_verifier, redirect_uri, expires_at
+  )
+  values (
+    p_user, p_session, p_provider, p_state_hash, p_pkce_verifier, p_redirect_uri, p_expires_at
+  );
+end;
+$$;
+revoke all on function public.create_social_oauth_transaction(
+  uuid, uuid, public.social_platform, text, text, text, timestamptz
+) from public, anon, authenticated;
+grant execute on function public.create_social_oauth_transaction(
+  uuid, uuid, public.social_platform, text, text, text, timestamptz
+) to service_role;
+
 alter table public.social_accounts
   drop constraint if exists social_accounts_connection_kind_check;
 alter table public.social_accounts
@@ -53,7 +103,7 @@ begin
     raise exception 'OAuth account invalid' using errcode = '22023';
   end if;
 
-  v_handle := lower(regexp_replace(btrim(p_handle), '^@', ''));
+  v_handle := regexp_replace(btrim(p_handle), '^@', '');
   if v_handle is null or length(v_handle) not between 1 and 200
     or v_handle !~ '^[[:alnum:]][[:alnum:]._-]*$' then
     raise exception 'OAuth account invalid' using errcode = '22023';

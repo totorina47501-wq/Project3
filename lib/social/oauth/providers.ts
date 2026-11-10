@@ -1,3 +1,5 @@
+import 'server-only';
+
 export const socialOAuthProviders = {
   instagram: {
     authorizationEndpoint: 'https://www.instagram.com/oauth/authorize',

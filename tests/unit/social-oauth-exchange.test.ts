@@ -30,7 +30,7 @@ describe('Échange OAuth simulé hors ligne', () => {
   beforeEach(() => vi.restoreAllMocks());
 
   it.each([
-    ['instagram', { access_token: 'ig-access', expires_in: 3600, user_id: 12345 }],
+    ['instagram', { access_token: 'ig-access', user_id: 12345 }],
     ['tiktok', { data: { access_token: 'tt-access', expires_in: 3600, open_id: 'tt-user' } }],
     ['youtube', { access_token: 'yt-access', expires_in: 3600 }],
     ['linkedin', { access_token: 'li-access', expires_in: 3600 }],
@@ -53,10 +53,10 @@ describe('Échange OAuth simulé hors ligne', () => {
         }
         if (provider === 'youtube') {
           expect(url).toBe(
-            'https://youtube.googleapis.com/youtube/v3/channels?part=id%2Csnippet&mine=true',
+            'https://youtube.googleapis.com/youtube/v3/channels?part=id&mine=true',
           );
           expect(new Headers(init?.headers).get('authorization')?.endsWith('yt-access')).toBe(true);
-          return response({ items: [{ id: 'UC_test_Channel', snippet: { customUrl: '@channel' } }] });
+          return response({ items: [{ id: 'UC_test_Channel' }] });
         }
         if (provider === 'linkedin') {
           expect(url).toBe('https://api.linkedin.com/v2/userinfo');
@@ -77,7 +77,7 @@ describe('Échange OAuth simulé hors ligne', () => {
       });
       expect(result.handle).toBe(provider === 'instagram' ? '12345' :
         provider === 'tiktok' ? 'tt-user' :
-          provider === 'youtube' ? 'uc_test_channel' : 'li-user');
+          provider === 'youtube' ? 'UC_test_Channel' : 'li-user');
       expect(result.expiresAt).toBe('2026-11-10T13:00:00.000Z');
       expect(result.tokenSecret).toContain(
         provider === 'instagram' ? 'ig-access' :
@@ -89,11 +89,15 @@ describe('Échange OAuth simulé hors ligne', () => {
   );
 
   it('refuse les jetons mal formés et masque les erreurs du fournisseur', async () => {
-    const fetcher = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => response({
-      access_token: 'simulated-secret',
-      expires_in: 30,
-      error_description: 'sensitive provider detail',
-    }));
+    const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      expect(String(input)).toBe(socialOAuthProviders.instagram.tokenEndpoint);
+      expect(init?.method).toBe('POST');
+      return response({
+        access_token: 'simulated-secret',
+        expires_in: 30,
+        error_description: 'sensitive provider detail',
+      });
+    });
     await expect(exchangeSocialOAuthCode({
       provider: 'instagram',
       config: config('instagram'),
@@ -106,10 +110,36 @@ describe('Échange OAuth simulé hors ligne', () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
+  it('révoque au mieux un jeton non persistant si la recherche d’identité échoue', async () => {
+    const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      if (url === socialOAuthProviders.youtube.tokenEndpoint) {
+        return response({ access_token: 'yt-orphan', expires_in: 3600 });
+      }
+      if (url.includes('/channels?')) return response(null, 503);
+      expect(url).toBe(socialOAuthProviders.youtube.revocationEndpoint);
+      expect(String(init?.body)).toContain('yt-orphan');
+      expect(url).not.toContain('yt-orphan');
+      return new Response(null, { status: 200 });
+    });
+    await expect(exchangeSocialOAuthCode({
+      provider: 'youtube',
+      config: config('youtube'),
+      redirectUri: config('youtube').redirectUri,
+      authorizationCode: 'simulated-code',
+      codeVerifier: 'simulated-verifier',
+      fetcher: fetcher as typeof fetch,
+      now,
+    })).rejects.toThrow('OAuth provider response unavailable.');
+    expect(fetcher).toHaveBeenCalledTimes(3);
+  });
+
   it('révoque avec POST et n’envoie rien si le jeton est déjà expiré ou sans API', async () => {
-    const fetcher = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) =>
-      new Response(null, { status: 200 }),
-    );
+    const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      expect(String(input)).toBe(socialOAuthProviders.youtube.revocationEndpoint);
+      expect(init?.method).toBe('POST');
+      return new Response(null, { status: 200 });
+    });
     const tokenSecret = JSON.stringify({
       accessToken: 'simulated-access',
       tokenType: 'Bearer',

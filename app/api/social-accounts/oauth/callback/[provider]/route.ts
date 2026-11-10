@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { createSocialOAuthAccountStore } from '@/lib/social/oauth/accounts';
-import { exchangeSocialOAuthCode } from '@/lib/social/oauth/exchange';
+import {
+  exchangeSocialOAuthCode,
+  revokeSocialOAuthToken,
+} from '@/lib/social/oauth/exchange';
 import { completeSocialOAuthCallback } from '@/lib/social/oauth/protocol';
 import { socialOAuthConfig } from '@/lib/social/oauth/providers';
 import { createSocialOAuthTransactionStore } from '@/lib/social/oauth/store';
@@ -12,8 +15,31 @@ export const dynamic = 'force-dynamic';
 type Context = { params: Promise<{ provider: string }> };
 const providerSchema = z.enum(['instagram', 'tiktok', 'youtube', 'linkedin']);
 
-function returnToSettings(request: Request, result: 'connected' | 'unavailable', provider?: string) {
-  const destination = new URL('/dashboard/settings', request.url);
+function returnToSettings(result: 'connected' | 'unavailable', provider?: string) {
+  const publicOrigin = process.env.SOCIAL_OAUTH_PUBLIC_ORIGIN;
+  const allowedOrigins = (process.env.SOCIAL_OAUTH_ALLOWED_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim());
+  let origin: URL;
+  try {
+    origin = new URL(publicOrigin ?? '');
+  } catch {
+    return Response.json(
+      { error: 'Connexion indisponible.' },
+      { status: 503, headers: { 'Cache-Control': 'private, no-store' } },
+    );
+  }
+  if (
+    origin.protocol !== 'https:' ||
+    origin.origin !== publicOrigin ||
+    !allowedOrigins.includes(origin.origin)
+  ) {
+    return Response.json(
+      { error: 'Connexion indisponible.' },
+      { status: 503, headers: { 'Cache-Control': 'private, no-store' } },
+    );
+  }
+  const destination = new URL('/dashboard/settings', origin);
   destination.searchParams.set('social_oauth', result);
   if (provider) destination.searchParams.set('provider', provider);
   return new Response(null, {
@@ -29,12 +55,12 @@ function returnToSettings(request: Request, result: 'connected' | 'unavailable',
 export async function GET(request: Request, context: Context) {
   const { provider: rawProvider } = await context.params;
   const parsedProvider = providerSchema.safeParse(rawProvider);
-  if (!parsedProvider.success) return returnToSettings(request, 'unavailable');
+  if (!parsedProvider.success) return returnToSettings('unavailable');
   const provider = parsedProvider.data;
 
   try {
     const config = socialOAuthConfig(provider);
-    if (!config) return returnToSettings(request, 'unavailable', provider);
+    if (!config) return returnToSettings('unavailable', provider);
     const { user, sessionId } = await requireSocialOAuthSession();
     const callback = await completeSocialOAuthCallback({
       provider,
@@ -51,15 +77,26 @@ export async function GET(request: Request, context: Context) {
       authorizationCode: callback.authorizationCode,
       codeVerifier: callback.codeVerifier,
     });
-    await createSocialOAuthAccountStore().save({
-      userId: user.id,
-      provider,
-      handle: exchanged.handle,
-      tokenSecret: exchanged.tokenSecret,
-      expiresAt: exchanged.expiresAt,
-    });
-    return returnToSettings(request, 'connected', provider);
+    try {
+      await createSocialOAuthAccountStore().save({
+        userId: user.id,
+        provider,
+        handle: exchanged.handle,
+        tokenSecret: exchanged.tokenSecret,
+        expiresAt: exchanged.expiresAt,
+      });
+    } catch {
+      try {
+        await revokeSocialOAuthToken({
+          provider,
+          config,
+          tokenSecret: exchanged.tokenSecret,
+        });
+      } catch {}
+      return returnToSettings('unavailable', provider);
+    }
+    return returnToSettings('connected', provider);
   } catch {
-    return returnToSettings(request, 'unavailable', provider);
+    return returnToSettings('unavailable', provider);
   }
 }

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { platformLabels, type SocialAccount, type SocialDraft, SOCIAL_PAGE_SIZE } from '@/lib/social/model';
 
 type Props={initialItems:SocialAccount[];initialTotal:number;initialUnavailable?:boolean;plan:string};
@@ -16,6 +16,17 @@ export function SocialAccounts({initialItems,initialTotal,initialUnavailable=fal
   const [oauthProviders,setOAuthProviders]=useState<Record<SocialDraft['platform'],boolean>>({
     instagram:false,tiktok:false,youtube:false,linkedin:false,
   });
+  const load=useCallback(async(nextPage:number)=>{
+    const response=await fetch('/api/social-accounts?page='+nextPage,{cache:'no-store'});
+    const body=await response.json() as {items?:SocialAccount[];total?:number;error?:string};
+    if(!response.ok||!Array.isArray(body.items)||typeof body.total!=='number')throw new Error(body.error??'Liste indisponible.');
+    setItems(body.items);setTotal(body.total);setPage(nextPage);setUnavailable(false);
+  },[]);
+  const changePage=useCallback(async(nextPage:number)=>{
+    setBusy(true);setMessage('');
+    try{await load(nextPage);}catch(error){setMessage(error instanceof Error?error.message:'Liste indisponible.');}
+    finally{setBusy(false);}
+  },[load]);
   useEffect(()=>{
     let active=true;
     void fetch('/api/social-accounts/oauth/providers',{cache:'no-store'})
@@ -34,20 +45,9 @@ export function SocialAccounts({initialItems,initialTotal,initialUnavailable=fal
     if(outcome==='connected')setMessage('Compte connecté via OAuth.');
     if(outcome==='unavailable')setMessage('La connexion au réseau social est indisponible.');
     if(outcome==='connected'||outcome==='unavailable')window.history.replaceState(null,'','/dashboard/settings');
-    void load(1);
+    void changePage(1);
     return ()=>{active=false;};
-  },[]);
-  async function load(nextPage:number){
-    const response=await fetch('/api/social-accounts?page='+nextPage,{cache:'no-store'});
-    const body=await response.json() as {items?:SocialAccount[];total?:number;error?:string};
-    if(!response.ok||!Array.isArray(body.items)||typeof body.total!=='number')throw new Error(body.error??'Liste indisponible.');
-    setItems(body.items);setTotal(body.total);setPage(nextPage);setUnavailable(false);
-  }
-  async function changePage(nextPage:number){
-    setBusy(true);setMessage('');
-    try{await load(nextPage);}catch(error){setMessage(error instanceof Error?error.message:'Liste indisponible.');}
-    finally{setBusy(false);}
-  }
+  },[changePage]);
   async function save(event:FormEvent){
     event.preventDefault();setBusy(true);setMessage('');
     try{

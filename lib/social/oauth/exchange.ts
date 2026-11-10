@@ -10,7 +10,6 @@ const MAX_RESPONSE_LENGTH = 16_384;
 
 type OAuthTokenBundle = {
   accessToken: string;
-  tokenType: string;
   expiresAt: string;
 };
 
@@ -43,14 +42,50 @@ function identityText(value: unknown): string {
   return requiredText(value, 200);
 }
 
-function accountHandle(provider: SocialOAuthProvider, value: unknown): string {
-  const raw = identityText(value).replace(/^@/, '').toLowerCase();
-  const normalized = raw.replace(/[^a-z0-9._-]/g, '_').slice(0, 200);
-  const handle = /^[a-z0-9]/.test(normalized) ? normalized : `${provider}_${normalized}`;
-  if (!/^[a-z0-9][a-z0-9._-]{0,199}$/.test(handle)) {
+async function boundedResponseText(response: Response): Promise<string> {
+  if (!response.body) return '';
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      length += value.byteLength;
+      if (length > MAX_RESPONSE_LENGTH) {
+        await reader.cancel();
+        throw new Error('OAuth provider response unavailable.');
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
     throw new Error('OAuth provider response unavailable.');
   }
-  return handle;
+}
+
+function accountHandle(provider: SocialOAuthProvider, value: unknown): string {
+  const raw = identityText(value).replace(/^@/, '');
+  if (!raw) throw new Error('OAuth provider response unavailable.');
+  const casePreserved = raw.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 200);
+  const prefix = `${provider}_`;
+  const stableHandle = /^[a-zA-Z0-9]/.test(casePreserved)
+    ? casePreserved
+    : `${prefix}${casePreserved.slice(0, 200 - prefix.length)}`;
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,199}$/.test(stableHandle)) {
+    throw new Error('OAuth provider response unavailable.');
+  }
+  return stableHandle;
 }
 
 async function requestJson(
@@ -66,10 +101,7 @@ async function requestJson(
     signal: AbortSignal.timeout(TOKEN_TIMEOUT_MS),
   });
   if (!response.ok) throw new Error('OAuth provider request unavailable.');
-  const text = await response.text();
-  if (text.length > MAX_RESPONSE_LENGTH) {
-    throw new Error('OAuth provider response unavailable.');
-  }
+  const text = await boundedResponseText(response);
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -130,7 +162,7 @@ async function accountHandleFor(
   fetcher: typeof fetch,
 ): Promise<string> {
   if (provider === 'instagram') {
-    return accountHandle(provider, token.username ?? token.user_id);
+    return accountHandle(provider, token.user_id);
   }
 
   if (provider === 'tiktok') {
@@ -140,7 +172,7 @@ async function accountHandleFor(
   if (provider === 'youtube') {
     const profile = await requestJson(
       fetcher,
-      'https://youtube.googleapis.com/youtube/v3/channels?part=id%2Csnippet&mine=true',
+      'https://youtube.googleapis.com/youtube/v3/channels?part=id&mine=true',
       { headers: { Authorization: 'Bearer ' + accessToken } },
     );
     const items = profile.items;
@@ -176,23 +208,37 @@ export async function exchangeSocialOAuthCode(input: {
     fetcher,
   );
   const accessToken = requiredText(token.access_token);
-  const expiresIn = Number(token.expires_in);
+  const expiresIn =
+    input.provider === 'instagram' && token.expires_in === undefined
+      ? 3600
+      : Number(token.expires_in);
   if (!Number.isSafeInteger(expiresIn) || expiresIn < 60 || expiresIn > 31_536_000) {
     throw new Error('OAuth provider response unavailable.');
   }
   const expiresAt = new Date(
     (input.now ?? new Date()).getTime() + expiresIn * 1000,
   ).toISOString();
-  const tokenType =
-    typeof token.token_type === 'string' && token.token_type.length <= 40
-      ? token.token_type
-      : 'Bearer';
-  const handle = await accountHandleFor(input.provider, token, accessToken, fetcher);
-  const tokenBundle: OAuthTokenBundle = { accessToken, tokenType, expiresAt };
+  const tokenBundle: OAuthTokenBundle = { accessToken, expiresAt };
+  const tokenSecret = JSON.stringify(tokenBundle);
+  let handle: string;
+  try {
+    handle = await accountHandleFor(input.provider, token, accessToken, fetcher);
+  } catch {
+    try {
+      await revokeSocialOAuthToken({
+        provider: input.provider,
+        config: input.config,
+        tokenSecret,
+        fetcher,
+        ...(input.now ? { now: input.now } : {}),
+      });
+    } catch {}
+    throw new Error('OAuth provider response unavailable.');
+  }
   return {
     handle,
     expiresAt,
-    tokenSecret: JSON.stringify(tokenBundle),
+    tokenSecret,
   };
 }
 
@@ -212,13 +258,16 @@ export async function revokeSocialOAuthToken(input: {
     const value = object(parsed);
     bundle = {
       accessToken: requiredText(value?.accessToken),
-      tokenType: requiredText(value?.tokenType, 40),
       expiresAt: requiredText(value?.expiresAt, 64),
     };
   } catch {
     throw new Error('Stored OAuth credential unavailable.');
   }
-  if (Date.parse(bundle.expiresAt) <= (input.now ?? new Date()).getTime()) return;
+  const expiresAt = Date.parse(bundle.expiresAt);
+  if (!Number.isFinite(expiresAt)) {
+    throw new Error('Stored OAuth credential unavailable.');
+  }
+  if (expiresAt <= (input.now ?? new Date()).getTime()) return;
 
   const body =
     input.provider === 'tiktok'
@@ -226,7 +275,6 @@ export async function revokeSocialOAuthToken(input: {
           client_key: input.config.clientId,
           client_secret: input.config.clientSecret,
           token: bundle.accessToken,
-          token_type_hint: 'access_token',
         })
       : formBody({ token: bundle.accessToken });
   const response = await (input.fetcher ?? fetch)(definition.revocationEndpoint, {
@@ -239,4 +287,16 @@ export async function revokeSocialOAuthToken(input: {
     signal: AbortSignal.timeout(TOKEN_TIMEOUT_MS),
   });
   if (!response.ok) throw new Error('OAuth provider request unavailable.');
+  const text = await boundedResponseText(response);
+  if (text.trim()) {
+    let responseBody: unknown;
+    try {
+      responseBody = JSON.parse(text);
+    } catch {
+      throw new Error('OAuth provider response unavailable.');
+    }
+    if (object(responseBody)?.error) {
+      throw new Error('OAuth provider request unavailable.');
+    }
+  }
 }

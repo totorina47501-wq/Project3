@@ -33,64 +33,94 @@ concurrentes. Le total comprend aussi les comptes historiques. Aucune limite
 commerciale supplémentaire Pro/Studio n’est inventée et aucun formulaire ne
 peut modifier le plan. Les écritures directes de `social_accounts` restent interdites.
 
-## Socle OAuth social — préparé, désactivé
+## Connexions OAuth sociales — code présent, activation bloquée
 
-La déclaration manuelle ci-dessus reste l’unique parcours disponible. Il n’existe
-ni route de démarrage/callback OAuth, ni bouton « connecter », ni échange de code
-ou appel réseau aux fournisseurs. Les quatre métadonnées d’adaptateur et le
-contrat serveur sont préparés pour tests hors ligne seulement.
-`SOCIAL_OAUTH_ENABLED` doit être explicitement `true`, avec identifiants serveur,
-origine HTTPS et allowlist d’origine concordants, avant que la configuration
-puisse être considérée comme présente ; aucune de ces valeurs n’est livrée ou
-activée ici.
-Les variables globales prévues sont `SOCIAL_OAUTH_PUBLIC_ORIGIN` et
-`SOCIAL_OAUTH_ALLOWED_ORIGINS`. Chaque fournisseur requiert en plus son propre
-identifiant et secret serveur : `SOCIAL_OAUTH_INSTAGRAM_CLIENT_ID` /
-`SOCIAL_OAUTH_INSTAGRAM_CLIENT_SECRET`, `SOCIAL_OAUTH_TIKTOK_CLIENT_KEY` /
-`SOCIAL_OAUTH_TIKTOK_CLIENT_SECRET`, `SOCIAL_OAUTH_YOUTUBE_CLIENT_ID` /
-`SOCIAL_OAUTH_YOUTUBE_CLIENT_SECRET` ou `SOCIAL_OAUTH_LINKEDIN_CLIENT_ID` /
-`SOCIAL_OAUTH_LINKEDIN_CLIENT_SECRET`. Ne pas placer ces valeurs dans le navigateur,
-les URL, les journaux, `.env.example` ou le dépôt.
+Les routes serveur réalisent le démarrage, le callback, l’échange adapté au
+fournisseur, l’écriture du secret dans Vault, l’expiration et la déconnexion.
+Le parcours manuel reste indépendant. Au premier affichage, tous les réseaux
+indiquent « Connexion indisponible » ; le bouton « Connecter » apparaît seulement
+si le garde-fou global **et** le drapeau du réseau sont `true` et que ses
+identifiants serveur, l’origine HTTPS et l’allowlist concordent. Ne pas activer
+ces variables avant la recette isolée et les validations externes ci-dessous.
 
-Les demandes de démarrage créent un `state` aléatoire lié au propriétaire et à
-l’identifiant de session Supabase, ne stockent que son SHA-256, expirent après
-10 minutes et consomment leur état atomiquement une seule fois. Le vérificateur
-PKCE n’est présent que pour Google/YouTube dans cette préparation web et demeure
-dans la table serveur non lisible par `anon`/`authenticated`. Callback attendu :
-`https://<origine-HTTPS-allowlistée>/api/social-accounts/oauth/callback/<réseau>`.
-Le parseur refuse les origines/chemins différents, paramètres inconnus/dupliqués,
-code et erreur simultanés, sessions/propriétaires divergents, états expirés et
-rejeux. Ces invariants sont testés avec un magasin mémoire ; la migration SQL
-ajoute la consommation atomique et `tests/sql/social_oauth_security.sql` vérifie
-les droits et l’isolation A/B en base locale jetable.
+Variables globales : `SOCIAL_OAUTH_ENABLED`, `SOCIAL_OAUTH_PUBLIC_ORIGIN` et
+`SOCIAL_OAUTH_ALLOWED_ORIGINS`. L’origine publique doit être une origine HTTPS
+exacte, également présente dans l’allowlist. Chaque réseau a son propre
+interrupteur et ses identifiants :
 
-| Réseau | État / scopes minimaux proposés | Pré-requis restant |
+| Réseau | Interrupteur | Identifiant / secret serveur |
 |---|---|---|
-| Instagram / Meta | **Préparé, indisponible** : Instagram Login (`instagram_business_basic`), comptes professionnels ; pas de scope de publication | App Meta de type Business, URL callback enregistrée, accès/revue Meta et confirmation de la procédure officielle de révocation |
-| TikTok | **Préparé, indisponible** : Login Kit Web (`user.info.basic`) ; pas de scope de publication | Produit Login Kit approuvé, `client_key`/secret serveur, callback HTTPS enregistré et confirmation de PKCE/révocation pour le client web |
-| YouTube / Google | **Préparé, indisponible** : OAuth web Google, `youtube.readonly` (scope de lecture assez large pour l’identité de chaîne) avec PKCE S256 ; aucun appel YouTube Data API | Projet Google, YouTube Data API/quota, écran de consentement et vérification Google selon les utilisateurs/scopes |
-| LinkedIn | **Préparé, indisponible** : OAuth 3-legged / OIDC (`openid profile`), sans email ni permissions d’écriture | Produit « Sign In with LinkedIn using OpenID Connect », app et callback approuvés ; PKCE/révocation du client web à confirmer |
+| Instagram | `SOCIAL_OAUTH_INSTAGRAM_ENABLED` | `SOCIAL_OAUTH_INSTAGRAM_CLIENT_ID` / `SOCIAL_OAUTH_INSTAGRAM_CLIENT_SECRET` |
+| TikTok | `SOCIAL_OAUTH_TIKTOK_ENABLED` | `SOCIAL_OAUTH_TIKTOK_CLIENT_KEY` / `SOCIAL_OAUTH_TIKTOK_CLIENT_SECRET` |
+| YouTube | `SOCIAL_OAUTH_YOUTUBE_ENABLED` | `SOCIAL_OAUTH_YOUTUBE_CLIENT_ID` / `SOCIAL_OAUTH_YOUTUBE_CLIENT_SECRET` |
+| LinkedIn | `SOCIAL_OAUTH_LINKEDIN_ENABLED` | `SOCIAL_OAUTH_LINKEDIN_CLIENT_ID` / `SOCIAL_OAUTH_LINKEDIN_CLIENT_SECRET` |
 
-Références fournisseurs : [Instagram Login](https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/business-login/),
+Ne pas placer les identifiants ou jetons dans le navigateur, une URL, un journal,
+`.env.example` ou le dépôt. La migration
+`20261110220000_social_oauth_vault_accounts.sql` doit être appliquée à
+l’environnement de test avant toute activation ; elle n’a pas été appliquée à
+une base distante dans le cadre de ce travail.
+
+Le démarrage est un POST same-origin. Le `state` aléatoire est lié au propriétaire
+et au `session_id` de la session Supabase validée, seul son SHA-256 est stocké,
+sa durée est de 10 minutes et le RPC le consomme atomiquement une fois. Le
+serveur limite à cinq les états non consommés d’une même session/fournisseur et
+supprime les expirés au prochain démarrage. Le vérificateur PKCE est conservé
+côté serveur pour Google/YouTube (S256). Le callback
+est exclusivement
+`https://<origine-HTTPS-allowlistée>/api/social-accounts/oauth/callback/<réseau>`.
+Origine, chemin, paramètres, doublons, erreurs, expiration, session, propriétaire
+et rejeu sont contrôlés. Les erreurs/redirections ne renvoient jamais le jeton,
+le code OAuth ou les messages privés d’un fournisseur.
+
+Les jetons d’accès sont stockés sous forme de secret Vault et seul leur UUID est
+conservé sur `social_accounts`; ni `anon` ni `authenticated` ne peuvent lire ce
+secret ou les dates d’expiration. Aucun jeton de renouvellement n’est demandé ou
+stocké : à expiration, le secret Vault est supprimé au prochain chargement des
+comptes, l’état devient `expired` et l’utilisateur doit reconnecter. La
+déconnexion supprime localement le secret et marque la ligne `expired`.
+TikTok/Google ont un appel de révocation serveur ; pour Instagram/LinkedIn ou
+lorsque l’appel distant échoue, l’interface indique que la révocation fournisseur
+reste à vérifier dans les paramètres de l’application concernée.
+
+| Réseau | Adaptateur et permissions minimales implémentés | État externe |
+|---|---|---|
+| Instagram / Meta | Instagram Login ; `instagram_business_basic` (séparateur conforme Meta), échange de code sur `api.instagram.com/oauth/access_token`, identifiant de compte renvoyé par le jeton. Le jeton court est traité comme valide 1 h ; aucun échange vers un jeton long ni scope de publication. | **BLOCKED** — compte Business/Creator, app Meta Business, callback enregistré, App Review/permissions et procédure de révocation à confirmer. |
+| TikTok | Login Kit Web ; `user.info.basic`, échange sur `/v2/oauth/token/`, identifiant `open_id`, révocation sur `/v2/oauth/revoke/` avec client key, secret et token en corps form-urlencoded. Pas de contenu de profil collecté. | **BLOCKED** — produit Login Kit et app approuvés, callback enregistré ; confirmer la recette de révocation de l’app. |
+| YouTube / Google | OAuth web ; `youtube.readonly`, PKCE S256, `channels.list` (`part=id`, `mine=true`, identifiant de chaîne uniquement) et révocation Google. | **BLOCKED** — projet, API/quota, écran de consentement et vérification Google selon les utilisateurs/scopes. |
+| LinkedIn | OIDC ; `openid profile`, échange de code puis endpoint `userinfo`; aucun email. | **BLOCKED** — produit « Sign In with LinkedIn using OpenID Connect », app/callback approuvés et procédure de révocation à confirmer. |
+
+Documentation officielle : [Instagram Login](https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/business-login/),
 [TikTok Login Kit Web](https://developers.tiktok.com/doc/login-kit-web/),
-[Google OAuth web server](https://developers.google.com/identity/protocols/oauth2/web-server) /
-[YouTube OAuth](https://developers.google.com/youtube/data/guides/auth/server-side-web-apps),
-[LinkedIn OAuth 3-legged](https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow) /
+[TikTok token revocation](https://developers.tiktok.com/docs/en/oauth-revoke-a-user-access-token),
+[Google OAuth web server](https://developers.google.com/identity/protocols/oauth2/web-server),
+[YouTube channels.list](https://developers.google.com/youtube/v3/docs/channels/list),
+[Google token revocation](https://developers.google.com/identity/protocols/oauth2/web-server#tokenrevoke),
 [LinkedIn OIDC](https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/sign-in-with-linkedin-v2).
-Les scopes proposés ne signifient ni autorisation ni revue accordée. Aucun accès
-aux publications, messages privés, scraping ou publication n’est implémenté.
 
-La table `social_oauth_transactions` ne contient aucun jeton fournisseur. Aucun
-échange/renouvellement/révocation de jeton ni écriture Vault n’est implémenté ;
-la colonne réservée `access_token_vault_id` reste inaccessible au navigateur.
-L’activation reste **bloquée** jusqu’à l’intégration serveur de l’échange adapté,
-au stockage/révocation/expiration des jetons via Vault, à la validation humaine
-des permissions/callbacks par fournisseur, à une revue de sécurité et à des tests
-avec simulateurs locaux. Avant tout démarrage ultérieur : créer les applications
-développeur, faire enregistrer les quatre URI exactes de callback, obtenir les
-revues/permissions requises et placer les identifiants/ secrets uniquement dans
-les secrets serveur Cloudflare. Aucune migration n’a été appliquée à une base
-distante.
+Les handles OAuth affichés sont les identifiants techniques stables renvoyés par
+les fournisseurs, pas des noms d’utilisateur vérifiés. Scopes et endpoints sont
+des demandes, pas une preuve d’autorisation ou d’App Review. Le PKCE Web n’est
+pas documenté dans les guides Login Kit Web TikTok ni OIDC LinkedIn cités
+(LinkedIn le documente pour son client natif) ; l’adaptateur ne l’active donc pas
+pour ces clients confidentiels. Les adaptateurs LinkedIn/Instagram ne disposent pas ici d’un appel
+programmatique de révocation. Aucune lecture de publications, message privé,
+scraping, import média ou publication n’est implémenté.
+
+| Validation | Résultat |
+|---|---|
+| Échange simulé hors ligne, state/PKCE/callback/anti-replay, contrôles d’accès et tests SQL locaux | **PASS** (suite locale seulement ; le stub SQL ne teste pas le chiffrement Vault natif). |
+| Identifiants/app review/callbacks et permissions des quatre plateformes | **BLOCKED** (non fournis/non vérifiés). |
+| E2E staging avec comptes jetables | **BLOCKED** (aucun compte ou secret staging utilisé). |
+| Activation en production, migration distante et recette de production | **BLOCKED** (non effectuées et interdites par ce lot). |
+
+Avant une activation ultérieure, il faut créer les applications développeur,
+enregistrer les URI de callback exactes, obtenir les revues/scopes requis, valider
+les méthodes de révocation et renseigner uniquement les secrets du serveur de
+l’environnement isolé. Puis faire une revue humaine Auth/RLS/Vault, appliquer
+la migration uniquement à la base de test autorisée et réaliser l’E2E avec des
+comptes jetables et leur consentement explicite. Aucun de ces points n’est
+prouvé par la suite hors ligne ou une CI verte.
 
 ## Tonalité
 

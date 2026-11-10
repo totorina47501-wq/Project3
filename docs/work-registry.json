@@ -348,10 +348,10 @@
     },
     {
       "id": "oauth-social",
-      "name": "Comptes sociaux manuels et socle OAuth désactivé",
-      "status": "prepared_disabled",
-      "anchor": "lib/social/oauth/protocol.ts",
-      "test": "tests/unit/social-oauth.test.ts",
+      "name": "Comptes sociaux manuels et connexions OAuth protégées",
+      "status": "partial",
+      "anchor": "lib/social/oauth/exchange.ts",
+      "test": "tests/unit/social-oauth-routes.test.ts",
       "doc": "docs/09-internal-settings.md",
       "aliases": [
         "social",
@@ -363,13 +363,18 @@
       "routes": [
         "app/api/social-accounts/route.ts",
         "app/api/social-accounts/[id]/route.ts",
-        "app/api/social-accounts/preferences/route.ts"
+        "app/api/social-accounts/preferences/route.ts",
+        "app/api/social-accounts/oauth/providers/route.ts",
+        "app/api/social-accounts/oauth/start/route.ts",
+        "app/api/social-accounts/oauth/callback/[provider]/route.ts",
+        "app/api/social-accounts/oauth/disconnect/[id]/route.ts"
       ],
       "migrations": [
-        "supabase/migrations/20261110210000_social_oauth_transactions.sql"
+        "supabase/migrations/20261110210000_social_oauth_transactions.sql",
+        "supabase/migrations/20261110220000_social_oauth_vault_accounts.sql"
       ],
       "next": [
-        "Déclarations manuelles inchangées. État OAuth serveur à usage unique et métadonnées des quatre fournisseurs préparés hors ligne ; aucun échange de code, jeton Vault, route ni bouton de connexion n’est activé."
+        "Déclarations manuelles inchangées ; flux serveur et stockage Vault testés hors ligne, désactivés sans flags explicites. Reste à appliquer la migration en environnement de test, vérifier Vault natif, les quatre App Reviews/révocations et l’E2E staging à comptes jetables ; production reste bloquée."
       ]
     },
     {

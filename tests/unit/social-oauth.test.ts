@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+vi.mock('server-only', () => ({}));
 import {
   beginSocialOAuth,
   completeSocialOAuthCallback,
@@ -159,7 +160,7 @@ describe('Socle OAuth social désactivé', () => {
       'https://www.googleapis.com/auth/youtube.readonly',
     );
 
-    const callbackUrl = `${config('youtube').redirectUri}?code=simulated-code&state=${state}`;
+    const callbackUrl = `${config('youtube').redirectUri}?code=simulated-code&state=${state}&scope=${encodeURIComponent('https://www.googleapis.com/auth/youtube.readonly')}`;
     await expect(
       completeSocialOAuthCallback({
         provider: 'youtube',
@@ -291,5 +292,28 @@ describe('Socle OAuth social désactivé', () => {
         now,
       }),
     ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('accepts TikTok’s documented granted-scopes callback parameter without trusting it', async () => {
+    const authorizationUrl = await beginSocialOAuth({
+      provider: 'tiktok',
+      userId: owner,
+      sessionId: session,
+      store,
+      config: config('tiktok'),
+      now,
+    });
+    const state = authorizationUrl.searchParams.get('state')!;
+    const result = await completeSocialOAuthCallback({
+      provider: 'tiktok',
+      userId: owner,
+      sessionId: session,
+      callbackUrl: `${config('tiktok').redirectUri}?code=simulated-code&state=${state}&scopes=user.info.basic`,
+      store,
+      config: config('tiktok'),
+      now,
+    });
+    expect(result.authorizationCode).toBe('simulated-code');
+    expect(result.codeVerifier).toBeNull();
   });
 });
