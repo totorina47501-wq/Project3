@@ -55,13 +55,27 @@ try {
   });
   const {data:session,error:sessionError}=await ssr.auth.signInWithPassword({email,password});
   if(sessionError||session.user?.id!==userId)throw Error('STAGING_AUTH_SSR_COOKIE_LOGIN_FAILED');
-  const cookie=Array.from(jar,([name,value])=>name+'='+value).join('; ');
+  const ssrCookie=Array.from(jar,([name,value])=>name+'='+value).join('; ');
+  const loginCookie=(loginPost.headers.getSetCookie?.()??[])
+    .map(line=>line.split(';',1)[0]).filter(Boolean).join('; ');
+  const cookie=loginCookie.includes('sb-')?loginCookie:ssrCookie;
   if(!cookie.includes('sb-'))throw Error('STAGING_AUTH_SSR_COOKIE_ABSENT');
   const settings=await fetch(BASE+'/dashboard/settings',{
     redirect:'manual',signal:AbortSignal.timeout(25000),headers:{Cookie:cookie},
   });
-  assert.equal(settings.status,200,'Paramètres doivent exiger Auth et fonctionner');
   const html=await settings.text();
+  // N'émettre que des marqueurs : jamais HTML, email, cookie ou information sensible.
+  console.log('STAGING_SETTINGS_DIAGNOSTIC',JSON.stringify({
+    status:settings.status,
+    loginCookiePresent:loginCookie.includes('sb-'),
+    ssrCookiePresent:ssrCookie.includes('sb-'),
+    settingsHeading:html.includes('Mon abonnement actuel'),
+    loginPage:html.includes('Content de te retrouver'),
+    settingsNav:html.includes('Paramètres'),
+    serverError:html.includes('Application error')||html.includes('Internal Server Error'),
+    bodyLength:html.length,
+  }));
+  assert.equal(settings.status,200,'Paramètres doivent exiger Auth et fonctionner');
   assert.ok(html.includes('Mon abonnement actuel'),'Page paramètres absente');
   assert.ok(html.includes('Gratuit'),'Promotion ne doit pas être active sans GO');
   const guest=await fetch(BASE+'/api/mia/conversations',{signal:AbortSignal.timeout(20000)});
