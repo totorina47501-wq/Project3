@@ -11,13 +11,13 @@ insert into auth.users (id,email,email_confirmed_at) values
 update public.users set plan='studio' where id in
  ('10000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000002');
 -- Refuser un profil Studio historique sans abonnement valable.
-do $
+do $legacy_gate$
 begin
  if not exists(select 1 from public.users where id='10000000-0000-0000-0000-000000000001' and plan='studio')
  then raise exception 'Fixture Studio absente'; end if;
  if studio_private.has_active_studio_subscription('10000000-0000-0000-0000-000000000001'::uuid)
  then raise exception 'Un profil historique ne vaut pas un abonnement'; end if;
-end $;
+end $legacy_gate$;
 -- Souscriptions de test strictement dans la transaction PGlite à rollback.
 insert into public.subscriptions(user_id,stripe_subscription_id,plan,status,current_period_end) values
  ('10000000-0000-0000-0000-000000000001','sub_studio_fixture_a','studio','active',now()+interval '30 days'),
