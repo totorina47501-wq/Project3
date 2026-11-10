@@ -3,18 +3,21 @@ import { isSameOrigin } from '@/lib/security/origin';
 import { z } from 'zod';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { publicError } from '@/lib/security/auth';
+import { acceptableRegistrationPassword } from '@/lib/security/password-policy';
+import { requireAuthAttemptLimit } from '@/lib/security/auth-attempt-limit';
 
 const credentials = z.object({
   email: z.string().email().max(320),
-  password: z.string().min(10).max(200),
+  password: z.string().min(12).max(200).refine(acceptableRegistrationPassword),
 }).strict();
 
 export async function POST(request: Request) {
   try {
     if (!isSameOrigin(request)) return Response.json({ error: 'Origine interdite.' }, { status: 403 });
+    await requireAuthAttemptLimit(request);
     const body = credentials.safeParse(await request.json());
     if (!body.success) return Response.json({
-      error: 'Email invalide ou mot de passe trop court (10 caractères minimum).',
+      error: 'Email invalide ou mot de passe faible (12 caractères, 3 familles : minuscules, majuscules, chiffres ou symboles).',
     }, { status: 400 });
     const client = await createServerSupabase();
     const { error } = await client.auth.signUp(body.data);

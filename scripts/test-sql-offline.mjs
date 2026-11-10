@@ -96,7 +96,7 @@ export async function runSqlOffline() {
       if(!rows[0]?.present)throw new Error('Migration interne manquante pour '+table+'. Aucun SQL temporaire non versionné n’est exécuté.');
     }
     let suites=0;
-    for(const name of ['studio_security.sql','settings_security.sql','collaborations_security.sql','privacy_regressions.sql','media_jobs_security.sql','ai_usage_security.sql','quota_period_security.sql','media_outputs_security.sql','law_controlled_import.sql','media_ai_security.sql','billing_sync_security.sql','free_paid_tiers_security.sql']) {
+    for(const name of ['studio_security.sql','settings_security.sql','collaborations_security.sql','privacy_regressions.sql','media_jobs_security.sql','ai_usage_security.sql','quota_period_security.sql','media_outputs_security.sql','law_controlled_import.sql','media_ai_security.sql','billing_sync_security.sql','free_paid_tiers_security.sql','legacy_solo_promotion_security.sql']) {
       try {await db.exec(await readFile(new URL(name,regressionDir),'utf8'));}catch(error) {
         throw new Error('Échec régression '+name+': '+(error instanceof Error?error.message:String(error)),{cause:error});
       }

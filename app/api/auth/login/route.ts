@@ -5,6 +5,7 @@ import { createServerSupabase } from '@/lib/supabase/server';
 import { publicError } from '@/lib/security/auth';
 import { missingAuthConfig, categorizeAuthError } from '@/lib/security/auth-diagnostics';
 import { logServerError } from '@/lib/security/logging';
+import { requireAuthAttemptLimit } from '@/lib/security/auth-attempt-limit';
 
 const credentials = z.object({
   email: z.string().email().max(320),
@@ -14,6 +15,7 @@ const credentials = z.object({
 export async function POST(request: Request) {
   try {
     if (!isSameOrigin(request)) return Response.json({ error: 'Origine interdite.' }, { status: 403 });
+    await requireAuthAttemptLimit(request);
     const body = credentials.safeParse(await request.json());
     if (!body.success) return Response.json({ error: 'Identifiants invalides.' }, { status: 400 });
     // Les variables NEXT_PUBLIC_ doivent aussi exister dans l'environnement

@@ -73,10 +73,13 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
           </label>
           <label className="block text-sm font-semibold">
             Mot de passe
-            <input type="password" required disabled={loading} minLength={isLogin ? 8 : 10}
+            <input type="password" required disabled={loading} minLength={isLogin ? 8 : 12}
               autoComplete={isLogin ? 'current-password' : 'new-password'}
               value={password} onChange={(e) => setPassword(e.target.value)}
               className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-accent" />
+            {!isLogin && <span className="mt-1 block text-xs font-normal text-slate-500">
+              Au moins 12 caractères et 3 catégories parmi majuscules, minuscules, chiffres et symboles. Utilise un mot de passe unique.
+            </span>}
           </label>
           {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}
           {message && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{message}</p>}

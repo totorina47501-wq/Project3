@@ -54,6 +54,7 @@
     "MEDIA_RUNNER_PAUSED": "true",
     "MEDIA_AI_ENABLED": "false",
     "MEDIA_AI_SCHEMA_READY": "true",
-    "MEDIA_RETENTION_ENABLED": "false"
+    "MEDIA_RETENTION_ENABLED": "false",
+    "PROMO_SOLO_ENABLED": "false"
   }
 }

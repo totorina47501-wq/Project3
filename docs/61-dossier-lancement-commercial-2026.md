@@ -194,3 +194,7 @@ Le contrôle gratuit `execution=rules_only` reste le parcours le plus
 IA. Toute sélection explicite du mode IA alors que le fournisseur est en
 pause doit être refusée **avant** la réservation du quota, avec une
 instruction claire pour basculer vers le mode sans IA.
+
+## Décisions retenues le 10 novembre — annexe versionnée
+
+L'exploitant a choisi **l'EI sous régime micro-entreprise** (non encore immatriculée), **Supabase Auth Free** avec compensations et acceptation du risque résiduel, **30 jours Solo promotionnel pour deux comptes historiques**, **25 USD mensuels de budget API OpenAI** sous réserve d'un plafond strict vérifié, et **l'ouverture publique seulement après certification complète**. Les prérequis et scripts de promotion sont dans [le plan de décision](63-launch-decisions-20261110.md). Aucune validation fournisseur externe ni dépense n'est réputée accomplie.

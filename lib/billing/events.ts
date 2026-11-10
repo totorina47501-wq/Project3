@@ -29,6 +29,19 @@ export function subscriptionAccessTier(subscription: {
   if (!['solo','pro','studio'].includes(subscription.plan)) return 'free';
   return subscription.plan;
 }
+// Une promotion Solo est indépendante du fournisseur ; aucun identifiant Stripe fictif.
+export function accessTierWithPromotion(
+  subscription: Parameters<typeof subscriptionAccessTier>[0],
+  promotion: {starts_at:string;expires_at:string}|null,
+  now = Date.now(),
+): AccessTier {
+  const subscribed = subscriptionAccessTier(subscription,now);
+  if (subscribed !== 'free') return subscribed;
+  if (!promotion) return 'free';
+  const start=Date.parse(promotion.starts_at),end=Date.parse(promotion.expires_at);
+  return Number.isFinite(start)&&Number.isFinite(end)&&end>start&&start<=now&&now<end
+    ? 'solo' : 'free';
+}
 export function stripeStatus(status: string):
   'incomplete' | 'incomplete_expired' | 'trialing' | 'active' |
   'past_due' | 'canceled' | 'unpaid' | 'paused' {
