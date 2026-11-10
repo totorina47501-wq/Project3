@@ -103,3 +103,15 @@ refusé ; le compte créé est supprimé par ID exact dans `finally`.
 Aucun paiement, inscription email sortante, appel IA ni migration de
 production n'est déclenché. Un résultat CI vert et un résultat staging
 vert sur le même SHA sont nécessaires avant toute revue de fusion.
+
+## Correctif de sécurité découvert par la recette HTTP Auth
+La page `/dashboard/settings` ne doit pas demander
+`users.stripe_customer_id` via le client Supabase authentifié :
+la migration RLS accorde volontairement `SELECT` uniquement sur les
+colonnes publiques du profil et ne donne **aucun accès** à l'identifiant
+fournisseur Stripe. La présence d'un client de facturation est donc
+vérifiée par le serveur seulement lorsque `billingGate` est ouvert,
+avec un filtre strict sur `userData.id`, sans transmettre l'ID Stripe.
+**Aucun GRANT, RLS ni policy n'est élargi.** Ce correctif traite une
+régression de la page Paramètres déjà présente dans la version
+Stripe Sandbox et demande une recette Auth staging répétée.

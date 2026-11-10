@@ -20,8 +20,14 @@ export default async function SettingsPage() {
   const stripe = billingGate(process.env);
   const { data: authData } = await supabase.auth.getUser();
   const isMiaAdmin = Boolean(authData.user && (process.env.MIA_ADMIN_USER_IDS ?? '').split(',').map(v => v.trim()).includes(authData.user.id));
+  // Stripe Customer ID n'est pas lisible par le rôle authenticated (RLS/GRANT).
+  // Ne jamais élargir les droits de cette colonne pour l'interface.
   const { data: userData, error } = await supabase.from('users')
-    .select('id,plan,ai_training_opt_in,created_at,stripe_customer_id').single();
+    .select('id,plan,ai_training_opt_in,created_at').single();
+  const { data: billingProfile, error: billingProfileError } = stripe.enabled && userData
+    ? await createAdminSupabase().from('users')
+      .select('stripe_customer_id').eq('id',userData.id).single()
+    : {data:null,error:null};
   const { data: subscription, error: subscriptionError } = userData
     ? await supabase.from('subscriptions')
       .select('stripe_subscription_id,plan,status,current_period_end')
@@ -84,7 +90,7 @@ export default async function SettingsPage() {
           </div>)}
         </div>}
         <p className="mt-3 text-xs text-slate-500">Dernière période enregistrée. Les contrôles sans IA ne consomment pas de quota de vérifications payantes.</p>
-        {stripe.enabled && stripe.mode && userData.stripe_customer_id &&
+        {stripe.enabled && stripe.mode && !billingProfileError && billingProfile?.stripe_customer_id &&
           <BillingPortal mode={stripe.mode} />}
         {!stripe.enabled && tier !== 'free' && !promotionalSolo && <p className="mt-3 text-sm text-slate-600">La gestion de facturation est momentanément indisponible. Les droits existants restent consultables.</p>}
       </section>
