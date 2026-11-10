@@ -2,7 +2,7 @@
 name: MentionCheck Launch Auth Staging
 on:
   push:
-    branches: [feat/mentioncheck-launch-decisions-20261110]
+    branches: [feat/mentioncheck-launch-decisions-20261110, codex/codex-certification-six-chantiers]
 permissions:
   contents: read
 concurrency:
@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   auth-staging:
-    if: github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/feat/mentioncheck-launch-decisions-20261110'
+    if: github.repository == 'totorina47501-wq/Project3' && (github.ref == 'refs/heads/feat/mentioncheck-launch-decisions-20261110' || github.ref == 'refs/heads/codex/codex-certification-six-chantiers')
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
