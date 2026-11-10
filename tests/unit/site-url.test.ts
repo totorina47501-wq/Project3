@@ -7,6 +7,18 @@ describe('URLs publiques sécurisées',()=>{
     expect(publicSiteUrl()).toBe('https://mentioncheck.toto-rina47501.workers.dev');
     if(previous)process.env.NEXT_PUBLIC_APP_URL=previous;
   });
+  it('utilise mentioncheck.app seulement quand l’origine HTTPS est configurée',()=>{
+    const previous=process.env.NEXT_PUBLIC_APP_URL;
+    try {
+      process.env.NEXT_PUBLIC_APP_URL='https://mentioncheck.app';
+      expect(publicSiteUrl()).toBe('https://mentioncheck.app');
+      process.env.NEXT_PUBLIC_APP_URL='https://mentioncheck.app/unsafe-path';
+      expect(publicSiteUrl()).toBe('https://mentioncheck.app');
+    } finally {
+      if(previous === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
+      else process.env.NEXT_PUBLIC_APP_URL=previous;
+    }
+  });
   it('ignore les schémas non sécurisés',()=>{
     const previous=process.env.NEXT_PUBLIC_APP_URL;
     process.env.NEXT_PUBLIC_APP_URL='javascript:alert(1)';
