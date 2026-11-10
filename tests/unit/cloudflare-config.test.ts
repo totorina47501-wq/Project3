@@ -13,6 +13,12 @@ describe('Configuration Cloudflare sécurisée',()=>{
       OPENAI_PAUSED:'false',OPENAI_TEXT_ENABLED:'true',
       OPENAI_VISION_ENABLED:'true',OPENAI_EMBEDDINGS_ENABLED:'false',
       PROMO_SOLO_ENABLED:'false',
+      BILLING_ENABLED:'false',STRIPE_WEBHOOK_ENABLED:'false',
+      STRIPE_MODE:'live',
+      STRIPE_PRICE_SOLO:'price_1UaKLwCdRRAa9LkpiXUiv0wc',
+      STRIPE_PRICE_PRO:'price_1UaKLyCdRRAa9Lkp5daPFLZK',
+      STRIPE_PRICE_STUDIO:'price_1UaKM0CdRRAa9Lkptx9oZCS8',
+      STRIPE_LIVE_APPROVED:'false',
     });
     expect(config.previews.vars.PROMO_SOLO_ENABLED).toBe('false');
     expect(config.previews.vars.OPENAI_PAUSED).toBe('true');
@@ -20,7 +26,10 @@ describe('Configuration Cloudflare sécurisée',()=>{
     expect(config.previews.vars.OPENAI_VISION_ENABLED).toBe('false');
     expect(config.previews.vars.BILLING_ENABLED).toBe('false');
     expect(config.vars).not.toHaveProperty('OPENAI_API_KEY');
-    expect(config.vars).not.toHaveProperty('BILLING_ENABLED');
+    expect(config.vars.BILLING_ENABLED).toBe('false');
+    expect(config.vars.STRIPE_WEBHOOK_ENABLED).toBe('false');
+    expect(config.vars.STRIPE_LIVE_APPROVED).toBe('false');
+    expect(JSON.stringify(config.vars)).not.toMatch(/sk_live_|sk_test_|whsec_/);
     // Activation à la demande sans audio / embeddings ni média IA automatique.
     // La clé reste un secret du Worker, jamais une variable publiée dans Git.
   });

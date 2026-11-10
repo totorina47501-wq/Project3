@@ -198,3 +198,9 @@ instruction claire pour basculer vers le mode sans IA.
 ## Décisions retenues le 10 novembre — annexe versionnée
 
 L'exploitant a choisi **l'EI sous régime micro-entreprise** (non encore immatriculée), **Supabase Auth Free** avec compensations et acceptation du risque résiduel, **30 jours Solo promotionnel pour deux comptes historiques**, **25 USD mensuels de budget API OpenAI** sous réserve d'un plafond strict vérifié, et **l'ouverture publique seulement après certification complète**. Les prérequis et scripts de promotion sont dans [le plan de décision](63-launch-decisions-20261110.md). Aucune validation fournisseur externe ni dépense n'est réputée accomplie.
+
+## 7. Préparation Cloudflare — tarifs Stripe Live, encaissements toujours fermés
+
+Le `wrangler.jsonc` de production référence les trois identifiants Stripe Live (Solo 9 € : `price_1UaKLwCdRRAa9LkpiXUiv0wc`, Pro 19 € : `price_1UaKLyCdRRAa9Lkp5daPFLZK`, Studio 49 € : `price_1UaKM0CdRRAa9Lkptx9oZCS8`). Ils ne sont pas des secrets. Le worker reste strictement verrouillé : `BILLING_ENABLED=false`, `STRIPE_WEBHOOK_ENABLED=false`, `STRIPE_LIVE_APPROVED=false`. Aucun flux n'autorise les paiements et aucune promotion n'est lancée. Staging/preview conservent leur configuration test distincte. La fusion/déploiement du `wrangler.jsonc` ne prouve pas à elle seule que l'environnement Cloudflare effectif a reçu ces variables : consulter les versions Worker/builds et vérifier la configuration runtime sans exposer les secrets.
+
+Les secrets `STRIPE_SECRET_KEY` (clé API Live autorisée au minimum nécessaire) et `STRIPE_WEBHOOK_SECRET` (signature de la destination Live) doivent être installés dans le coffre **Cloudflare Worker production seulement**, jamais dans GitHub, le dépôt, les logs ou le Worker staging. Tant que ces secrets et la recette de sécurité/légale/fiscale ne sont pas certifiés, ne pas passer les flags d'activation à `true`.
