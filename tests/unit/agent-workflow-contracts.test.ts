@@ -15,7 +15,12 @@ describe('Contrats statiques des workflows agents', () => {
     expect(dispatch).toContain('issues:\n    types: [opened, labeled, closed]');
     expect(dispatch).toContain('pull_request:\n    types: [closed]');
     expect(dispatch).toContain('default: true');
-    expect(dispatch).toContain("MAX_ACTIVE: '2'");
+    expect(dispatch).toContain("MAX_ACTIVE: '4'");
+    expect(dispatch).toContain('assigned=0');
+    expect(dispatch).toContain('active=$((active + 1))');
+    expect(dispatch).toContain('assigned=$((assigned + 1))');
+    expect(dispatch).toContain('Capacity reached after assignment');
+    expect(dispatch).toContain('Dispatched $assigned Copilot mission(s)');
     expect(dispatch).toContain('select(.pull_request == null and .state == "open")');
     expect(dispatch).toContain('index("agent:approved")');
     expect(dispatch).toContain('sort_by(.number)');

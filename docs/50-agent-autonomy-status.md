@@ -2,6 +2,14 @@
 
 Le dépôt est `totorina47501-wq/Project3`, sur `main`. Ce document ne constitue pas une preuve de déploiement.
 
+## Augmentation de capacité du dispatcher — proposition du 10 novembre 2026
+
+- Plafond du **dispatcher MentionCheck** porté de **2 à 4 issues Copilot affectées simultanément** via `MAX_ACTIVE` ; cette limite est propre à notre workflow, pas une preuve d'autorisation de quatre sessions cloud par l'abonnement GitHub.
+- Un déclenchement peut maintenant remplir **toutes les places libres** dans la même exécution au lieu d'affecter une seule issue. Le verrou GitHub `concurrency` continue de sérialiser les dispatchs et chaque attribution est revérifiée auprès de GitHub avant de compter la place.
+- **Aucune issue n'est inventée ni approuvée automatiquement** : le dispatcher exige toujours `agent:approved`, écarte les issues Codex et les issues déjà couvertes par une PR, refuse les secrets manquants et conserve le mode `dry_run` par défaut pour `workflow_dispatch`.
+- L'ouverture de nouvelles missions peut utiliser des requêtes premium et des minutes GitHub Actions. La disponibilité réelle, les quotas GitHub et la preuve d'un cycle à plus de deux agents simultanés restent à vérifier après intégration sur `main`.
+- Les changements Auth/RLS/SQL/release, Stripe et OAuth restent soumis aux revues et protections existantes. Aucun auto-merge sensible, paiement ou appel IA fournisseur n'est autorisé par ce réglage.
+
 ## Vérifications distantes
 
 - Dispatch Copilot validé : [run #42221900584](https://github.com/totorina47501-wq/Project3/actions/runs/42221900584) (3e tentative réussie avec le secret utilisateur), issue #54 affectée et PR #65 créée.
@@ -13,7 +21,7 @@ Le dépôt est `totorina47501-wq/Project3`, sur `main`. Ce document ne constitue
 
 ## Couverture et limites
 
-Le dispatcher planifié fonctionne toutes les demi-heures **à titre de demande de planning**, GitHub pouvant décaler les runs. La limite est de deux issues Copilot affectées simultanément ; un candidat attend si deux PR/issus restent actives.
+Le dispatcher planifié fonctionne toutes les demi-heures **à titre de demande de planning**, GitHub pouvant décaler les runs. Historiquement le plafond était de deux issues Copilot affectées simultanément ; la proposition du 10 novembre porte ce plafond à quatre une fois fusionnée sur `main`. Les candidats attendent lorsqu'aucune place libre n'est disponible.
 
 La fusion automatique existante s'applique seulement au sous-ensemble sûr de documentation et tests prévu par `.github/workflows/mentioncheck-agent-automerge.yml` et au chemin documentaire opt-in de `.github/workflows/factory-safe-automerge.yml`. Une CI verte ou un job d'automerge `success` ne suffit pas à prouver une fusion. Les changements source, auth, sécurité, billing et les workflows ne sont pas fusionnés sans contrôle des protections GitHub.
 
