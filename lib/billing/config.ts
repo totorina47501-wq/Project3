@@ -49,7 +49,7 @@ export function billingGate(env:BillingEnv, purpose:'checkout'|'webhook'='checko
        env.OPENAI_TEXT_ENABLED!=='true' ||
        env.OPENAI_VISION_ENABLED!=='true' ||
        !env.OPENAI_API_KEY?.trim() ||
-       env.NEXT_PUBLIC_APP_URL!=='https://mentioncheck.toto-rina47501.workers.dev') {
+       env.NEXT_PUBLIC_APP_URL!=='https://mentioncheck.app') {
       return disabled('Lancement commercial non validé (identité, fiscalité, CGV, recette ou services IA).');
     }
     mode='live';
