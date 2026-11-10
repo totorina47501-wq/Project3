@@ -242,3 +242,19 @@ Contrôle en lecture seule via Supabase sur les **deux projets distincts** :
 - **Production** `zcztvberuihphqklhjsr` : cette migration est absente de l'historique. La fonction en production conserve le quota Solo sans condition de souscription Stripe. **Aucune modification de cette base n'a été effectuée par ce contrôle.**
 
 Le correctif est donc **préparé et appliqué sur staging, pas en production**. Avant tout merge de la PR #114 ou déploiement commercial, coordonner la migration production avec le nouveau code de quotas, l'analyse d'impact sur les comptes existants et les vérifications post-déploiement. Ne pas déclarer un palier Gratuit techniquement effectif en production tant que ces opérations ne sont pas attestées. La CI GitHub `42814096059` est verte sur le SHA `4143618af3f3e599a33f98ae7890eed523391588` (quality + image runner média) ; cela **ne remplace pas** les preuves Stripe/Supabase distantes.
+
+## Garde-fou contre les doubles souscriptions avant synchronisation webhook
+
+La route Checkout vérifie maintenant chez Stripe, en plus de la projection SQL,
+qu'aucune souscription non terminée ni session Checkout d'abonnement ouverte
+n'existe pour le client. Une erreur de lecture Stripe bloque la création.
+La clé d'idempotence est commune aux différentes offres pendant une fenêtre de
+10 minutes, afin que deux demandes concurrentes de plans différents ne créent
+pas deux sessions facturables. La recette de staging utilise **trois utilisateurs
+synthétiques distincts**, un par offre, et supprime les trois comptes en fin de
+recette. Aucun paiement ni souscription n'est créé. Les sessions Stripe test
+incomplètes peuvent nécessiter expiration/nettoyage dans Sandbox.
+
+L'API Stripe reste la source de vérité en cas de retard de webhook ; cette
+précaution ne remplace pas les tests de concurrence en environnement isolé ni
+une règle d'idempotence transactionnelle durable en cas de demandes espacées.

@@ -1,5 +1,5 @@
 import { afterEach,beforeEach,expect,it,vi } from 'vitest';
-const mocks=vi.hoisted(()=>({user:vi.fn(),admin:vi.fn(),stripe:vi.fn(),customer:vi.fn(),session:vi.fn()}));
+const mocks=vi.hoisted(()=>({user:vi.fn(),admin:vi.fn(),stripe:vi.fn(),customer:vi.fn(),session:vi.fn(),subscriptionsList:vi.fn(),sessionsList:vi.fn()}));
 vi.mock('server-only',()=>({}));
 vi.mock('../../lib/security/auth',async original=>({...await original<typeof import('../../lib/security/auth')>(),requireUser:mocks.user}));
 vi.mock('../../lib/supabase/admin',()=>({createAdminSupabase:mocks.admin}));
@@ -22,7 +22,8 @@ beforeEach(()=>{
   throw new Error('Unexpected table');
  }});
  mocks.customer.mockResolvedValue({id:'cus_fixture'});mocks.session.mockResolvedValue({url:'https://checkout.stripe.test/fixture'});
- mocks.stripe.mockReturnValue({customers:{create:mocks.customer},checkout:{sessions:{create:mocks.session}}});
+ mocks.subscriptionsList.mockResolvedValue({data:[]});mocks.sessionsList.mockResolvedValue({data:[]});
+ mocks.stripe.mockReturnValue({customers:{create:mocks.customer},subscriptions:{list:mocks.subscriptionsList},checkout:{sessions:{create:mocks.session,list:mocks.sessionsList}}});
 });
 afterEach(()=>vi.unstubAllEnvs());
 it('refuse Solo sans tarif avant tout accès SDK ou création de client',async()=>{
@@ -81,4 +82,43 @@ it('autorise une nouvelle souscription quand la précédente est annulée',async
  existingSubscription={stripe_subscription_id:'sub_canceled',status:'canceled'};
  expect((await POST(request())).status).toBe(200);
  expect(mocks.session).toHaveBeenCalledTimes(1);
+});
+
+
+it('refuse toute session de souscription Checkout ouverte avant une seconde création',async()=>{
+ vi.stubEnv('STRIPE_PRICE_SOLO','price_SOLO');
+ mocks.sessionsList.mockResolvedValue({data:[{mode:'subscription',status:'open'}]});
+ const response=await POST(request());
+ expect(response.status).toBe(409);
+ expect(mocks.session).not.toHaveBeenCalled();
+});
+it('refuse un abonnement fournisseur incomplet même si le webhook est en retard',async()=>{
+ vi.stubEnv('STRIPE_PRICE_SOLO','price_SOLO');
+ mocks.subscriptionsList.mockResolvedValue({data:[{status:'incomplete'}]});
+ const response=await POST(request());
+ expect(response.status).toBe(409);
+ expect(mocks.sessionsList).not.toHaveBeenCalled();
+ expect(mocks.session).not.toHaveBeenCalled();
+});
+it('échoue fermé si la recherche des sessions fournisseur est indisponible',async()=>{
+ vi.stubEnv('STRIPE_PRICE_SOLO','price_SOLO');
+ mocks.sessionsList.mockRejectedValue(new Error('private Stripe failure'));
+ const response=await POST(request());
+ expect(response.status).toBe(503);
+ expect(JSON.stringify(await response.json())).not.toContain('private Stripe failure');
+ expect(mocks.session).not.toHaveBeenCalled();
+});
+it('réutilise une clé idempotente unique pour deux plans concurrentiels du même compte',async()=>{
+ vi.stubEnv('STRIPE_PRICE_SOLO','price_SOLO');
+ const now=vi.spyOn(Date,'now').mockReturnValue(1_700_000_000_000);
+ try {
+   expect((await POST(request())).status).toBe(200);
+   const pro=new Request('https://mentioncheck.test/api/stripe/checkout',{method:'POST',
+     headers:{origin:'https://mentioncheck.test','content-type':'application/json'},
+     body:JSON.stringify({plan:'pro'})});
+   expect((await POST(pro)).status).toBe(200);
+   const first=mocks.session.mock.calls[0][1].idempotencyKey;
+   const second=mocks.session.mock.calls[1][1].idempotencyKey;
+   expect(first).toBe(second);
+ } finally { now.mockRestore(); }
 });
