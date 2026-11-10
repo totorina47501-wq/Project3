@@ -29,7 +29,7 @@ jobs:
     env:
       CODEX_DISPATCH_TOKEN: ${{ secrets.CODEX_DISPATCH_TOKEN || secrets.COPILOT_DISPATCH_TOKEN || secrets.GH_AW_AGENT_TOKEN }}
     steps:
-      - name: Select one safe Codex issue and verify assignment
+      - name: Select up to three safe Codex issues and verify assignments
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.CODEX_DISPATCH_TOKEN || secrets.COPILOT_DISPATCH_TOKEN || secrets.GH_AW_AGENT_TOKEN }}
@@ -45,10 +45,21 @@ jobs:
               owner, repo, state: 'open', per_page: 100
             });
             const isCodex = (user) => user?.login === 'Codex';
-            const activeIssue = issues.some(i => !i.pull_request && i.assignees?.some(isCodex));
-            const activePr = prs.some(p => isCodex(p.user));
-            if (activeIssue || activePr) {
-              core.info('Codex already has an issue or open PR; capacity 1/1. No assignment.');
+            const MAX_ACTIVE = 3;
+            const activeIssues = issues.filter(i => !i.pull_request && i.state === 'open' &&
+              i.assignees?.some(isCodex));
+            const activePrs = prs.filter(p => p.state === 'open' && isCodex(p.user));
+            const closesIssue = (pr, number) => new RegExp(
+              '(?:fix(?:es|ed)?|clos(?:es|ed)?|resolv(?:es|ed)?)\\s+#' + number + '\\b', 'i'
+            ).test((pr.title || '') + ' ' + (pr.body || ''));
+            // A PR and its already assigned issue represent the same mission,
+            // never two slots. An orphan/stale PR still reserves a slot for review.
+            let active = activeIssues.length + activePrs.filter(p =>
+              !activeIssues.some(i => closesIssue(p, i.number))
+            ).length;
+            core.info('Codex occupied slots: ' + active + ' / ' + MAX_ACTIVE);
+            if (active >= MAX_ACTIVE) {
+              core.info('Codex capacity reached. No assignment.');
               return;
             }
             const hasLabel = (i, name) => i.labels?.some(l => l.name === name);
@@ -59,8 +70,7 @@ jobs:
             ).sort((a,b) => a.number-b.number);
             for (const issue of candidateIssues) {
               const number = issue.number;
-              const closing = new RegExp('(?:fix(?:es|ed)?|clos(?:es|ed)?|resolv(?:es|ed)?)\\s+#' + number + '\\b','i');
-              if (prs.some(pr => closing.test((pr.title||'')+' '+(pr.body||'')))) {
+              if (prs.some(pr => closesIssue(pr, number))) {
                 core.info('Issue #'+number+' has an open linked PR; skipping.');
                 continue;
               }
@@ -100,7 +110,11 @@ jobs:
               if (!check.assignees?.some(isCodex)) {
                 throw Error('Codex GraphQL assignee not persisted on issue #'+number);
               }
-              core.info('Codex assignee verified on #'+number+'; confirm session and PR separately.');
-              return;
+              active += 1;
+              core.info('Codex assignee verified on #'+number+'; occupied slots '+active+' / '+MAX_ACTIVE+'. Confirm session and PR separately.');
+              if (active >= MAX_ACTIVE) {
+                core.info('Codex capacity filled. Stop dispatch.');
+                break;
+              }
             }
-            core.info('No Codex-only issue eligible for dispatch.');
+            core.info('Codex dispatch finished; occupied slots '+active+' / '+MAX_ACTIVE+'.');

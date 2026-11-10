@@ -8,15 +8,20 @@ const codex = file('mentioncheck-codex-dispatch.yml');
 const copilot = file('mentioncheck-agent-dispatch.yml');
 
 describe('Codex/Copilot separation contracts', () => {
-  it('isolates Codex queue and never creates a second concurrent session', () => {
+  it('isolates Codex queue and caps concurrent missions at three', () => {
     expect(codex).toContain("cron: '5,35 * * * *'");
     expect(codex).toContain('types: [opened, labeled, closed]');
     expect(codex).toContain("default: true");
     expect(codex).toContain("hasLabel(i, 'agent:codex')");
     expect(codex).toContain("!hasLabel(i, 'agent:approved')");
-    expect(codex).toContain('const activePr = prs.some(p => isCodex(p.user));');
-    expect(codex).toContain('if (activeIssue || activePr) {');
-    expect(codex).toContain("if (prs.some(pr => closing.test((pr.title||'')+' '+(pr.body||'')))) {");
+    expect(codex).toContain('const MAX_ACTIVE = 3;');
+    expect(codex).toContain("const activeIssues = issues.filter(i => !i.pull_request");
+    expect(codex).toContain("const activePrs = prs.filter(p => p.state === 'open'");
+    expect(codex).toContain('!activeIssues.some(i => closesIssue(p, i.number))');
+    expect(codex).toContain('if (active >= MAX_ACTIVE) {');
+    expect(codex).toContain('active += 1;');
+    expect(codex).toContain('Codex capacity filled. Stop dispatch.');
+    expect(codex).toContain('if (prs.some(pr => closesIssue(pr, number))) {');
     expect(codex).toContain("Issue #'+number+' has an open linked PR; skipping.");
     expect(codex).toContain("const dryRun = context.eventName === 'workflow_dispatch' &&");
     expect(codex).toContain("Dry-run: would assign Codex to #'+number");
@@ -24,7 +29,7 @@ describe('Codex/Copilot separation contracts', () => {
   it('requires Codex identity and checks persistence without auto-merge', () => {
     expect(codex).toContain("addAssigneesToAssignable");
     expect(codex).toContain("Codex GraphQL assignee not persisted");
-    expect(codex).toContain("confirm session and PR separately");
+    expect(codex).toContain("Confirm session and PR separately");
     expect(codex).toContain("identity.type !== 'Bot'");
     expect(codex).not.toContain("github.rest.issues.addAssignees(");
     expect(codex).not.toContain("mergePullRequest");
