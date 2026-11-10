@@ -57,3 +57,24 @@ ne doit modifier les variables du Worker de production.
   ne remplacent pas la facturation OpenAI.
 - Une activation IA **ne vaut pas autorisation d'encaisser** : les
   formalités juridiques et Stripe live restent à terminer.
+
+
+## Sonde HTTP sans appel facturable — 10 novembre 2026
+
+`GET /api/health/ai` est un précontrôle non authentifié et peu coûteux.
+Il ne lit que la **configuration du Worker** et vérifie le booléen composé
+(clé non vide, texte activé et vision activée, absence de pause).
+La réponse n'expose **ni secret**, ni numéro de projet, ni réglage exact,
+ni identifiant d'utilisateur. Elle porte le marqueur
+`ai-prod-20261110` pour permettre de vérifier si un build récent
+est effectivement publié par Cloudflare Workers Builds. Les en-têtes
+désactivent la mise en cache et l'indexation.
+
+- HTTP 200 avec `status=configured` : configuration runtime cohérente ;
+  **pas** une certification de la validité de la clé ou d'une réponse modèle.
+- HTTP 503 avec `status=not_configured` : flags/clé insuffisants,
+  pas de requête modèle.
+- HTTP 404 : le Worker n'a pas encore déployé ce changement.
+- Toute requête réellement facturable reste soumise à une session
+  authentifiée, aux quotas, aux contrôles de sécurité, et au plafond
+  de dépenses OpenAI Platform. La sonde ne déclenche jamais ces requêtes.

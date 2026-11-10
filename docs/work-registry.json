@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updated": "2026-11-06",
+  "updated": "2026-11-10",
   "scope": "Code de la branche, non preuve de déploiement ni de commercialisation.",
   "features": [
     {
@@ -68,7 +68,9 @@
         "transcription",
         "embeddings"
       ],
-      "routes": [],
+      "routes": [
+        "app/api/health/ai/route.ts"
+      ],
       "migrations": [
         "supabase/migrations/20261105003500_ai_usage_ownership.sql"
       ],
@@ -76,7 +78,8 @@
         "Clé existante conservée dans le Worker ; GPT-4o texte, réécriture, Vision et embeddings validés réellement le 5 novembre 2026 sur 0d8aec2, sans rotation ni clé locale.",
         "Sorties structurées strictes et coût conservé pour les réponses invalides ; propriété des métriques et RLS vérifiées.",
         "Adaptateur audio inchangé, désactivé par défaut et non raccordé au flux distant.",
-        "Réactivation texte/vision explicite sur branche dédiée : audio, embeddings et médias IA automatiques restent interdits. Vérifier clé production et plafond strict API avant preuve de dépense ; docs/62-ai-reactivation-20261110.md."
+        "Réactivation texte/vision explicite sur branche dédiée : audio, embeddings et médias IA automatiques restent interdits. Vérifier clé production et plafond strict API avant preuve de dépense ; docs/62-ai-reactivation-20261110.md.",
+        "Probe HTTP de production GET /api/health/ai : ne fait aucun appel payant, n'expose ni clé ni détails sensibles ; retourne configured uniquement si flags texte/vision et clé sont présents. Ne prouve pas la validité de la clé ni le succès d'un appel GPT-4o."
       ]
     },
     {
