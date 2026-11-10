@@ -8,6 +8,12 @@ import { createAdminSupabase } from '@/lib/supabase/admin';
 
 export const runtime='nodejs';
 
+type StripeReference = string | { id: string } | null | undefined;
+function stripeObjectId(value: StripeReference): string | null {
+  if (!value) return null;
+  return typeof value === 'string' ? value : value.id;
+}
+
 async function syncSubscription(subscription: Stripe.Subscription, eventAt:number, deleted = false) {
   const gate=billingGate(process.env,'webhook');
   const plan=paidPlanFromPrices(subscription.items.data.map(item=>item.price.id),{
@@ -24,19 +30,39 @@ async function syncSubscription(subscription: Stripe.Subscription, eventAt:numbe
   if(error) throw new Error('Atomic subscription sync unavailable.');
 }
 
+async function syncSubscriptionById(subscriptionId: string, eventAt: number) {
+  const current = await getStripe('webhook').subscriptions.retrieve(subscriptionId);
+  await syncSubscription(current, eventAt);
+}
+
 async function handleEvent(event: Stripe.Event) {
   if (event.type === 'customer.subscription.created' ||
       event.type === 'customer.subscription.updated') {
     const source = event.data.object as Stripe.Subscription;
     // Relecture de l'état actuel pour éviter qu'un ancien événement rétrograde l'abonnement.
-    const current = await getStripe('webhook').subscriptions.retrieve(source.id);
-    await syncSubscription(current,event.created);
+    await syncSubscriptionById(source.id,event.created);
   } else if (event.type === 'customer.subscription.deleted') {
     const deleted = event.data.object as Stripe.Subscription;
     await syncSubscription(deleted,event.created,true);
+  } else if (event.type === 'invoice.paid' || event.type === 'invoice.payment_failed') {
+    const invoice = event.data.object as Stripe.Invoice & { subscription?: StripeReference };
+    const subscriptionId = stripeObjectId(invoice.subscription);
+    if (subscriptionId) await syncSubscriptionById(subscriptionId, event.created);
+  } else if (event.type === 'checkout.session.completed') {
+    const session = event.data.object as Stripe.Checkout.Session;
+    if (session.mode !== 'subscription') return;
+    const subscriptionId = stripeObjectId(session.subscription);
+    if (subscriptionId) await syncSubscriptionById(subscriptionId, event.created);
+  } else if (event.type === 'payment_intent.payment_failed') {
+    const intent = event.data.object as Stripe.PaymentIntent & { invoice?: StripeReference };
+    const invoiceId = stripeObjectId(intent.invoice);
+    if (!invoiceId) return;
+    const invoice = await getStripe('webhook').invoices.retrieve(invoiceId) as Stripe.Invoice & { subscription?: StripeReference };
+    const subscriptionId = stripeObjectId(invoice.subscription);
+    if (subscriptionId) await syncSubscriptionById(subscriptionId, event.created);
   }
   // checkout.session.completed seul n'active jamais un plan :
-  // attendre une notification subscription vérifiée.
+  // les droits viennent d'une souscription relue chez Stripe.
 }
 
 export async function POST(request: Request) {

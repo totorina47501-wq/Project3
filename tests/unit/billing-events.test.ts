@@ -13,7 +13,9 @@ describe('Droits Stripe test — sans appel API',()=>{
   });
   it('enlève les droits payants après fin ou impayé',()=>{
     expect(effectivePlan('active','studio')).toBe('studio');
+    expect(effectivePlan('incomplete','studio')).toBe('free');
     expect(effectivePlan('past_due','studio')).toBe('free');
+    expect(effectivePlan('unpaid','pro')).toBe('free');
     expect(effectivePlan('canceled','pro')).toBe('free');
     expect(effectivePlan('active',null)).toBe('free');
   });

@@ -565,7 +565,7 @@
         "supabase/migrations/20261105122000_billing_atomic_sync.sql"
       ],
       "next": [
-        "Facturation désactivée ; tests fournisseur simulés et SQL local. Aucun paiement réel."
+        "Facturation désactivée ; synchronisation webhooks idempotente (customer.subscription.*, invoice.paid, invoice.payment_failed, checkout.session.completed abonnement, payment_intent.payment_failed), tests fournisseur simulés et SQL local. Aucun paiement réel."
       ]
     },
     {
