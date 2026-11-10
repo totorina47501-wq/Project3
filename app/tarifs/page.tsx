@@ -23,7 +23,7 @@ const plans = ([
   { id: 'pro', name: 'Pro', audience: 'Pour publier régulièrement', price: BRAND.plans.pro.priceMonthlyEur,
     highlights: ['Pour les créateurs actifs', 'Réécritures de contenus', 'Assistant Mia pour vos questions'] },
   { id: 'studio', name: 'Studio', audience: 'Pour les volumes importants', price: BRAND.plans.studio.priceMonthlyEur,
-    highlights: ['5 sièges, propriétaire compris', 'API de contrôle sans IA', 'Rapports sur les contrôles partagés'] },
+    highlights: ['5 sièges, propriétaire compris', 'API sans IA : 2 000 contrôles/mois par espace', 'Rapports sur les contrôles partagés'] },
 ] as const).map(plan => ({ ...plan, rights: planEntitlements(plan.id) }));
 
 const faq = (live:boolean) => [

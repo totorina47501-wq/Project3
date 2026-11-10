@@ -10,6 +10,18 @@ insert into auth.users (id,email,email_confirmed_at) values
  ('10000000-0000-0000-0000-000000000006','studio-six@example.test',null);
 update public.users set plan='studio' where id in
  ('10000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000002');
+-- Refuser un profil Studio historique sans abonnement valable.
+do $
+begin
+ if not exists(select 1 from public.users where id='10000000-0000-0000-0000-000000000001' and plan='studio')
+ then raise exception 'Fixture Studio absente'; end if;
+ if studio_private.has_active_studio_subscription('10000000-0000-0000-0000-000000000001'::uuid)
+ then raise exception 'Un profil historique ne vaut pas un abonnement'; end if;
+end $;
+-- Souscriptions de test strictement dans la transaction PGlite à rollback.
+insert into public.subscriptions(user_id,stripe_subscription_id,plan,status,current_period_end) values
+ ('10000000-0000-0000-0000-000000000001','sub_studio_fixture_a','studio','active',now()+interval '30 days'),
+ ('10000000-0000-0000-0000-000000000002','sub_studio_fixture_b','studio','active',now()+interval '30 days');
 insert into public.verifications(user_id,platform,content_text) values
  ('10000000-0000-0000-0000-000000000001','instagram','Historique personnel du propriétaire, jamais partagé'),
  ('10000000-0000-0000-0000-000000000004','youtube','Historique personnel du membre, jamais partagé');
@@ -118,6 +130,41 @@ begin
  update public.users set plan='solo' where id=owner_id;
  perform pg_temp.expect_denied(owner_id,ws,'checks');
  perform pg_temp.expect_denied(member_id,ws,'overview');
+ -- Vérifier explicitement le quota partagé sur toutes les clés API de l'espace.
+ key_id := (public.studio_execute(owner_id,ws,'create_key',
+   jsonb_build_object('name','quota','token_hash',repeat('e',64),
+    'prefix','mc_studio_quota','scopes',jsonb_build_array('checks:write')))->'key'->>'id')::uuid;
+ update public.studio_api_usage_monthly set checks_used=1999
+   where workspace_id=ws and period_start=date_trunc('month',timezone('UTC',now()))::date;
+ if not found then
+   insert into public.studio_api_usage_monthly(workspace_id,period_start,checks_used)
+   values(ws,date_trunc('month',timezone('UTC',now()))::date,1999);
+ end if;
+ perform public.studio_execute_api(repeat('e',64),'save_check',
+   '{"caption":"Contrôle API sans IA","platform":"instagram","result":{"analysisMode":"rules_only"}}');
+ if (select checks_used from public.studio_api_usage_monthly
+    where workspace_id=ws and period_start=date_trunc('month',timezone('UTC',now()))::date)<>2000
+ then raise exception 'Le dernier contrôle API n a pas été compté'; end if;
+ begin
+   perform public.studio_execute_api(repeat('e',64),'save_check',
+      '{"caption":"Quota dépassé","platform":"instagram","result":{"analysisMode":"rules_only"}}');
+   raise exception 'Le plafond API 2k a été dépassé';
+ exception when raise_exception then
+   -- Accepter uniquement le refus métier P0001.
+   if SQLSTATE<>'P0001' then raise; end if;
+ end;
+ update public.subscriptions set current_period_end=now()-interval '1 second'
+   where user_id=owner_id;
+ begin
+  perform public.studio_execute_api(repeat('e',64),'checks','{}');
+  raise exception 'API exposée malgré expiration Studio';
+ exception when insufficient_privilege then null; end;
+ update public.subscriptions set current_period_end=now()+interval '30 days'
+   where user_id=owner_id;
+ if has_table_privilege('authenticated','public.studio_api_usage_monthly','select')
+    or has_table_privilege('anon','public.studio_api_usage_monthly','select')
+    or has_function_privilege('authenticated','studio_private.has_active_studio_subscription(uuid)','execute')
+ then raise exception 'Compteur API ou helper privilégié exposé'; end if;
  -- Une équipe supprimée localement ne laisse aucune capacité utilisable.
  perform public.studio_execute(other_id,other_ws,'invite',jsonb_build_object('email','studio-five@example.test','role','member','token_hash',repeat('ab',32)));
  perform public.studio_execute(other_id,other_ws,'create_key',jsonb_build_object('name','deleted-workspace','token_hash',repeat('cd',32),'prefix','mc_studio_123456782','scopes',jsonb_build_array('checks:read')));

@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: MentionCheck Studio API
   version: 1.0.0
-  description: API B2B de vérification textuelle sans IA. Requiert un espace Studio actif et une clé serveur.
+  description: API B2B de vérification textuelle sans IA. Requiert un abonnement Stripe Studio actif non échu et une clé serveur. 2000 POST par espace et mois UTC, HTTP 429 après épuisement.
 servers:
   - url: https://mentioncheck.toto-rina47501.workers.dev
 security:
@@ -12,7 +12,7 @@ paths:
     post:
       operationId: createVerification
       summary: Contrôler un texte partagé
-      description: Requiert le scope checks:write. N'effectue aucun appel IA.
+      description: Requiert le scope checks:write. N'effectue aucun appel IA. Inclus dans Studio uniquement, limite de 2000 appels/mois UTC/espace.
       requestBody:
         required: true
         content:

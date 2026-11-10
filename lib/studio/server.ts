@@ -9,6 +9,7 @@ import type { Platform } from '@/lib/ai/schemas';
 
 type RpcError = { code?: string; message?: string };
 export function throwStudioError(error: RpcError): never {
+  if (error.code === 'P0001') throw new HttpError(429, 'Quota API Studio mensuel atteint.');
   if (error.code === '42501') throw new HttpError(403, 'Accès Studio refusé, jeton expiré ou permission insuffisante.');
   if (error.code === '23505') throw new HttpError(409, 'Cet espace, ce membre ou cette invitation existe déjà.');
   if (error.code === '23514') throw new HttpError(409, 'Limite Studio atteinte ou données invalides. Cinq sièges maximum, invitations comprises.');
