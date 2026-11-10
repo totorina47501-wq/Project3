@@ -387,7 +387,32 @@
       "migrations": [],
       "next": [
         "Identité juridique et contenu final non validés.",
-        "Accueil SEO éditorial, canonical et liaison vers tarifs indicatifs ; tests Playwright mis à jour, sans indexer les tarifs. Voir docs/19-seo-release-plan.md."
+        "Accueil SEO éditorial, canonical et liaison vers tarifs indicatifs ; tests Playwright mis à jour, sans indexer les tarifs. Voir docs/19-seo-release-plan.md.",
+        "Guide /guide/checklist-influence et lead magnet .txt publiés avec disclaimer non-avis juridique ; feedback volontaire local (stub) avec consentement explicite et suppression immédiate."
+      ]
+    },
+    {
+      "id": "growth-feedback",
+      "name": "Lead magnet et feedback marketing autonome",
+      "status": "partial",
+      "anchor": "components/LeadFeedbackForm.tsx",
+      "test": "tests/e2e/growth-landing-feedback.spec.ts",
+      "doc": "docs/19-seo-release-plan.md",
+      "aliases": [
+        "growth",
+        "lead magnet",
+        "feedback",
+        "utm",
+        "community"
+      ],
+      "routes": [
+        "app/api/lead-magnet/route.ts",
+        "app/api/marketing/feedback/route.ts"
+      ],
+      "migrations": [],
+      "next": [
+        "Adaptateur local en mémoire uniquement (pas de CRM, pas de synchronisation SaaSFactory, pas d’API sociale).",
+        "Collecte minimale et suppression immédiate disponibles ; validation juridique et raccord Factory #65/#66/#70 restent bloqués en phase 2."
       ]
     },
     {
