@@ -90,3 +90,16 @@ La migration `legacy_solo_promotion_30d` a été **exécutée** sur le projet de
 Cette preuve ne vaut ni test unitaire local vert, ni validation E2E
 authentifiée, ni migration de production. La base de production
 `zcztvberuihphqklhjsr` **n'a pas été modifiée** pour ce lot.
+
+## Recette HTTP Auth staging, sans IA ni facturation
+Le workflow `.github/workflows/mentioncheck-launch-staging-auth.yml` est
+déclenché uniquement par la branche `feat/mentioncheck-launch-decisions-20261110`.
+Il effectue les vérifications de frontière, le build et le déploiement du
+**seul** Worker `mentioncheck-staging`, avec IA, billing et promotion
+désactivés. Le script `scripts/recette/auth-staging-smoke.mjs` vérifie
+login/inscription (contrôle IP Cloudflare + mot de passe faible), Checkout
+fermé, utilisateur technique authentifié, page paramètres et accès invité
+refusé ; le compte créé est supprimé par ID exact dans `finally`.
+Aucun paiement, inscription email sortante, appel IA ni migration de
+production n'est déclenché. Un résultat CI vert et un résultat staging
+vert sur le même SHA sont nécessaires avant toute revue de fusion.
