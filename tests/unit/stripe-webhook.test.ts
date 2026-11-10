@@ -159,7 +159,7 @@ it('refuse un événement test lorsque les prérequis live sont attestés', asyn
     STRIPE_LIVE_TAX_REVIEW:'approved',STRIPE_LIVE_TERMS_REVIEW:'approved',
     STRIPE_LIVE_E2E_REVIEW:'passed',
     OPENAI_PAUSED:'false',OPENAI_TEXT_ENABLED:'true',OPENAI_VISION_ENABLED:'true',OPENAI_API_KEY:'sk-proj-fixture',
-    NEXT_PUBLIC_APP_URL:'https://mentioncheck.toto-rina47501.workers.dev'
+    NEXT_PUBLIC_APP_URL:'https://mentioncheck.app'
   }))vi.stubEnv(name,value);
   const response=await POST(request());
   expect(response.status).toBe(400);
