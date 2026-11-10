@@ -34,14 +34,23 @@ describe('MentionCheck Stripe Sandbox — isolation', () => {
     expect(paidPriceId('studio', gate)).toBe('price_1UaAGZCZ5rRirUf63iKoncrM');
     expect(billingGate({...env, STRIPE_SECRET_KEY: 'sk_live_forbidden'}).enabled).toBe(false);
   });
-  it('ne copie ni Stripe ni les références staging dans le Worker production', () => {
+  it('prépare seulement les références Live publiques avec facturation fermée, sans fuite vers la preview staging', () => {
     const production = readConfig('wrangler.jsonc');
     expect(production.name).toBe('mentioncheck');
-    expect(Object.keys(production.vars).some(key => key.startsWith('STRIPE_'))).toBe(false);
-    expect(JSON.stringify(production)).not.toContain('price_1UaAGVCZ5rRirUf6Mwl2S9LU');
-    // La Preview QA du Worker production possède volontairement des références STAGING.
-    // Seuls les bindings runtime production doivent en être isolés.
+    expect(production.vars.STRIPE_MODE).toBe('live');
+    expect(production.vars.STRIPE_PRICE_SOLO).toBe('price_1UaKLwCdRRAa9LkpiXUiv0wc');
+    expect(production.vars.STRIPE_PRICE_PRO).toBe('price_1UaKLyCdRRAa9Lkp5daPFLZK');
+    expect(production.vars.STRIPE_PRICE_STUDIO).toBe('price_1UaKM0CdRRAa9Lkptx9oZCS8');
+    expect(production.vars.BILLING_ENABLED).toBe('false');
+    expect(production.vars.STRIPE_WEBHOOK_ENABLED).toBe('false');
+    expect(production.vars.STRIPE_LIVE_APPROVED).toBe('false');
+    expect(billingGate(production.vars).enabled).toBe(false);
+    expect(billingGate(production.vars, 'webhook').enabled).toBe(false);
+    expect(JSON.stringify(production.vars)).not.toMatch(/sk_(test|live)_|whsec_/);
+    expect(JSON.stringify(production.vars)).not.toContain('price_1UaAGVCZ5rRirUf6Mwl2S9LU');
+    // La Preview QA du Worker production reste strictement en sandbox et sans facturation.
     expect(production.previews?.vars?.BILLING_ENABLED).toBe('false');
+    expect(production.previews?.vars?.STRIPE_MODE).toBe('test');
     expect(Object.keys(production.previews?.vars ?? {}).some(key => key.startsWith('STRIPE_PRICE_'))).toBe(false);
   });
 });
