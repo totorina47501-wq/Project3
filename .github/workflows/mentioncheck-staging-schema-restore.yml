@@ -2,7 +2,7 @@
 name: MentionCheck staging hosted public schema restore
 on:
   push:
-    branches: [test/mentioncheck-staging-auth-20261108]
+    branches: [test/mentioncheck-staging-auth-20261108, codex/codex-certification-six-chantiers]
     paths:
       - '.github/workflows/mentioncheck-staging-schema-restore.yml'
       - 'scripts/recette/check-staging-postgres-url.mjs'
@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   restore-real-staging-schema:
-    if: github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/test/mentioncheck-staging-auth-20261108'
+    if: github.repository == 'totorina47501-wq/Project3' && (github.ref == 'refs/heads/test/mentioncheck-staging-auth-20261108' || github.ref == 'refs/heads/codex/codex-certification-six-chantiers')
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:

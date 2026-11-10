@@ -89,11 +89,21 @@ docker run --rm --env MENTIONCHECK_STAGING_POSTGRES_URL \
  sh -ec 'psql "$MENTIONCHECK_STAGING_POSTGRES_URL" -X -A -t -w -v ON_ERROR_STOP=1 -f /catalog.sql' \
  > "$temporary/source.fingerprint" 2> "$temporary/source.log" \
  || fail source_connect_or_catalog
-grep -q '^tables|27|' "$temporary/source.fingerprint" || fail unexpected_source_table_count
-grep -q '^policies|25|' "$temporary/source.fingerprint" || fail unexpected_source_policy_count
-grep -q '^functions|30|' "$temporary/source.fingerprint" || fail unexpected_source_function_count
-grep -q '^private_functions|3|' "$temporary/source.fingerprint" || fail unexpected_private_function_count
-printf 'STAGING_REMOTE_CATALOG_READONLY_PASS tables=27 policies=25 functions=30 private_functions=3\n'
+# Fail closed on missing or regressed catalog categories, but allow additive migrations.
+# Exact source-vs-local fingerprints below still verify every restored definition.
+catalog_count() {
+  local kind="$1" minimum="$2" found
+  found="$(awk -F'|' -v target="$kind" '$1 == target { print $2 }' "$temporary/source.fingerprint")"
+  case "$found" in ''|*[!0-9]*) fail "missing_or_invalid_catalog_${kind}" ;; esac
+  if (( found < minimum )); then fail "unexpected_source_${kind}_count"; fi
+  printf '%s' "$found"
+}
+tables_count="$(catalog_count tables 29)"
+policies_count="$(catalog_count policies 25)"
+functions_count="$(catalog_count functions 30)"
+private_functions_count="$(catalog_count private_functions 4)"
+printf 'STAGING_REMOTE_CATALOG_READONLY_PASS tables=%s policies=%s functions=%s private_functions=%s\n' \
+ "$tables_count" "$policies_count" "$functions_count" "$private_functions_count"
 
 # The standalone CLI runs in a disposable folder, never linked to production.
 npm install --prefix "$temporary/cli" --no-audit --no-fund --silent supabase@2 \
@@ -181,5 +191,6 @@ if ! cmp -s "$temporary/source.fingerprint" "$temporary/restored.fingerprint"; t
   fail restored_fingerprint_differs
 fi
 printf 'STAGING_REAL_PUBLIC_SCHEMA_RESTORE_PASS source=ukvgnkxgzyhswgpnvyzz dest=local_disposable\n'
-printf 'STAGING_SCHEMA_CATALOG_FINGERPRINT_PASS tables=27 policies=25 functions=30 private_functions=3\n'
+printf 'STAGING_SCHEMA_CATALOG_FINGERPRINT_PASS tables=%s policies=%s functions=%s private_functions=%s\n' \
+ "$tables_count" "$policies_count" "$functions_count" "$private_functions_count"
 printf 'STAGING_REAL_SCHEMA_NO_DATA_NO_PRODUCTION_WRITES_PASS\n'
