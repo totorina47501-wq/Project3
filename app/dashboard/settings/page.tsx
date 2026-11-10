@@ -7,7 +7,8 @@ import { SocialAccounts } from '@/components/SocialAccounts';
 import { AIPreferences } from '@/components/AIPreferences';
 import { SOCIAL_COLUMNS, SOCIAL_PAGE_SIZE, type SocialAccount } from '@/lib/social/model';
 import { toneSchema } from '@/lib/ai/schemas';
-import { subscriptionAccessTier } from '@/lib/billing/events';
+import { subscriptionAccessTier, accessTierWithPromotion } from '@/lib/billing/events';
+import { createAdminSupabase } from '@/lib/supabase/admin';
 import { planEntitlements } from '@/lib/billing/plans';
 import { BillingPortal } from '@/components/BillingPortal';
 import { billingGate } from '@/lib/billing/config';
@@ -19,14 +20,29 @@ export default async function SettingsPage() {
   const stripe = billingGate(process.env);
   const { data: authData } = await supabase.auth.getUser();
   const isMiaAdmin = Boolean(authData.user && (process.env.MIA_ADMIN_USER_IDS ?? '').split(',').map(v => v.trim()).includes(authData.user.id));
+  // Stripe Customer ID n'est pas lisible par le rôle authenticated (RLS/GRANT).
+  // Ne jamais élargir les droits de cette colonne pour l'interface.
   const { data: userData, error } = await supabase.from('users')
-    .select('id,plan,ai_training_opt_in,created_at,stripe_customer_id').single();
+    .select('id,plan,ai_training_opt_in,created_at').single();
+  const { data: billingProfile, error: billingProfileError } = stripe.enabled && userData
+    ? await createAdminSupabase().from('users')
+      .select('stripe_customer_id').eq('id',userData.id).single()
+    : {data:null,error:null};
   const { data: subscription, error: subscriptionError } = userData
     ? await supabase.from('subscriptions')
       .select('stripe_subscription_id,plan,status,current_period_end')
       .eq('user_id', userData.id).maybeSingle()
     : { data:null, error:null };
-  const tier = subscriptionError ? null : subscriptionAccessTier(subscription);
+  // Flag inactif jusqu'à migration + activation explicite lors du lancement.
+  // Ne pas requêter une table absente de la base de production.
+  const promotionEnabled=process.env.PROMO_SOLO_ENABLED==='true';
+  const { data:promotion,error:promotionError } = promotionEnabled && userData
+    ? await createAdminSupabase().from('promotional_solo_access')
+      .select('starts_at,expires_at').eq('user_id',userData.id).maybeSingle()
+    : {data:null,error:null};
+  const tier = subscriptionError || promotionError ? null
+    : accessTierWithPromotion(subscription,promotion);
+  const promotionalSolo = tier === 'solo' && subscriptionAccessTier(subscription)==='free';
   const rights = tier ? planEntitlements(tier) : null;
   const { data: usage, error: usageError } = await supabase.from('usage_monthly')
     .select('checks_used,rewrites_used,mia_messages_used,period_start')
@@ -51,12 +67,16 @@ export default async function SettingsPage() {
     </p> : <>
       <section className="rounded-2xl border border-slate-200 bg-white p-6">
         <h2 className="font-heading text-xl font-bold">Mon abonnement actuel</h2>
-        <p className="mt-3 text-lg font-semibold">{tier === null ? 'Statut indisponible' : tier === 'free' ? 'Gratuit' : tier === 'solo' ? 'Solo (abonnement test)' : tier === 'pro' ? 'Pro (abonnement test)' : 'Studio (abonnement test)'}</p>
+        <p className="mt-3 text-lg font-semibold">{tier === null ? 'Statut indisponible' : tier === 'free' ? 'Gratuit' : tier === 'solo' ? promotionalSolo ? 'Solo offert (promotion temporaire)' : 'Solo (abonnement test)' : tier === 'pro' ? 'Pro (abonnement test)' : 'Studio (abonnement test)'}</p>
         <p className="mt-1 text-sm text-slate-500">
           {tier === 'free' ? 'Aucun abonnement payant actif : quotas gratuits appliqués.' :
            tier === null ? 'Le statut de facturation ne peut pas être vérifié actuellement.' :
+           promotionalSolo ? 'Accès Solo promotionnel gratuit, sans abonnement ni prélèvement Stripe.' :
            'Abonnement Stripe Sandbox : aucun encaissement réel.'}
         </p>
+        {promotionalSolo && promotion && <p className="mt-1 text-sm text-slate-500">
+          Offre de bienvenue valable jusqu’au {new Date(promotion.expires_at).toLocaleDateString('fr-FR')}.
+        </p>}
         {usageError ? <p role="alert" className="mt-5 text-sm text-red-800">Quotas momentanément indisponibles.{' '}
           <a className="font-semibold underline" href="/dashboard/settings">Réessayer le chargement</a>
         </p> : <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -70,9 +90,9 @@ export default async function SettingsPage() {
           </div>)}
         </div>}
         <p className="mt-3 text-xs text-slate-500">Dernière période enregistrée. Les contrôles sans IA ne consomment pas de quota de vérifications payantes.</p>
-        {stripe.enabled && stripe.mode && userData.stripe_customer_id &&
+        {stripe.enabled && stripe.mode && !billingProfileError && billingProfile?.stripe_customer_id &&
           <BillingPortal mode={stripe.mode} />}
-        {!stripe.enabled && tier !== 'free' && <p className="mt-3 text-sm text-slate-600">La gestion de facturation est momentanément indisponible. Les droits existants restent consultables.</p>}
+        {!stripe.enabled && tier !== 'free' && !promotionalSolo && <p className="mt-3 text-sm text-slate-600">La gestion de facturation est momentanément indisponible. Les droits existants restent consultables.</p>}
       </section>
       <SocialAccounts initialItems={(social?.data??[]) as unknown as SocialAccount[]} initialTotal={social?.count??0}
         initialUnavailable={!social||!!social.error} plan={tier ?? 'free'} />

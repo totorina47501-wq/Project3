@@ -48,3 +48,7 @@ Le workflow `.github/workflows/ci.yml` télécharge désormais une archive Linux
 ## Installation Chromium résiliente sur GitHub Actions (6 novembre 2026)
 
 Le runner GitHub `ubuntu-24.04` possède déjà les bibliothèques système requises par Chromium. L'option `--with-deps` appelait APT et pouvait bloquer la CI sur les miroirs réseau, comme pour FFmpeg. Le workflow met en cache les navigateurs de la version Playwright verrouillée (`@playwright/test 1.64.1`) dans `~/.cache/ms-playwright`, puis exécute `npx playwright install chromium` sans installation APT ni service additionnel, avec une seconde tentative explicite en cas d'échec réseau. Tous les vrais tests E2E Playwright restent bloquants : si les bibliothèques ou le navigateur manquent, le job échoue et la fusion est refusée.
+
+## Gate commercial choisi le 10 novembre 2026
+
+Aucune ouverture Stripe Live automatique : vérifier la [décision d'ouverture publique](63-launch-decisions-20261110.md), le plafond OpenAI 25 USD appliqué en hard limit avec alerte 20 USD, l'acceptation conditionnelle Supabase Free, la migration des promotions et des quotas (30 jours Solo pour **deux** comptes historiques), le backup/rollback réel interversions, les E2E authentifiés et l'immatriculation micro-entreprise. Le flag `PROMO_SOLO_ENABLED=false` reste inactif avant migration de production, plan d'activation et préflight.

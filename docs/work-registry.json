@@ -582,6 +582,27 @@
       "next": [
         "Ne remplace aucune revue juridique et n’active aucun paiement. Compléter le dossier privé avec l’identité réelle de l’exploitant."
       ]
+    },
+    {
+      "id": "legacy-solo-promotion",
+      "name": "Promotion Solo historique sans Stripe",
+      "status": "prepared_disabled",
+      "anchor": "lib/billing/events.ts",
+      "test": "tests/unit/billing-events.test.ts",
+      "doc": "docs/63-launch-decisions-20261110.md",
+      "aliases": [
+        "promotion solo historique",
+        "offre de bienvenue",
+        "legacy solo 30 days"
+      ],
+      "routes": [],
+      "migrations": [
+        "supabase/migrations/20261110170000_legacy_solo_promotion.sql"
+      ],
+      "next": [
+        "Code, SQL et tests préparés ; aucun octroi dans ce lot. Migration staging puis production coordonnée, sélection et activation seulement lors du GO public certifié.",
+        "PROMO_SOLO_ENABLED reste false tant que la nouvelle table n'est pas présente et les tests d'accès authentifiés ne sont pas passés."
+      ]
     }
   ]
 }

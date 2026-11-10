@@ -7,6 +7,7 @@ vi.mock('@/lib/security/auth', () => ({
   requireUser: mocks.requireUser,
   publicError: () => ({ status: 503, message: 'Le service est momentanément indisponible.' }),
 }));
+vi.mock('server-only', () => ({}));
 import Dashboard from '../../app/dashboard/page';
 import Archives from '../../app/dashboard/archive/page';
 import Settings from '../../app/dashboard/settings/page';

@@ -71,7 +71,8 @@
     "OPENAI_PAUSED": "false",
     "OPENAI_TEXT_ENABLED": "true",
     "OPENAI_VISION_ENABLED": "true",
-    "OPENAI_EMBEDDINGS_ENABLED": "false"
+    "OPENAI_EMBEDDINGS_ENABLED": "false",
+    "PROMO_SOLO_ENABLED": "false"
   },
   "dev": {
     "enable_containers": false
@@ -91,7 +92,8 @@
       "MEDIA_CLOUDFLARE_RUNNER_ENABLED": "false",
       "MEDIA_RUNNER_PAUSED": "true",
       "MEDIA_AI_ENABLED": "false",
-      "MEDIA_RETENTION_ENABLED": "false"
+      "MEDIA_RETENTION_ENABLED": "false",
+      "PROMO_SOLO_ENABLED": "false"
     }
   }
 }
