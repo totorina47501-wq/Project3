@@ -37,7 +37,7 @@ Sur le checkout de cette PR (base `main` `3c01a63d80a1eb45656490384ef1e732c79d33
 - `npm run typecheck` : **PASS**.
 - `npm run lint` : **PASS**.
 - `OPENAI_PAUSED=true BILLING_ENABLED=false NEXT_TELEMETRY_DISABLED=1 npm run build` : **PASS**.
-- CI de la branche de reprise avant correctif : [run #42905713623](https://github.com/totorina47501-wq/Project3/actions/runs/42905713623), **action_required** sans jobs exécutés ; la relance sur le nouveau commit est requise pour attester l'exécution des workflows de recette staging désormais autorisés.
+- Après correctif, les deux workflows staging se déclenchent bien sur ce SHA : [Auth staging #42906686340](https://github.com/totorina47501-wq/Project3/actions/runs/42906686340) et [Studio API staging #42906686505](https://github.com/totorina47501-wq/Project3/actions/runs/42906686505), tous deux en **action_required** sans jobs exécutés (en attente d'approbation/permissions GitHub). La preuve distante de recette sur ce SHA reste donc **BLOCKED**.
 
 ## Portes et dépendances restant ouvertes
 
