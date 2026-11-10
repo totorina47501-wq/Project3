@@ -13,10 +13,14 @@ describe('OpenAI : préparation sans émission de requêtes', () => {
     expect(() => assertOpenAIAllowed('audio',env)).toThrow(OpenAICapabilityDisabledError);
     expect(() => assertOpenAIAllowed('embeddings',env)).toThrow(OpenAICapabilityDisabledError);
   });
-  it('préserve les fonctions existantes, et un kill-switch bloque tout', () => {
-    expect(openaiCapabilityEnabled('text',{})).toBe(true);
-    expect(openaiCapabilityEnabled('vision',{})).toBe(true);
+  it('refuse tout appel payant par défaut et garde un coupe-circuit général', () => {
+    expect(openaiCapabilityEnabled('text',{})).toBe(false);
+    expect(openaiCapabilityEnabled('vision',{})).toBe(false);
+    expect(openaiCapabilityEnabled('text',{OPENAI_TEXT_ENABLED:'true'})).toBe(true);
+    expect(openaiCapabilityEnabled('vision',{OPENAI_VISION_ENABLED:'true'})).toBe(true);
+    expect(openaiCapabilityEnabled('text',{OPENAI_TEXT_ENABLED:'TRUE'})).toBe(false);
     const env = { OPENAI_PAUSED:'true', OPENAI_API_KEY:'sk-test',
+      OPENAI_TEXT_ENABLED:'true', OPENAI_VISION_ENABLED:'true',
       OPENAI_AUDIO_ENABLED:'true', OPENAI_EMBEDDINGS_ENABLED:'true' };
     for (const cap of ['text','vision','audio','embeddings'] as const) {
       expect(openaiCapabilityEnabled(cap,env)).toBe(false);
@@ -24,12 +28,13 @@ describe('OpenAI : préparation sans émission de requêtes', () => {
     }
   });
   it('aucun appel client sans clé secrète côté serveur', () => {
-    expect(() => assertOpenAIAllowed('text',{})).toThrow(MissingOpenAIKeyError);
+    expect(() => assertOpenAIAllowed('text',{})).toThrow(OpenAICapabilityDisabledError);
+    expect(() => assertOpenAIAllowed('text',{OPENAI_TEXT_ENABLED:'true'})).toThrow(MissingOpenAIKeyError);
     expect(() => assertOpenAIAllowed('audio',{OPENAI_AUDIO_ENABLED:'true'}))
       .toThrow(MissingOpenAIKeyError);
   });
   it('expose seulement un booléen de configuration, jamais la clé', () => {
-    const status = openaiReadiness({OPENAI_API_KEY:'secret-sensible'});
+    const status = openaiReadiness({OPENAI_API_KEY:'secret-sensible',OPENAI_TEXT_ENABLED:'true'});
     expect(status.keyConfigured).toBe(true);
     expect(JSON.stringify(status)).not.toContain('secret-sensible');
     expect(status.modelAudio).toBe('gpt-transcribe');

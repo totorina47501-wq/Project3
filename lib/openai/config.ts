@@ -36,14 +36,14 @@ export class MissingOpenAIKeyError extends Error {
   }
 }
 
-// Les fonctions texte/vision déjà utilisées restent compatibles tant que
-// OPENAI_PAUSED ou leur propre drapeau ne les désactive pas explicitement.
-// Audio et embeddings sont désactivés par défaut même avec une clé existante.
+// Opt-in explicite pour toute capacité facturable : aucun appel lorsque les
+// drapeaux sont absents, même si la clé serveur existe. La pause l'emporte.
+// Audio et embeddings restent fermés tant qu'ils ne sont pas approuvés.
 export function openaiCapabilityEnabled(capability: OpenAICapability, env: OpenAIEnv): boolean {
   if (env.OPENAI_PAUSED === 'true') return false;
   switch (capability) {
-    case 'text': return env.OPENAI_TEXT_ENABLED !== 'false';
-    case 'vision': return env.OPENAI_VISION_ENABLED !== 'false';
+    case 'text': return env.OPENAI_TEXT_ENABLED === 'true';
+    case 'vision': return env.OPENAI_VISION_ENABLED === 'true';
     case 'audio': return env.OPENAI_AUDIO_ENABLED === 'true';
     case 'embeddings': return env.OPENAI_EMBEDDINGS_ENABLED === 'true';
   }

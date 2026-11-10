@@ -65,9 +65,13 @@
     "MEDIA_JOBS_SCHEMA_READY": "true",
     "MEDIA_PROCESSING_ENABLED": "true",
     "MEDIA_CLOUDFLARE_RUNNER_ENABLED": "true",
-    "MEDIA_AI_ENABLED": "true",
+    "MEDIA_AI_ENABLED": "false",
     "MEDIA_AI_SCHEMA_READY": "true",
-    "OPENAI_AUDIO_ENABLED": "true"
+    "OPENAI_AUDIO_ENABLED": "false",
+    "OPENAI_PAUSED": "false",
+    "OPENAI_TEXT_ENABLED": "true",
+    "OPENAI_VISION_ENABLED": "true",
+    "OPENAI_EMBEDDINGS_ENABLED": "false"
   },
   "dev": {
     "enable_containers": false

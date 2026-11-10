@@ -75,7 +75,8 @@
       "next": [
         "Clé existante conservée dans le Worker ; GPT-4o texte, réécriture, Vision et embeddings validés réellement le 5 novembre 2026 sur 0d8aec2, sans rotation ni clé locale.",
         "Sorties structurées strictes et coût conservé pour les réponses invalides ; propriété des métriques et RLS vérifiées.",
-        "Adaptateur audio inchangé, désactivé par défaut et non raccordé au flux distant."
+        "Adaptateur audio inchangé, désactivé par défaut et non raccordé au flux distant.",
+        "Réactivation texte/vision explicite sur branche dédiée : audio, embeddings et médias IA automatiques restent interdits. Vérifier clé production et plafond strict API avant preuve de dépense ; docs/62-ai-reactivation-20261110.md."
       ]
     },
     {
