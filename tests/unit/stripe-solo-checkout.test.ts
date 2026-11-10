@@ -117,8 +117,9 @@ it('réutilise une clé idempotente unique pour deux plans concurrentiels du mê
      headers:{origin:'https://mentioncheck.test','content-type':'application/json'},
      body:JSON.stringify({plan:'pro'})});
    expect((await POST(pro)).status).toBe(200);
-   const first=mocks.session.mock.calls[0][1].idempotencyKey;
-   const second=mocks.session.mock.calls[1][1].idempotencyKey;
+   expect(mocks.session).toHaveBeenCalledTimes(2);
+   const first=mocks.session.mock.calls[0]![1].idempotencyKey;
+   const second=mocks.session.mock.calls[1]![1].idempotencyKey;
    expect(first).toBe(second);
  } finally { now.mockRestore(); }
 });
