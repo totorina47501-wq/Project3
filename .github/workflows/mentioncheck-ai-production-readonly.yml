@@ -17,8 +17,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.MENTIONCHECK_STAGING_CLOUDFLARE_ACCOUNT_ID }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.MENTIONCHECK_STAGING_CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: f9b14d5d93b1fe8ef3982d3ddb87131d
+      # Dedicated per-Worker Metadata Read-Only token; never reuse staging deploy credentials.
+      CLOUDFLARE_API_TOKEN: ${{ secrets.MENTIONCHECK_PROD_CLOUDFLARE_READ_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:

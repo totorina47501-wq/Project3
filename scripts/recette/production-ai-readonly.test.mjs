@@ -12,4 +12,6 @@ test('diagnostic strictement lecture seule sans appel OpenAI ni écriture Cloudf
   assert.match(workflow,/permissions:\n  contents: read/);
   assert.match(workflow,/github\.ref == 'refs\/heads\/main'/);
   assert.match(workflow,/workflow_dispatch:/);
+  assert.match(workflow,/MENTIONCHECK_PROD_CLOUDFLARE_READ_TOKEN/);
+  assert.doesNotMatch(workflow,/secrets\\.MENTIONCHECK_STAGING_CLOUDFLARE_API_TOKEN/);
 });
