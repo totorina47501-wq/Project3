@@ -154,17 +154,17 @@ l’analyse IA vidéo et la transcription restent des développements distincts.
 
 ## PRA privé sur le MediaRunner existant — préparation opt-in du 11/11/2026
 
-**Pourquoi réutiliser MediaRunner :** l'image existante est déjà déployée avec un seul Container Cloudflare \`basic\` (0,25 vCPU, 1 GiB de RAM, 4 Go de disque, juridiction UE). Les sources \`workers/media-jobs/src\` sont déjà copiées dans le **Dockerfile existant**. Aucun nouveau Worker, Container binding, Dockerfile, instance, plan, route publique ni cron PRA n'est créé pour ce lot.
+**Pourquoi réutiliser MediaRunner :** l'image existante est déjà déployée avec un seul Container Cloudflare `basic` (0,25 vCPU, 1 GiB de RAM, 4 Go de disque, juridiction UE). Les sources `workers/media-jobs/src` sont déjà copiées dans le **Dockerfile existant**. Aucun nouveau Worker, Container binding, Dockerfile, instance, plan, route publique ni cron PRA n'est créé pour ce lot.
 
 **Livrable technique initial, sans exécution payante :**
-- \`workers/media-jobs/src/pra-storage.mjs\` : bibliothèque **lecture seule**. Vérification de la liste stricte des 3 buckets privés (\`deal-contracts\`, \`verification-media\`, \`verification-media-derived\`), parcours récursif/paginé des objets, lecture de chaque octet via Storage, comparaison des tailles et des SHA-256 enregistrés pour les \`media_assets\`. Max 100 objets et 16 MiB en mémoire. **Aucune écriture SQL, Storage ou filesystem.**
-- \`workers/media-jobs/src/pra-storage-run.mjs --verify-storage-readback\` : point d'entrée opt-in **interne au conteneur**, non relié aux routes HTTP ou alarmes. N'utilise que les secrets Supabase serveur déjà exploités par le runner média, sous réserve de leur disponibilité au moment d'une future exécution. Émet **uniquement les totaux** et le statut \`PARTIAL_READBACK_ONLY\`, jamais les chemins, SHA, identifiants clients ou erreurs brutes.
-- Garde-fous obligatoires : \`MC_PRA_STORAGE_ENABLED=true\`, \`MC_PRA_INCLUDED_QUOTA_CONFIRMED=true\`, cible PROD Supabase exacte, 3 totaux sources attendus non sensibles, pas de CI ni d'URL PostgreSQL distante ; aucun démarrage automatique. Les tests hors ligne réutilisent \`node --test workers/media-jobs/tests/*.test.mjs\` et les fixtures.
+- `workers/media-jobs/src/pra-storage.mjs` : bibliothèque **lecture seule**. Vérification de la liste stricte des 3 buckets privés (`deal-contracts`, `verification-media`, `verification-media-derived`), parcours récursif/paginé des objets, lecture de chaque octet via Storage, comparaison des tailles et des SHA-256 enregistrés pour les `media_assets`. Max 100 objets et 16 MiB en mémoire. **Aucune écriture SQL, Storage ou filesystem.**
+- `workers/media-jobs/src/pra-storage-run.mjs --verify-storage-readback` : point d'entrée opt-in **interne au conteneur**, non relié aux routes HTTP ou alarmes. N'utilise que les secrets Supabase serveur déjà exploités par le runner média, sous réserve de leur disponibilité au moment d'une future exécution. Émet **uniquement les totaux** et le statut `PARTIAL_READBACK_ONLY`, jamais les chemins, SHA, identifiants clients ou erreurs brutes.
+- Garde-fous obligatoires : `MC_PRA_STORAGE_ENABLED=true`, `MC_PRA_INCLUDED_QUOTA_CONFIRMED=true`, cible PROD Supabase exacte, 3 totaux sources attendus non sensibles, pas de CI ni d'URL PostgreSQL distante ; aucun démarrage automatique. Les tests hors ligne réutilisent `node --test workers/media-jobs/tests/*.test.mjs` et les fixtures.
 - À la dernière lecture Supabase Production : **13 objets**, **832860 octets**, **5 médias avec SHA-256 enregistré**. Ces valeurs sont des **préconditions à relever de nouveau au moment de l'essai**, pas des constantes fiables pour un futur backup.
 
-**Commande à exécuter uniquement par mécanisme \`exec()\` interne sur le conteneur EXISTANT déjà actif, lorsque la file média est vide, après contrôle de la consommation Cloudflare et du budget restant (pas de route publique et aucune exécution lancée dans ce lot) :**
+**Commande à exécuter uniquement par mécanisme `exec()` interne sur le conteneur EXISTANT déjà actif, lorsque la file média est vide, après contrôle de la consommation Cloudflare et du budget restant (pas de route publique et aucune exécution lancée dans ce lot) :**
 
-\`\`\`sh
+```sh
 # Environnement côté conteneur uniquement, jamais dans un commit ou un log :
 # SUPABASE_URL et SUPABASE_SERVICE_KEY déjà fournis au runner média.
 export MC_PRA_STORAGE_ENABLED=true
@@ -173,8 +173,8 @@ export MC_PRA_EXPECT_OBJECTS=13
 export MC_PRA_EXPECT_BYTES=832860
 export MC_PRA_EXPECT_MEDIA_HASHES=5
 node workers/media-jobs/src/pra-storage-run.mjs --verify-storage-readback
-\`\`\`
+```
 
 La commande exige confirmation **réelle** du quota disponible ; une variable n'est pas une protection de facturation technique. **Cloudflare Workers Paid facture les dépassements** : mémoire, CPU, disque, egress et Worker/DO, et le reste des quotas du compte n'est pas accessible via les connecteurs de cette discussion. Ne jamais exécuter le contrôle pour « essayer » avant vérification du compte. Références : https://developers.cloudflare.com/containers/platform/pricing/ et https://developers.cloudflare.com/containers/guides/execute-commands/ .
 
-**Distinction cruciale :** un téléchargement + contrôle SHA-256 **n'est pas** une restauration des objets dans un Storage indépendant ; cette première phase permet uniquement de prouver que les fichiers sont actuellement lisibles et cohérents. Le Dockerfile actuel n'embarque **pas PostgreSQL 17**, et l'accès au backup SQL/au secret PostgreSQL n'est pas disponible via le connecteur. Ne pas présenter cette phase comme \`isolated_restore_verified\` ou \`storage_binary_restore_verified\`. **Issue #16 reste bloquée** jusqu'à restauration locale PostgreSQL 17 et Storage sur copies isolées, sans risque de coûts additionnels. Ne pas remplacer le runtime média par un Docker-in-Docker tournant en root.
+**Distinction cruciale :** un téléchargement + contrôle SHA-256 **n'est pas** une restauration des objets dans un Storage indépendant ; cette première phase permet uniquement de prouver que les fichiers sont actuellement lisibles et cohérents. Le Dockerfile actuel n'embarque **pas PostgreSQL 17**, et l'accès au backup SQL/au secret PostgreSQL n'est pas disponible via le connecteur. Ne pas présenter cette phase comme `isolated_restore_verified` ou `storage_binary_restore_verified`. **Issue #16 reste bloquée** jusqu'à restauration locale PostgreSQL 17 et Storage sur copies isolées, sans risque de coûts additionnels. Ne pas remplacer le runtime média par un Docker-in-Docker tournant en root.
