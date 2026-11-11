@@ -294,6 +294,51 @@ describe('Socle OAuth social désactivé', () => {
     ).rejects.toMatchObject({ status: 400 });
   });
 
+  it('accepts Google callback metadata while rejecting duplicates and preserving state/PKCE', async () => {
+    const authorizationUrl = await beginSocialOAuth({
+      provider: 'youtube',
+      userId: owner,
+      sessionId: session,
+      store,
+      config: config('youtube'),
+      now,
+    });
+    const state = authorizationUrl.searchParams.get('state')!;
+    const callback = new URL(config('youtube').redirectUri);
+    callback.searchParams.set('code', 'simulated-google-code');
+    callback.searchParams.set('state', state);
+    callback.searchParams.set('scope', 'https://www.googleapis.com/auth/youtube.readonly');
+    callback.searchParams.set('authuser', '0');
+    callback.searchParams.set('prompt', 'consent');
+    callback.searchParams.set('hd', 'example.test');
+    callback.searchParams.set('iss', 'https://accounts.google.com');
+
+    const duplicate = new URL(callback);
+    duplicate.searchParams.append('authuser', '1');
+    await expect(completeSocialOAuthCallback({
+      provider: 'youtube',
+      userId: owner,
+      sessionId: session,
+      callbackUrl: duplicate.toString(),
+      store,
+      config: config('youtube'),
+      now,
+    })).rejects.toMatchObject({ status: 400 });
+
+    const result = await completeSocialOAuthCallback({
+      provider: 'youtube',
+      userId: owner,
+      sessionId: session,
+      callbackUrl: callback.toString(),
+      store,
+      config: config('youtube'),
+      now,
+    });
+    expect(result.authorizationCode).toBe('simulated-google-code');
+    expect(result.codeVerifier).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(store.transactions).toHaveLength(0);
+  });
+
   it('accepts TikTok’s documented granted-scopes callback parameter without trusting it', async () => {
     const authorizationUrl = await beginSocialOAuth({
       provider: 'tiktok',

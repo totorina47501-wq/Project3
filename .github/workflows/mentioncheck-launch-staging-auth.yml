@@ -14,7 +14,8 @@ jobs:
       github.repository == 'totorina47501-wq/Project3' &&
       (github.ref == 'refs/heads/feat/mentioncheck-launch-decisions-20261110' ||
       (github.ref == 'refs/heads/copilot/social-oauth-001-completion-phase-2' &&
-       github.event.head_commit.message == 'chore(oauth): sync staging vars once (#124)'))
+       (github.event.head_commit.message == 'chore(oauth): sync staging vars once (#124)' ||
+        github.event.head_commit.message == 'fix(oauth): accept Google callback metadata (#124)')))
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
@@ -64,6 +65,7 @@ jobs:
       - name: TypeScript et build staging OpenNext
         run: |
           npm run typecheck
+          npx vitest run tests/unit/social-oauth.test.ts tests/unit/social-oauth-routes.test.ts
           npm run build
           npx @opennextjs/cloudflare build --skipNextBuild --config wrangler.staging.jsonc
           npx wrangler deploy --config wrangler.staging.jsonc --dry-run

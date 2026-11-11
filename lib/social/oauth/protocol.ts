@@ -181,7 +181,13 @@ export async function completeSocialOAuthCallback(input: {
     'error_uri',
   ]);
   if (input.provider === 'tiktok') allowedParameters.add('scopes');
-  if (input.provider === 'youtube') allowedParameters.add('scope');
+  if (input.provider === 'youtube') {
+    // Google documents these optional redirect parameters; none are trusted for
+    // identity or authorization. State, session binding and PKCE remain mandatory.
+    for (const parameter of ['scope', 'authuser', 'prompt', 'hd', 'iss']) {
+      allowedParameters.add(parameter);
+    }
+  }
   if ([...callback.searchParams.keys()].some((key) => !allowedParameters.has(key))) {
     throw new SocialOAuthError(400, 'Réponse fournisseur invalide.');
   }
