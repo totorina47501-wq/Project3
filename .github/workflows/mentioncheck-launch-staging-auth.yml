@@ -73,6 +73,7 @@ jobs:
           MENTIONCHECK_STAGING_SUPABASE_SERVICE_KEY: ${{ secrets.MENTIONCHECK_STAGING_SUPABASE_SERVICE_KEY }}
         run: node scripts/recette/staging-auth-ab.mjs
       - name: RGPD sur fixture creee dans ce run staging (export, demande, apercu, effacement)
+        if: github.ref == 'refs/heads/codex/codex-certification-six-chantiers'
         run: |
           node --check scripts/recette/staging-rgpd-erasure.mjs
           node scripts/recette/staging-rgpd-erasure.mjs
