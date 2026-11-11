@@ -50,6 +50,11 @@ vi.mock('@/lib/social/oauth/accounts', () => ({
 vi.mock('@/lib/social/oauth/exchange', () => ({
   exchangeSocialOAuthCode: mocks.exchange,
   revokeSocialOAuthToken: mocks.revoke,
+  OAuthProviderStageError: class extends Error {
+    constructor(public readonly stage: 'token' | 'channel') {
+      super('OAuth provider response unavailable.');
+    }
+  },
 }));
 
 import { GET as listProviders } from '@/app/api/social-accounts/oauth/providers/route';
@@ -201,6 +206,36 @@ describe('Routes OAuth sociales', () => {
       provider: 'youtube',
       tokenSecret: expect.stringContaining('simulated-access'),
     }));
+  });
+
+  it('redirige avec une catégorie sûre après échec de récupération de chaîne Google', async () => {
+    enableYouTube();
+    const started = await startOAuth(new Request(
+      'https://local.test/api/social-accounts/oauth/start',
+      {
+        method: 'POST',
+        headers: { Origin: 'https://local.test', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'youtube' }),
+      },
+    ));
+    const authorization = new URL(
+      (await started.json() as { authorizationUrl: string }).authorizationUrl,
+    );
+    const url = new URL(callbackPath);
+    url.searchParams.set('code', 'temporary-code');
+    url.searchParams.set('state', authorization.searchParams.get('state')!);
+    mocks.exchange.mockRejectedValueOnce(
+      Object.assign(new Error('OAuth provider response unavailable.'), { stage: 'channel' }),
+    );
+    const result = await callbackOAuth(
+      new Request(url),
+      { params: Promise.resolve({ provider: 'youtube' }) },
+    );
+    expect(result.status).toBe(303);
+    expect(result.headers.get('location')).toContain('social_oauth=unavailable');
+    expect(result.headers.get('location')).toContain('social_oauth_error=channel');
+    expect(result.headers.get('location')).not.toContain('temporary-code');
+    expect(mocks.save).not.toHaveBeenCalled();
   });
 
   it('déconnecte selon le propriétaire, masque le secret et confirme la révocation simulée', async () => {

@@ -106,7 +106,10 @@ describe('Échange OAuth simulé hors ligne', () => {
       codeVerifier: null,
       fetcher: fetcher as typeof fetch,
       now,
-    })).rejects.toThrow('OAuth provider request unavailable.');
+    })).rejects.toMatchObject({
+      stage: 'token',
+      message: 'OAuth provider request unavailable.',
+    });
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
@@ -130,7 +133,10 @@ describe('Échange OAuth simulé hors ligne', () => {
       codeVerifier: 'simulated-verifier',
       fetcher: fetcher as typeof fetch,
       now,
-    })).rejects.toThrow('OAuth provider response unavailable.');
+    })).rejects.toMatchObject({
+      stage: 'channel',
+      message: 'OAuth provider response unavailable.',
+    });
     expect(fetcher).toHaveBeenCalledTimes(3);
   });
 

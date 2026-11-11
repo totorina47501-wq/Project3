@@ -3,6 +3,7 @@ import { createSocialOAuthAccountStore } from '@/lib/social/oauth/accounts';
 import {
   exchangeSocialOAuthCode,
   revokeSocialOAuthToken,
+  OAuthProviderStageError,
 } from '@/lib/social/oauth/exchange';
 import { completeSocialOAuthCallback } from '@/lib/social/oauth/protocol';
 import { socialOAuthConfig } from '@/lib/social/oauth/providers';
@@ -15,7 +16,11 @@ export const dynamic = 'force-dynamic';
 type Context = { params: Promise<{ provider: string }> };
 const providerSchema = z.enum(['instagram', 'tiktok', 'youtube', 'linkedin']);
 
-function returnToSettings(result: 'connected' | 'unavailable', provider?: string) {
+function returnToSettings(
+  result: 'connected' | 'unavailable',
+  provider?: string,
+  stage?: 'token' | 'channel' | 'storage',
+) {
   const publicOrigin = process.env.SOCIAL_OAUTH_PUBLIC_ORIGIN;
   const allowedOrigins = (process.env.SOCIAL_OAUTH_ALLOWED_ORIGINS ?? '')
     .split(',')
@@ -42,6 +47,7 @@ function returnToSettings(result: 'connected' | 'unavailable', provider?: string
   const destination = new URL('/dashboard/settings', origin);
   destination.searchParams.set('social_oauth', result);
   if (provider) destination.searchParams.set('provider', provider);
+  if (result === 'unavailable' && stage) destination.searchParams.set('social_oauth_error', stage);
   return new Response(null, {
     status: 303,
     headers: {
@@ -93,10 +99,14 @@ export async function GET(request: Request, context: Context) {
           tokenSecret: exchanged.tokenSecret,
         });
       } catch {}
-      return returnToSettings('unavailable', provider);
+      return returnToSettings('unavailable', provider, 'storage');
     }
     return returnToSettings('connected', provider);
-  } catch {
-    return returnToSettings('unavailable', provider);
+  } catch (error) {
+    return returnToSettings(
+      'unavailable',
+      provider,
+      error instanceof OAuthProviderStageError ? error.stage : undefined,
+    );
   }
 }

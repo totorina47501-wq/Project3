@@ -13,6 +13,16 @@ type OAuthTokenBundle = {
   expiresAt: string;
 };
 
+export class OAuthProviderStageError extends Error {
+  constructor(
+    public readonly stage: 'token' | 'channel',
+    message: string,
+  ) {
+    super(message);
+    this.name = 'OAuthProviderStageError';
+  }
+}
+
 export type ExchangedSocialAccount = {
   handle: string;
   tokenSecret: string;
@@ -199,21 +209,33 @@ export async function exchangeSocialOAuthCode(input: {
   now?: Date;
 }): Promise<ExchangedSocialAccount> {
   const fetcher = input.fetcher ?? fetch;
-  const token = await tokenResponse(
-    input.provider,
-    input.config,
-    input.redirectUri,
-    input.authorizationCode,
-    input.codeVerifier,
-    fetcher,
-  );
-  const accessToken = requiredText(token.access_token);
-  const expiresIn =
-    input.provider === 'instagram' && token.expires_in === undefined
-      ? 3600
-      : Number(token.expires_in);
-  if (!Number.isSafeInteger(expiresIn) || expiresIn < 60 || expiresIn > 31_536_000) {
-    throw new Error('OAuth provider response unavailable.');
+  let accessToken: string;
+  let expiresIn: number;
+  try {
+    const token = await tokenResponse(
+      input.provider,
+      input.config,
+      input.redirectUri,
+      input.authorizationCode,
+      input.codeVerifier,
+      fetcher,
+    );
+    accessToken = requiredText(token.access_token);
+    expiresIn =
+      input.provider === 'instagram' && token.expires_in === undefined
+        ? 3600
+        : Number(token.expires_in);
+    if (!Number.isSafeInteger(expiresIn) || expiresIn < 60 || expiresIn > 31_536_000) {
+      throw new Error('OAuth provider response unavailable.');
+    }
+  } catch (error) {
+    // Only expose a fixed error category, never provider payloads or credentials.
+    const safeMessage =
+      error instanceof Error &&
+      /^OAuth provider (?:request|response) unavailable\.$/.test(error.message)
+        ? error.message
+        : 'OAuth provider response unavailable.';
+    throw new OAuthProviderStageError('token', safeMessage);
   }
   const expiresAt = new Date(
     (input.now ?? new Date()).getTime() + expiresIn * 1000,
@@ -233,7 +255,7 @@ export async function exchangeSocialOAuthCode(input: {
         ...(input.now ? { now: input.now } : {}),
       });
     } catch {}
-    throw new Error('OAuth provider response unavailable.');
+    throw new OAuthProviderStageError('channel', 'OAuth provider response unavailable.');
   }
   return {
     handle,

@@ -41,11 +41,20 @@ export function SocialAccounts({initialItems,initialTotal,initialUnavailable=fal
         });
       })
       .catch(()=>{});
-    const outcome=new URLSearchParams(window.location.search).get('social_oauth');
-    if(outcome==='connected')setMessage('Compte connecté via OAuth.');
-    if(outcome==='unavailable')setMessage('La connexion au réseau social est indisponible.');
+    const query=new URLSearchParams(window.location.search);
+    const outcome=query.get('social_oauth');
+    const errorStage=query.get('social_oauth_error');
+    const oauthMessage=outcome==='connected'?'Compte connecté via OAuth.'
+      :outcome==='unavailable'&&errorStage==='channel'
+        ?'Google a autorisé la connexion, mais la chaîne YouTube n’a pas pu être récupérée. Vérifie que YouTube Data API v3 est activée et que ce compte Google possède une chaîne YouTube.'
+      :outcome==='unavailable'&&errorStage==='token'
+        ?'L’échange du code de connexion avec Google a échoué. Vérifie la configuration OAuth Google du staging.'
+      :outcome==='unavailable'&&errorStage==='storage'
+        ?'Le compte a été reconnu, mais son enregistrement sécurisé est indisponible.'
+      :outcome==='unavailable'?'La connexion au réseau social est indisponible.':'';
     if(outcome==='connected'||outcome==='unavailable')window.history.replaceState(null,'','/dashboard/settings');
-    void changePage(1);
+    // changePage clears normal notifications; restore OAuth outcome after it completes.
+    void changePage(1).then(()=>{if(active&&oauthMessage)setMessage(oauthMessage);});
     return ()=>{active=false;};
   },[changePage]);
   async function save(event:FormEvent){
