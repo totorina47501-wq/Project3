@@ -141,7 +141,8 @@
         "supabase/migrations/202611042005_media_asset_sha256.sql"
       ],
       "next": [
-        "Transfert privé PNG réel via client HTTP, confirmation serveur et SHA-256 persisté validés le 5 novembre 2026. Restent les limites mémoire Cloudflare à 50 MiB, l’immuabilité Storage et les parcours navigateur concurrents authentifiés ; voir docs/37-real-openai-validation.md."
+        "Transfert privé PNG réel via client HTTP, confirmation serveur et SHA-256 persisté validés le 5 novembre 2026. Restent les limites mémoire Cloudflare à 50 MiB, l’immuabilité Storage et les parcours navigateur concurrents authentifiés ; voir docs/37-real-openai-validation.md.",
+        "PRA Storage : CLI lecture seule opt-in intégrée au MediaRunner EXISTANT sur PR #128 ; aucun endpoint ni déclenchement auto, vérification réelle non exécutée, restauration SQL/Storage non certifiée ; docs/41-cloudflare-containers.md."
       ]
     },
     {

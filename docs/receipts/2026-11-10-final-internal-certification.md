@@ -91,3 +91,8 @@ Pour le GO production ultérieur : confirmer immatriculation et CGV, backup/rest
 ## Préparation PRA Docker éphémère — lot existant #128
 
 Automatisation limitée au script privé déjà existant `scripts/recette/production-private-backup.sh` : nouveau mode `--verify-restore` refusant les URLs DB distantes, réseau Docker OFF, PGDATA en tmpfs, archive `age` et SHA-256 obligatoires, restauration PostgreSQL 17 + migrations et contrôles du catalogue/agrégats. Le mode `--backup` inclut désormais le schéma de l'historique des migrations, pour pouvoir tester également cette partie. Tests de refus ajoutés **au fichier Vitest existant**. Mode de test non exécuté sur données Production ; CI statique/negative prévue, aucun conteneur contenant PII démarré par GitHub Actions. **PRA = BLOCKED**, octets Storage non exportés ni restaurés ; aucun GO quotas Production. Consignes : [docs/64-production-private-backup.md](../64-production-private-backup.md).
+
+
+## Cloudflare MediaRunner réutilisé — préparation PRA Storage (11/11)
+
+Dans la PR #128 existante, ajout **désactivé** d'un contrôle de relecture Storage \`pra-storage.mjs\` + CLI \`pra-storage-run.mjs\`, avec tests \`workers/media-jobs/tests/pra-storage.test.mjs\`. Aucune route, aucun cron, aucun déclenchement de conteneur, aucun changement au worker média. Vérification du catalogue Prod par lecture SQL : 13 objets, 832860 octets, 5 médias à SHA-256 enregistré. Le contrôle n'a **pas été exécuté sur ces fichiers réels** : disponibilité du temps/container Cloudflare et secrets non vérifiée ; coût additionnel interdit. Aucun export durable ni restore PostgreSQL/Storage : P0-B BLOCKED et issue #16 reste ouverte. Détails : [docs/41-cloudflare-containers.md](../41-cloudflare-containers.md).

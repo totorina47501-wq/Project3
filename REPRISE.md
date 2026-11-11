@@ -281,3 +281,7 @@ réels ou des appels OpenAI sans nécessité.
 ## PRA Docker privé : fonctionnalité ajoutée dans la PR #128 (11/11)
 
 Le script `scripts/recette/production-private-backup.sh` conserve le mode `--backup` et offre `--verify-restore` pour un laboratoire Supabase PG17 Docker isolé, sans réseau, sur un poste privé chiffré. Tests de sécurité hors ligne dans `tests/unit/production-private-backup.test.ts`. Aucun backup Production ni clone Supabase n'a été déclenché par cette modification ; **aucune certification de restauration réelle** n'est revendiquée. Export et contrôle des octets Storage séparés requis. Instructions opérateur : `docs/64-production-private-backup.md`. Garder issue #16 ouverte, PR #128 en draft, flags Live OFF.
+
+## Reprise Cloudflare MediaRunner PRA — option zéro coût additionnel, 11/11
+
+Réutiliser \`MediaRunner\` EXISTANT : module \`workers/media-jobs/src/pra-storage.mjs\` et CLI \`pra-storage-run.mjs\`, uniquement en lecture Storage, **non déclenchés**. Le Dockerfile existant embarque ces fichiers par sa copie de sources. Aucun Worker nouveau/cron/binding/instance/image parallèle, aucune modification Production ni secret exposé. Test hors ligne dans \`workers/media-jobs/tests/pra-storage.test.mjs\`. La vraie restauration PostgreSQL 17 et Storage reste BLOQUÉE ; ne pas confondre relecture de fichiers et restauration. Pas de déploiement de PRA live avant vérification du quota Cloudflare sans dépassement. Voir \`docs/41-cloudflare-containers.md\`, \`docs/64-production-private-backup.md\`, issue #16.
