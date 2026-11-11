@@ -34,7 +34,7 @@ test('accueil sans collecte ni requête tierce, utilisable sur mobile et au clav
   await page.goto('/');
   await page.waitForLoadState('networkidle');
   await expect(page.getByRole('heading', { name: 'Retour communautaire volontaire' })).toBeVisible();
-  await expect(page.locator('form')).toHaveCount(1);
+  await expect(page.locator('form')).toHaveCount(0);
   expect(thirdPartyRequests).toEqual([]);
   expect(dataRequests).toEqual([]);
 

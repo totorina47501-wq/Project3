@@ -1,62 +1,40 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { DELETE, POST } from '../../app/api/marketing/feedback/route';
-import { __unsafeResetMarketingFeedbackStore } from '../../lib/marketing/feedback-store';
 
-function postRequest(body: string, origin = 'https://local.test') {
+function request(method: 'POST' | 'DELETE', origin = 'https://local.test') {
   return new Request('https://local.test/api/marketing/feedback', {
-    method: 'POST',
+    method,
     headers: { origin, 'content-type': 'application/json' },
-    body,
+    body: JSON.stringify({
+      message: 'Un retour volontaire avec consentement mais sans stockage durable disponible.',
+      consent: true,
+      origin: 'landing',
+      feedbackId: '11111111-1111-4111-8111-111111111111',
+      deleteToken: '22222222-2222-4222-8222-222222222222',
+    }),
   });
 }
 
-function deleteRequest(body: string, origin = 'https://local.test') {
-  return new Request('https://local.test/api/marketing/feedback', {
-    method: 'DELETE',
-    headers: { origin, 'content-type': 'application/json' },
-    body,
-  });
-}
-
-afterEach(() => {
-  __unsafeResetMarketingFeedbackStore();
-});
-
-describe('Marketing feedback API', () => {
-  it('accepte un feedback consenti puis autorise sa suppression', async () => {
-    const create = await POST(postRequest(JSON.stringify({
-      message: 'Retour de communauté test: la checklist est claire et utile pour la préparation.',
-      sourceUrl: 'https://example.test/post',
-      consent: true,
-      origin: 'landing',
-      utm: { source: 'reddit', medium: 'community', campaign: 'pilot' },
-    })));
-    expect(create.status).toBe(200);
-    const created = await create.json() as { feedbackId: string; deleteToken: string; retention: string };
-    expect(created.retention).toBe('local_stub');
-    const remove = await DELETE(deleteRequest(JSON.stringify({
-      feedbackId: created.feedbackId,
-      deleteToken: created.deleteToken,
-    })));
-    expect(remove.status).toBe(200);
-    expect(await remove.json()).toMatchObject({ deleted: true });
+describe('Marketing feedback désactivé tant que la persistance manque', () => {
+  it('ne produit aucun faux reçu ni identifiant de suppression', async () => {
+    const response = await POST(request('POST'));
+    expect(response.status).toBe(503);
+    expect(response.headers.get('cache-control')).toContain('no-store');
+    const body = await response.json() as Record<string, unknown>;
+    expect(body).toHaveProperty('error');
+    expect(body).not.toHaveProperty('feedbackId');
+    expect(body).not.toHaveProperty('deleteToken');
+    expect(body).not.toHaveProperty('receivedAt');
   });
 
-  it('refuse les envois sans consentement explicite', async () => {
-    const response = await POST(postRequest(JSON.stringify({
-      message: 'Ce texte dépasse vingt caractères mais sans consentement explicite.',
-      consent: false,
-      origin: 'landing',
-    })));
-    expect(response.status).toBe(422);
+  it('ne prétend pas avoir supprimé des données volatiles', async () => {
+    const response = await DELETE(request('DELETE'));
+    expect(response.status).toBe(503);
+    expect(await response.json()).not.toHaveProperty('deleted');
   });
 
-  it('rejette les origines tierces', async () => {
-    const response = await POST(postRequest(JSON.stringify({
-      message: 'Ce texte dépasse vingt caractères avec consentement explicite.',
-      consent: true,
-      origin: 'guide',
-    }), 'https://evil.test'));
-    expect(response.status).toBe(403);
+  it('refuse toujours les origines tierces', async () => {
+    expect((await POST(request('POST', 'https://evil.test'))).status).toBe(403);
+    expect((await DELETE(request('DELETE', 'https://evil.test'))).status).toBe(403);
   });
 });

@@ -9,31 +9,24 @@ test.beforeEach(async ({ page, baseURL }) => {
   });
 });
 
-test('lead magnet téléchargeable et feedback consenti supprimable', async ({ page }) => {
+test('lead magnet disponible et collecte marketing réellement désactivée', async ({ page, request, baseURL }) => {
   await page.goto('/?utm_source=reddit&utm_medium=community&utm_campaign=phase1');
   const downloadReady = page.waitForEvent('download');
   await page.getByRole('link', { name: 'Télécharger la checklist (.txt)' }).first().click();
   const download = await downloadReady;
   expect(download.suggestedFilename()).toContain('mentioncheck-checklist-influence-commerciale');
 
-  let submitRequests = 0;
-  page.on('request', (request) => {
-    if (new URL(request.url()).pathname === '/api/marketing/feedback' && request.method() === 'POST') {
-      submitRequests += 1;
-    }
+  await expect(page.getByRole('heading', { name: 'Retour communautaire volontaire' })).toBeVisible();
+  await expect(page.getByText('La collecte des retours est temporairement indisponible.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Envoyer mon retour' })).toHaveCount(0);
+  await expect(page.locator('form')).toHaveCount(0);
+
+  const response = await request.post('/api/marketing/feedback', {
+    headers: { origin: new URL(baseURL!).origin },
+    data: { consent: true, message: 'Tentative de retour sans stockage durable', origin: 'landing' },
   });
-
-  await page.getByLabel('Votre retour (minimum 20 caractères)').fill('Ce test valide le formulaire de retour volontaire avec consentement explicite.');
-  await page.getByRole('button', { name: 'Envoyer mon retour' }).click();
-  expect(submitRequests).toBe(0);
-
-  await page.getByRole('checkbox', { name: /J'autorise l'enregistrement local/ }).check();
-  await page.getByRole('button', { name: 'Envoyer mon retour' }).click();
-  await expect(page.getByText('Merci, votre retour a été reçu.')).toBeVisible();
-  expect(submitRequests).toBe(1);
-
-  await page.getByRole('button', { name: 'Supprimer ce retour' }).click();
-  await expect(page.getByRole('button', { name: 'Supprimer ce retour' })).toHaveCount(0);
+  expect(response.status()).toBe(503);
+  expect(await response.json()).not.toHaveProperty('feedbackId');
 });
 
 test.skip(process.env.E2E_OFFLINE_AUTH !== '1', 'Nécessite la fixture Supabase HTTP locale.');
