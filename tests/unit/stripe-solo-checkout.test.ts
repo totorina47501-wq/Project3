@@ -40,6 +40,25 @@ it('refuse une origine tierce avant authentification ou accès aux services',asy
  expect(response.status).toBe(403);
  expect(mocks.user).not.toHaveBeenCalled();expect(mocks.admin).not.toHaveBeenCalled();expect(mocks.stripe).not.toHaveBeenCalled();
 });
+it('refuse le domaine workers.dev pour un checkout live même avec origine same-origin',async()=>{
+ vi.stubEnv('STRIPE_PRICE_SOLO','price_SOLO');
+ for(const [key,value] of Object.entries({
+  STRIPE_MODE:'live',STRIPE_SECRET_KEY:'sk_live_fixture',
+  STRIPE_LIVE_APPROVED:'true',STRIPE_LIVE_LEGAL_REGISTRATION:'123456789',
+  STRIPE_LIVE_TAX_REVIEW:'approved',STRIPE_LIVE_TERMS_REVIEW:'approved',STRIPE_LIVE_E2E_REVIEW:'passed',
+  OPENAI_PAUSED:'false',OPENAI_TEXT_ENABLED:'true',OPENAI_VISION_ENABLED:'true',
+  OPENAI_API_KEY:'sk-proj-fixture',NEXT_PUBLIC_APP_URL:'https://mentioncheck.app'
+ }))vi.stubEnv(key,value);
+ const legacyOrigin='https://mentioncheck.toto-rina47501.workers.dev';
+ const response=await POST(new Request(legacyOrigin+'/api/stripe/checkout',{
+   method:'POST',headers:{origin:legacyOrigin,'content-type':'application/json'},
+   body:JSON.stringify({plan:'solo'})
+ }));
+ expect(response.status).toBe(403);
+ expect(mocks.user).not.toHaveBeenCalled();
+ expect(mocks.admin).not.toHaveBeenCalled();
+ expect(mocks.stripe).not.toHaveBeenCalled();
+});
 it('utilise le prix Solo configuré et l’identité serveur dans une session simulée',async()=>{
  vi.stubEnv('STRIPE_PRICE_SOLO','price_SOLO');expect((await POST(request())).status).toBe(200);
  expect(mocks.session).toHaveBeenCalledWith(expect.objectContaining({line_items:[{price:'price_SOLO',quantity:1}],metadata:{user_id:actor,selected_plan:'solo'}}),expect.objectContaining({idempotencyKey:expect.stringContaining('mentioncheck_checkout_')}));

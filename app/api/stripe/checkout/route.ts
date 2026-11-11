@@ -11,7 +11,9 @@ export async function POST(request: Request) {
   try {
     const gate = billingGate(process.env);
     if (!gate.enabled) throw new HttpError(503, gate.reason);
-    if (request.headers.get('origin') !== new URL(request.url).origin)
+    const requestOrigin = new URL(request.url).origin;
+    if (request.headers.get('origin') !== requestOrigin ||
+        (gate.mode === 'live' && requestOrigin !== process.env.NEXT_PUBLIC_APP_URL))
       throw new HttpError(403, 'Origine non autorisée.');
     const { user } = await requireUser();
     let body: unknown;
