@@ -70,6 +70,7 @@ de la souscription courante avant synchronisation RPC transactionnelle.
 `checkout.session.completed` seul ne donne jamais de droits via metadata client :
 les droits viennent uniquement de la souscription relue côté Stripe.
 
+\nLa résolution de souscription d'une facture supporte **Stripe API Basil et ultérieure** (`invoice.parent.subscription_details.subscription`) avec repli sur `invoice.subscription` pour les anciens événements signés, et accepte une référence sous forme d'ID ou d'objet développé. Couverture locale : `tests/unit/stripe-webhook.test.ts` ; aucun événement live n'est émis par ces tests.\n
 **Ne passer `BILLING_ENABLED=true` que dans staging** après confirmation des
 deux secrets, du webhook de test, de la migration `sync_stripe_subscription`,
 de la configuration isolée Supabase et des tests hors ligne.

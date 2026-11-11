@@ -14,6 +14,17 @@ function stripeObjectId(value: StripeReference): string | null {
   return typeof value === 'string' ? value : value.id;
 }
 
+// Stripe API 2025-03-31.basil+ nests subscription under invoice.parent.
+// Preserve the historical top-level field for signed, older events.
+function invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  const compatible = invoice as unknown as {
+    parent?: { subscription_details?: { subscription?: StripeReference } | null } | null;
+    subscription?: StripeReference;
+  };
+  return stripeObjectId(compatible.parent?.subscription_details?.subscription) ??
+    stripeObjectId(compatible.subscription);
+}
+
 async function syncSubscription(subscription: Stripe.Subscription, eventAt:number, deleted = false) {
   const gate=billingGate(process.env,'webhook');
   const plan=paidPlanFromPrices(subscription.items.data.map(item=>item.price.id),{
@@ -45,8 +56,8 @@ async function handleEvent(event: Stripe.Event) {
     const deleted = event.data.object as Stripe.Subscription;
     await syncSubscription(deleted,event.created,true);
   } else if (event.type === 'invoice.paid' || event.type === 'invoice.payment_failed') {
-    const invoice = event.data.object as Stripe.Invoice & { subscription?: StripeReference };
-    const subscriptionId = stripeObjectId(invoice.subscription);
+    const invoice = event.data.object as Stripe.Invoice;
+    const subscriptionId = invoiceSubscriptionId(invoice);
     if (subscriptionId) await syncSubscriptionById(subscriptionId, event.created);
   } else if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
@@ -57,8 +68,8 @@ async function handleEvent(event: Stripe.Event) {
     const intent = event.data.object as Stripe.PaymentIntent & { invoice?: StripeReference };
     const invoiceId = stripeObjectId(intent.invoice);
     if (!invoiceId) return;
-    const invoice = await getStripe('webhook').invoices.retrieve(invoiceId) as Stripe.Invoice & { subscription?: StripeReference };
-    const subscriptionId = stripeObjectId(invoice.subscription);
+    const invoice = await getStripe('webhook').invoices.retrieve(invoiceId);
+    const subscriptionId = invoiceSubscriptionId(invoice);
     if (subscriptionId) await syncSubscriptionById(subscriptionId, event.created);
   }
   // checkout.session.completed seul n'active jamais un plan :

@@ -106,6 +106,26 @@ describe('Webhooks Stripe isolés du fournisseur', () => {
     mocks.construct.mockReturnValue({ created:1_700_000_011,id: 'evt_invoice_without_subscription', livemode: false, type: 'invoice.paid', data: { object: { subscription: null } } });
     expect((await POST(request())).status).toBe(200);
   });
+  it('lit la souscription au format Stripe Basil, y compris un objet expanded', async () => {
+    mocks.construct.mockReturnValue({ created:1_700_000_010,id:'evt_basil_paid', livemode:false,
+      type:'invoice.paid', data:{object:{parent:{type:'subscription_details',subscription_details:{subscription:'sub_current'}}}} });
+    expect((await POST(request())).status).toBe(200);
+    expect(mocks.retrieve).toHaveBeenCalledWith('sub_current');
+    mocks.retrieve.mockClear();
+    mocks.construct.mockReturnValue({ created:1_700_000_011,id:'evt_basil_failed', livemode:false,
+      type:'invoice.payment_failed', data:{object:{parent:{type:'subscription_details',subscription_details:{subscription:{id:'sub_current'}}}}} });
+    mocks.retrieve.mockResolvedValue(source('sub_current',{status:'past_due'}));
+    expect((await POST(request())).status).toBe(200);
+    expect(mocks.retrieve).toHaveBeenCalledWith('sub_current');
+    expect(writes.find(write => write.table==='atomic_rpc' && write.values.p_status==='past_due')).toBeDefined();
+  });
+  it('préfère la souscription sous parent pour une facture moderne à champ historique divergent', async () => {
+    mocks.construct.mockReturnValue({ created:1_700_000_010,id:'evt_basil_priority',livemode:false,
+      type:'invoice.paid',data:{object:{subscription:'sub_old',parent:{subscription_details:{subscription:'sub_current'}}}} });
+    expect((await POST(request())).status).toBe(200);
+    expect(mocks.retrieve).toHaveBeenCalledWith('sub_current');
+    expect(mocks.retrieve).not.toHaveBeenCalledWith('sub_old');
+  });
   it('synchronise checkout.session.completed seulement en mode subscription', async () => {
     mocks.construct.mockReturnValue({ created:1_700_000_010,id: 'evt_checkout_subscription', livemode: false, type: 'checkout.session.completed', data: { object: { mode: 'subscription', subscription: 'sub_current' } } });
     expect((await POST(request())).status).toBe(200);
@@ -117,7 +137,7 @@ describe('Webhooks Stripe isolés du fournisseur', () => {
   });
   it('synchronise payment_intent.payment_failed via invoice puis souscription, et ignore sans facture', async () => {
     mocks.construct.mockReturnValue({ created:1_700_000_010,id: 'evt_pi_failed', livemode: false, type: 'payment_intent.payment_failed', data: { object: { invoice: 'in_failed' } } });
-    mocks.retrieveInvoice.mockResolvedValue({ subscription: 'sub_current' });
+    mocks.retrieveInvoice.mockResolvedValue({ parent: { type: 'subscription_details', subscription_details: { subscription: 'sub_current' } } });
     expect((await POST(request())).status).toBe(200);
     expect(mocks.retrieveInvoice).toHaveBeenCalledWith('in_failed');
     expect(mocks.retrieve).toHaveBeenCalledWith('sub_current');
