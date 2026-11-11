@@ -2,6 +2,8 @@
 
 **Date :** 10 novembre 2026
 
+**11 novembre — P0-C en cours (PR #128 uniquement) :** bridge Solo pré-GO versionné, tests PGlite à confirmer en CI. Deux comptes historiques en production n'ont pas de souscription active ; migrations quota/promotion/bridge **non exécutées en PROD**, sauvegarde données restaurable toujours non attestée. Cette évolution ne constitue pas un GO ni un acquittement de l'issue #16.
+
 **Verdict :** certification technique globale **PARTIELLE**, ouverture commerciale **NON CERTIFIÉE**. La présente preuve consolide les résultats existants ; aucune opération distante, migration, publication ou mutation n'a été exécutée dans cette reprise.
 
 ## Référence et portée

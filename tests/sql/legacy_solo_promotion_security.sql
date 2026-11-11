@@ -8,12 +8,29 @@ declare
  n integer;
 begin
  if public.reserve_usage_quota(actor,'check') is null then raise exception 'Le gratuit est inaccessible'; end if;
- insert into public.promotional_solo_access(user_id,starts_at,expires_at,reason)
- values(actor,now()-interval '1 day',now()+interval '29 days','test_legacy');
+ -- La transition pré-GO garde Solo SANS déclencher les 30 jours.
+ insert into public.promotional_solo_access(user_id,starts_at,expires_at,reason,activation_pending)
+ values(actor,null,null,'legacy_launch_solo_30d',true);
+ if (select count(*) from public.promotional_solo_access
+      where user_id=actor and activation_pending
+        and starts_at is null and expires_at is null)<>1
+ then raise exception 'La phase pré-GO consomme déjà les 30 jours'; end if;
  for n in 2..30 loop
    if public.reserve_usage_quota(actor,'check') is null then raise exception 'Solo offert devrait permettre 30 contrôles'; end if;
  end loop;
- if public.reserve_usage_quota(actor,'check') is not null then raise exception 'La promotion dépasse 30 contrôles'; end if;
+ if public.reserve_usage_quota(actor,'check') is not null then raise exception 'La promotion pré-GO dépasse 30 contrôles'; end if;
+ -- Le GO transforme la concession temporaire en 30 jours calendaires exacts,
+ -- sans réinitialiser les quotas mensuels.
+ update public.promotional_solo_access
+    set activation_pending=false,starts_at=now(),expires_at=now()+interval '30 days'
+    where user_id=actor and activation_pending;
+ if (select count(*) from public.promotional_solo_access
+      where user_id=actor and not activation_pending and starts_at<=now()
+        and expires_at>now()+interval '29 days')<>1
+ then raise exception 'La fenêtre 30 jours ne démarre pas au GO'; end if;
+ if public.reserve_usage_quota(actor,'rewrite') is null then
+   raise exception 'La promotion GO n accorde plus le quota Solo'; end if;
+ -- Après expiration, aucun Solo hérité ou plan manuel ne doit accorder de droits.
  update public.promotional_solo_access
     set starts_at=now()-interval '30 days',expires_at=now()-interval '1 second'
     where user_id=actor;

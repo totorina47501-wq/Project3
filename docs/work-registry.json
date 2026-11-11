@@ -600,11 +600,13 @@
       ],
       "routes": [],
       "migrations": [
-        "supabase/migrations/20261110170000_legacy_solo_promotion.sql"
+        "supabase/migrations/20261110170000_legacy_solo_promotion.sql",
+        "supabase/migrations/20261111103000_legacy_solo_prelaunch_bridge.sql"
       ],
       "next": [
         "Code, SQL et tests préparés ; aucun octroi dans ce lot. Migration staging puis production coordonnée, sélection et activation seulement lors du GO public certifié.",
-        "PROMO_SOLO_ENABLED reste false tant que la nouvelle table n'est pas présente et les tests d'accès authentifiés ne sont pas passés."
+        "PROMO_SOLO_ENABLED reste false tant que la nouvelle table n'est pas présente et les tests d'accès authentifiés ne sont pas passés.",
+        "PR #128 : bridge pré-GO activation_pending pour 2 profils historiques, Solo 30/5/20 sans lancer le compteur 30 jours ; preuve SQL PGlite, application staging nécessaire, aucune mutation production."
       ]
     }
   ]

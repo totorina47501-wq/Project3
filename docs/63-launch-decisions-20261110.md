@@ -17,37 +17,108 @@ Ces choix n'établissent aucune immatriculation, certification, souscription, d�
 - Sans application de cette migration **et** validation métier, le flag `PROMO_SOLO_ENABLED` reste `false` : l'interface n'interroge pas la nouvelle table sur production. Activer `true` seulement après migration et contrôles DB/Worker.
 - Une activation doit être décidée au moment de la certification publique pour ne pas consommer la période gratuite avant l'ouverture. Le quota consommé pendant le même mois n'est pas remis à zéro. Aucune carte, abonnement Stripe fictif ou paiement créé.
 
-### Recette de bascule (script SQL d'opérateur, NON exécuté)
-Sauvegarde et test de restauration **avant** la migration, validation du SHA applicatif, absence de transactions Stripe live, vérification explicite des deux bénéficiaires préexistants. Ne pas publier leurs ID dans Git/logs.
+### Transition pré-GO : zéro perte de droits, zéro jour promotionnel consommé
+
+Le correctif ADDITIF `supabase/migrations/20261111103000_legacy_solo_prelaunch_bridge.sql` étend **la table existante**
+`promotional_solo_access`, sans créer de second système d'abonnement ni
+changer `users.plan`. `activation_pending=true` (deux comptes historiques
+uniquement, identifiés en privé par l'opérateur) préserve le plafond Solo
+30/5/20 sans `starts_at` ni `expires_at`. Un abonnement Stripe authentique
+reste prioritaire. Les nouveaux comptes sans abonnement ni attribution explicite
+restent Gratuit 3/1/3. La table est toujours RLS server-only.
+
+**Verrou absolu :** ne pas effectuer la migration `free_vs_paid_solo_quotas`
+ou `legacy_solo_promotion` *séparément* en PROD avant le peuplement du
+bridge. Pour les deux comptes actuels, cela provoquerait une rétrogradation
+immédiate. Une procédure opérateur doit regrouper les migrations de quotas,
+promotion et bridge **et les deux attributions pré-GO dans une même transaction
+PostgreSQL**, avec verrouillage des comptes, validation d'identités en privé,
+zéro abonnement réel, rollback intégral en cas d'écart et rapprochement de
+l'historique des migrations Supabase. **Aucun `supabase db push` séquentiel
+en PROD** pour ce chantier. Pas de GO sans sauvegarde logique PRODUCTION
+hors site et preuve de restauration isolée. Aucun UUID réel dans Git, logs
+ou artifacts. Un script de recette staging ou une sauvegarde schema-only ne
+constitue pas cette preuve.
+
+La requête suivante décrit uniquement l'attribution à intégrer **dans la
+transaction atomique de première installation en PROD**, après création de
+la table et du bridge. **Ne pas l'exécuter séparément.** Refuser
+tout état inattendu :
+
+```sql
+do $$
+declare beneficiary_count integer;
+begin
+  select count(*) into beneficiary_count
+    from public.users
+    where created_at < timestamptz '2026-11-11 00:00:00+00';
+  if beneficiary_count <> 2 then
+    raise exception 'Nombre de beneficiaires historiques inattendu';
+  end if;
+  if exists (
+    select 1 from public.subscriptions s
+    join public.users u on u.id=s.user_id
+    where u.created_at < timestamptz '2026-11-11 00:00:00+00'
+      and s.status in ('active','trialing')
+      and s.stripe_subscription_id is not null
+  ) then raise exception 'Abonnement Stripe historique : revue requise'; end if;
+  insert into public.promotional_solo_access
+    (user_id,starts_at,expires_at,reason,activation_pending)
+  select id,null,null,'legacy_launch_solo_30d',true
+    from public.users
+    where created_at < timestamptz '2026-11-11 00:00:00+00'
+  on conflict(user_id) do nothing;
+  if (select count(*) from public.promotional_solo_access
+      where reason='legacy_launch_solo_30d' and activation_pending
+        and starts_at is null and expires_at is null) <> 2
+  then raise exception 'Pre-GO incomplet : rollback'; end if;
+end $$;
+```
+
+### GO commercial séparé (script d'opérateur, NON exécuté)
+
+Seulement après toutes les certifications et une décision explicite de GO,
+transformer les deux attributions existantes **atomiquement** : les 30 jours
+démarrent à ce moment-là, pas au moment de l'installation du bridge.
 
 ```sql
 begin;
 do $$
-declare beneficiary_count integer;
 begin
-  select count(*) into beneficiary_count from public.users
-    where created_at < timestamptz '2026-11-11 00:00:00+00';
-  if beneficiary_count <> 2 then
-    raise exception 'Nombre de bénéficiaires historiques inattendu : opération annulée';
-  end if;
-  if exists(select 1 from public.subscriptions s join public.users u on u.id=s.user_id
-    where u.created_at < timestamptz '2026-11-11 00:00:00+00'
-      and s.status in ('active','trialing') and s.stripe_subscription_id is not null)
-    then raise exception 'Abonnement réel déjà présent : revoir la promotion';
-  end if;
-  insert into public.promotional_solo_access(user_id,starts_at,expires_at,reason)
-  select id,now(),now()+interval '30 days','legacy_launch_solo_30d'
-    from public.users where created_at < timestamptz '2026-11-11 00:00:00+00'
-  on conflict(user_id) do nothing;
+  perform 1 from public.users where id in (
+    select user_id from public.promotional_solo_access
+    where reason='legacy_launch_solo_30d' and activation_pending
+  ) for update;
   if (select count(*) from public.promotional_solo_access
-      where reason='legacy_launch_solo_30d')<>2
-    then raise exception 'Promotion partielle : transaction annulée';
-  end if;
+    where reason='legacy_launch_solo_30d' and activation_pending
+      and starts_at is null and expires_at is null) <> 2
+  then raise exception 'Deux concessions pre-GO requises'; end if;
+  if exists(
+    select 1 from public.subscriptions s
+    join public.promotional_solo_access p on p.user_id=s.user_id
+    where p.reason='legacy_launch_solo_30d'
+      and s.stripe_subscription_id is not null and s.status in ('active','trialing')
+      and s.current_period_end>now()
+  ) then raise exception 'Revoir attribution: paiement actif'; end if;
+end $$;
+update public.promotional_solo_access
+ set activation_pending=false,starts_at=now(),expires_at=now()+interval '30 days'
+ where reason='legacy_launch_solo_30d' and activation_pending;
+do $$
+begin
+  if (select count(*) from public.promotional_solo_access
+    where reason='legacy_launch_solo_30d' and not activation_pending
+      and starts_at=now() and expires_at=now()+interval '30 days') <> 2
+  then raise exception 'GO incomplet : rollback'; end if;
 end $$;
 commit;
 ```
 
-**Gates avant exécution** : exécution uniquement sur la base de production identifiée explicitement, compte opérateur habilité, backup/restore testé, deux comptes historiques identifiés au moyen d'une preuve privée, migrations staging testées, contrôles de quota 30/5/20 puis expiration, interface et RPC coordonnées. On ne déclenche ce script ni en CI ni lors du merge. Si un compte existant ne doit pas bénéficier de la promotion, remplacer la condition globale par la liste approuvée d'IDs côté opérateur **sans les commiter**.
+**Vérifications post-opération :** deux bénéficiaires et pas davantage,
+les droits restent 30/5/20 avant et après le GO ; après `expires_at`, le
+compte sans Stripe revient à 3/1/3, sans remise à zéro automatique du mois.
+Ne pas activer `PROMO_SOLO_ENABLED` ni `BILLING_ENABLED` sur la seule
+base d'un test local ; exiger DB/Worker réels et preuves signées.
 
 ## Supabase Free : acceptation de risque sous conditions
 La fonction de protection native `Leaked Password Protection` de Supabase est **Pro+** ; elle reste absente sur Free. Le choix Free n'est **pas** une certification de sécurité ni une acceptation de toutes les attaques par mots de passe compromis.
