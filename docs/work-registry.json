@@ -27,7 +27,7 @@
       "next": [
         "Connexion réelle validée le 5 novembre 2026 sur le Worker via compte technique isolé, ensuite désactivé. Les parcours locaux restent couverts par Playwright ; voir docs/37-real-openai-validation.md.",
         "Checklist opératoire Auth Security Advisor (mots de passe compromis) documentée, sans activation automatique : docs/12-privacy-security.md.",
-        "Audit Supabase Security Advisor Production 11/11 : protection native des mots de passe compromis DESACTIVEE malgré Pro ; activation manuelle + tests login/reset nécessaires. Cinq RPC SECURITY DEFINER WARN à conserver sous revue ; voir issue #16."
+        "Contrôle Supabase Security Advisor Production du 11/11 après réglage opérateur : alerte auth_leaked_password_protection absente (protection activée) ; longueur minimale Supabase 12 et quatre familles de caractères exigées. Alignement du formulaire et de la validation serveur sur cette politique dans la PR #128 existante ; tests de non-régression requis avant fusion. Cinq WARN SECURITY DEFINER à conserver sous revue et à tester dynamiquement ; ne pas modifier les permissions sans analyse."
       ]
     },
     {
