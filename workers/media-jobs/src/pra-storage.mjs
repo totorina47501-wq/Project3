@@ -41,6 +41,18 @@ export async function verifyPraStorageReadback({client,expectedObjects,expectedB
     if(!r || r.error) FAIL();
     return r.data;
   };
+  // Active media jobs forbid PRA: the sole Cloudflare basic instance stays reserved for media.
+  // This is a read-only preflight, not a lock; the controller must also serialize any future exec.
+  guard();
+  let queue;
+  try{
+    queue=await client.from('media_processing_jobs')
+      .select('id',{head:true,count:'exact'})
+      .in('status',['queued','processing']);
+  }catch{FAIL();}
+  guard();
+  if(!queue || queue.error || queue.count!==0) FAIL();
+
   // Fail closed if a fourth bucket has appeared: a successful partial inventory is not proof.
   const buckets=await checked(client.storage.listBuckets());
   if(!Array.isArray(buckets) || buckets.length!==PRA_BUCKETS.length ||

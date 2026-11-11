@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readPraStorageConfig,verifyPraStorageReadback,PRA_BUCKETS} from '../src/pra-storage.mjs';
 const sha=b=>createHash('sha256').update(b).digest('hex');
-function fixture({changed=false,additionalBucket=false,assets=1}={}){
+function fixture({changed=false,additionalBucket=false,assets=1,busy=false}={}){
  const original=Buffer.from('private-fixture-no-personal-data');
  const expected=sha(original);
  const calls=[];
@@ -31,6 +31,7 @@ function fixture({changed=false,additionalBucket=false,assets=1}={}){
   }),
   },
   from:table=>{
+   if(table==='media_processing_jobs')return {select:()=>({in:async()=>({count:busy?1:0,error:null})})};
    assert.equal(table,'media_assets');
    return {select:()=>({range:async()=>({data:
      assets===1?[{storage_path:'folder/original.png',media_sha256:expected}]:[],
@@ -92,4 +93,12 @@ it('refuses any remote transport failure and any cancellation',async()=>{
  const g=fixture(),controller=new AbortController();controller.abort();
  await assert.rejects(verifyPraStorageReadback({client:g.client,expectedObjects:1,expectedBytes:g.size,expectedMediaHashes:1,signal:controller.signal}),
    /MC_PRA_STORAGE_BLOCKED/);
+});
+
+it('does not read Storage when the existing media queue has pending work',async()=>{
+ const f=fixture({busy:true});
+ await assert.rejects(verifyPraStorageReadback({
+   client:f.client,expectedObjects:1,expectedBytes:f.size,expectedMediaHashes:1,
+ }),/MC_PRA_STORAGE_BLOCKED/);
+ assert.equal(f.calls.length,0);
 });
