@@ -226,7 +226,7 @@ describe('Routes OAuth sociales', () => {
     url.searchParams.set('code', 'temporary-code');
     url.searchParams.set('state', authorization.searchParams.get('state')!);
     mocks.exchange.mockRejectedValueOnce(
-      new OAuthProviderStageError('channel'),
+      new OAuthProviderStageError('channel', 'OAuth provider response unavailable.'),
     );
     const result = await callbackOAuth(
       new Request(url),

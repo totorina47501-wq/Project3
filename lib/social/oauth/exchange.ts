@@ -209,10 +209,11 @@ export async function exchangeSocialOAuthCode(input: {
   now?: Date;
 }): Promise<ExchangedSocialAccount> {
   const fetcher = input.fetcher ?? fetch;
+  let token: Record<string, unknown>;
   let accessToken: string;
   let expiresIn: number;
   try {
-    const token = await tokenResponse(
+    token = await tokenResponse(
       input.provider,
       input.config,
       input.redirectUri,
