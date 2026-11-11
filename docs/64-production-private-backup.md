@@ -169,3 +169,30 @@ Cette phase recalcule les SHA-256 de tous les fichiers accessibles et compare le
 Une vérification directe du code montre que le mode `--verify-restore` existant est une **restauration Docker locale**, pas un restore sur Cloudflare MediaRunner. Le `Dockerfile` MediaRunner actuel ne contient ni serveur PostgreSQL 17 ni commande `age` ; le conteneur `basic` partage les ressources avec les traitements médias prioritaires. Il est interdit d'activer un nouveau process sur Production sans bilan du quota Cloudflare disponible et coordination atomique avec la file média. Une déclaration de confirmation du quota dans une variable d'environnement ne constitue pas un compteur de facturation. Aucun runtime ni conteneur n'a été déclenché.
 
 L'inventaire SQL en lecture seule du 11/11 confirme 13 objets / 832860 octets et 5 empreintes médias vérifiables, mais ne démontre **ni export indépendant des fichiers**, ni restauration des bytes Storage. Une archive de restauration doit rester chiffrée, hors Staging et hors CI. Le protocole Docker local déjà préparé est le repli sans nouvelle souscription ; il reste non exécuté sur des données de Production. **PRA intégral = BLOCKED**, même si les sauvegardes physiques Supabase Pro sont présentes.
+
+## Déblocage sans Cloudflare — archive privée Storage et récupération locale (11/11/2026)
+
+**Nouveau chemin distinct, non exécuté sur les fichiers réels :** `scripts/recette/production-private-storage.mjs` réutilise le lecteur `pra-storage.mjs`, ses trois buckets privés, son contrôle de file média, les cinq SHA existants et son inventaire strict. Il récupère les **13 octets-objets** sur un poste privé de confiance (aucun upload vers CI/GitHub/Staging), les place **uniquement en mémoire** dans une archive JSON, chiffre immédiatement avec `age` pour le disque privé, vérifie le déchiffrement, puis permet une **récupération indépendante dans des fichiers temporaires locaux** avec SHA-256 pour chaque objet. Les noms clients restent dans le chiffré ; les fichiers de restauration temporaires sont numérotés. Aucun serveur Supabase Storage indépendant n'est démarré : `storageApiRestored=false`, et **cela ne certifie pas le PRA complet**.
+
+Opérateur uniquement sur un ordinateur de confiance, **disque chiffré** et dépendances déjà installées (`node`, `npm ci`, `git`, `age`, `age-keygen`). La clé `SUPABASE_SERVICE_KEY` doit être fournie en privé, jamais dans Git/chat. Les dossiers et clé ont des permissions 0700/0600 et sont hors de tout dépôt Git. Le script refuse CI, Docker distant, PostgreSQL distant, staging et toute destination sensible; il n'utilise aucun service de paiement ni IA.
+
+```bash
+export MC_PRA_LOCAL_STORAGE_ENABLED=true
+export MC_BACKUP_DIR="$HOME/mentioncheck-encrypted-backups"
+export MC_BACKUP_WORKDIR="$HOME/mentioncheck-private-work"
+export MC_BACKUP_AGE_IDENTITY="$HOME/.local/share/mentioncheck-secret/backup-age-key.txt"
+export SUPABASE_URL="https://zcztvberuihphqklhjsr.supabase.co"
+# Renseigner SUPABASE_SERVICE_KEY via saisie privée non enregistrée dans l'historique.
+export MC_PRA_EXPECT_OBJECTS=13
+export MC_PRA_EXPECT_BYTES=832860
+export MC_PRA_EXPECT_MEDIA_HASHES=5
+node scripts/recette/production-private-storage.mjs --backup-storage-local
+# Puis sélectionner localement le fichier .json.age produit, sans le partager.
+unset SUPABASE_SERVICE_KEY SUPABASE_URL
+export MC_STORAGE_ENCRYPTED_ARCHIVE="/chemin/prive/mentioncheck-storage-...json.age"
+node scripts/recette/production-private-storage.mjs --verify-storage-restore-local
+```
+
+Les totaux 13 / 832860 / 5 doivent être **rafraîchis** à la source avant exécution. Aucun chemin, fichier, hash client, contenu média ou secret n'apparaît dans les résultats publiables. La suppression temporaire logique ne garantit pas l'effacement physique SSD ; le disque de travail doit être chiffré.
+
+**Précision de preuve :** `LOCAL_STORAGE_BYTES_RECOVERED` ne prouve qu'un replay local des octets du backup, ni le service Storage API ni une restauration PostgreSQL. Les résultats attendus du script `production-private-backup.sh --verify-restore` nécessitent séparément une vraie base PostgreSQL 17 locale et une archive de données issue de production. Aucune sauvegarde physique Pro n'a été restaurée ici. **P0-B = BLOCKED** jusqu'à exercice réel et comparaison indépendant.

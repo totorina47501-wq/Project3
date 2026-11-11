@@ -10,9 +10,7 @@ const FAIL=()=>{throw new Error('MC_PRA_STORAGE_BLOCKED');};
 const positive=(value,max)=>/^[1-9]\d*$/.test(value??'') && Number.isSafeInteger(Number(value)) && Number(value)<=max;
 const bounded=(value,max)=>/^\d+$/.test(value??'') && Number.isSafeInteger(Number(value)) && Number(value)<=max;
 
-export function readPraStorageConfig(env={}){
-  // These confirmations must be provided explicitly by a private operator.
-  if(env.MC_PRA_STORAGE_ENABLED!=='true' || env.MC_PRA_INCLUDED_QUOTA_CONFIRMED!=='true') FAIL();
+const readCommonConfig=env=>{
   if(env.CI || env.GITHUB_ACTIONS || env.DOCKER_HOST || env.DOCKER_CONTEXT) FAIL();
   if(env.MENTIONCHECK_PROD_POSTGRES_URL || env.MENTIONCHECK_STAGING_POSTGRES_URL) FAIL();
   if(env.SUPABASE_URL!==PROD_URL || !env.SUPABASE_SERVICE_KEY?.trim()) FAIL();
@@ -26,9 +24,19 @@ export function readPraStorageConfig(env={}){
     expectedBytes:Number(env.MC_PRA_EXPECT_BYTES),
     expectedMediaHashes:Number(env.MC_PRA_EXPECT_MEDIA_HASHES),
   };
+};
+export function readPraStorageConfig(env={}){
+  if(env.MC_PRA_STORAGE_ENABLED!=='true' || env.MC_PRA_INCLUDED_QUOTA_CONFIRMED!=='true') FAIL();
+  return readCommonConfig(env);
+}
+export function readPraStorageLocalConfig(env={}){
+  // Private local-only path. No Cloudflare quota flag or Worker entrypoint.
+  if(env.MC_PRA_LOCAL_STORAGE_ENABLED!=='true' || env.MC_PRA_STORAGE_ENABLED==='true') FAIL();
+  return readCommonConfig(env);
 }
 
-export async function verifyPraStorageReadback({client,expectedObjects,expectedBytes,expectedMediaHashes,signal}={}){
+export async function verifyPraStorageReadback({client,expectedObjects,expectedBytes,expectedMediaHashes,signal,onVerifiedObject}={}){
+  if(onVerifiedObject!==undefined && typeof onVerifiedObject!=='function') FAIL();
   if(!client || !Number.isSafeInteger(expectedObjects) || expectedObjects<1 || expectedObjects>100 ||
      !Number.isSafeInteger(expectedBytes) || expectedBytes<1 || expectedBytes>16*1024*1024 ||
      !Number.isSafeInteger(expectedMediaHashes) || expectedMediaHashes<0 || expectedMediaHashes>100) FAIL();
@@ -118,13 +126,19 @@ export async function verifyPraStorageReadback({client,expectedObjects,expectedB
           guard();
           if(data.byteLength!==itemSize) FAIL();
           const hash=createHash('sha256').update(data).digest('hex');
-          // No content, filenames, hashes or identifiers are returned/logged.
-          data.fill(0);
-          if(name==='verification-media' && mediaHashes.has(full)){
-            if(mediaHashes.get(full)!==hash) FAIL();
-            mediaHashes.delete(full);
-            verifiedMediaHashes++;
-          }
+          // Only the opt-in LOCAL archive callback receives private bytes.
+          // Its caller must zeroize its copy and never log the path/data.
+          try{
+            if(name==='verification-media' && mediaHashes.has(full)){
+              if(mediaHashes.get(full)!==hash) FAIL();
+              mediaHashes.delete(full);
+              verifiedMediaHashes++;
+            }
+            if(onVerifiedObject) await onVerifiedObject({
+              bucket:name,path:full,size:itemSize,sha256:hash,
+              bytes:Buffer.from(data),
+            });
+          }finally{data.fill(0);}
           bytes+=itemSize;
         }
         if(records.length<100) break;

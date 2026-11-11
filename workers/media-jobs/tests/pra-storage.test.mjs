@@ -1,7 +1,11 @@
 import {it} from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {readPraStorageConfig,verifyPraStorageReadback,PRA_BUCKETS} from '../src/pra-storage.mjs';
+import {readPraStorageConfig,readPraStorageLocalConfig,verifyPraStorageReadback,PRA_BUCKETS} from '../src/pra-storage.mjs';
+import {makeStorageArchive,restoreStorageArchive} from '../../../scripts/recette/production-private-storage.mjs';
+import {mkdtempSync,readdirSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 const sha=b=>createHash('sha256').update(b).digest('hex');
 function fixture({changed=false,additionalBucket=false,assets=1,busy=false,busyAfterProbes=0}={}){
  const original=Buffer.from('private-fixture-no-personal-data');
@@ -118,4 +122,51 @@ it('fails closed if media work appears after initial preflight or before success
   client:late.client,expectedObjects:1,expectedBytes:late.size,expectedMediaHashes:1,
  }),/MC_PRA_STORAGE_BLOCKED/);
  assert(late.calls.some(call=>call.startsWith('download:')));
+});
+
+it('local-only Storage mode refuses CI and reuses strict production source constraints',()=>{
+ const env={MC_PRA_LOCAL_STORAGE_ENABLED:'true',
+  SUPABASE_URL:'https://zcztvberuihphqklhjsr.supabase.co',
+  SUPABASE_SERVICE_KEY:'fake-fixture-secret',
+  MC_PRA_EXPECT_OBJECTS:'1',MC_PRA_EXPECT_BYTES:'32',MC_PRA_EXPECT_MEDIA_HASHES:'1'};
+ const r=readPraStorageLocalConfig(env);
+ assert.equal(r.expectedObjects,1);
+ for(const override of [{CI:'true'},{GITHUB_ACTIONS:'true'},
+  {SUPABASE_URL:'https://ukvgnkxgzyhswgpnvyzz.supabase.co'},
+  {MENTIONCHECK_PROD_POSTGRES_URL:'postgres://secret'},
+  {MC_PRA_LOCAL_STORAGE_ENABLED:'false'}])
+  assert.throws(()=>readPraStorageLocalConfig({...env,...override}),/MC_PRA_STORAGE_BLOCKED/);
+});
+it('exports synthetic bytes via existing readback and restores all hashes to private ephemeral files',async()=>{
+ const f=fixture(),records=[];
+ await verifyPraStorageReadback({
+  client:f.client,expectedObjects:1,expectedBytes:f.size,expectedMediaHashes:1,
+  onVerifiedObject:async r=>records.push(r),
+ });
+ const expected={objectCount:1,totalBytes:f.size,mediaHashesCompared:1};
+ const manifest=makeStorageArchive(records,expected);
+ const work=mkdtempSync(join(tmpdir(),'mc-pra-synthetic-'));
+ try{
+  const v=restoreStorageArchive(manifest,expected,work);
+  assert.deepEqual(v,{state:'LOCAL_STORAGE_BYTES_RECOVERED',
+   objectsRestored:1,bytesRestored:f.size,storageApiRestored:false,
+   fullPraCertified:false});
+  assert.deepEqual(readdirSync(work),[]);
+  assert(!JSON.stringify(v).includes('original.png'));
+  const changed=structuredClone(manifest);
+  changed.objects[0].bytesBase64=Buffer.from('different fixture').toString('base64');
+  assert.throws(()=>restoreStorageArchive(changed,expected,work),/MC_STORAGE_PRIVATE_BLOCKED/);
+  assert.deepEqual(readdirSync(work),[]);
+  const duplicate=structuredClone(manifest);
+  duplicate.objects.push(duplicate.objects[0]);duplicate.count=2;
+  assert.throws(()=>restoreStorageArchive(duplicate,{...expected,objectCount:2},work),/MC_STORAGE_PRIVATE_BLOCKED/);
+  assert.deepEqual(readdirSync(work),[]);
+  const traversal=structuredClone(manifest);
+  traversal.objects[0].path='../secret';
+  assert.throws(()=>restoreStorageArchive(traversal,expected,work),/MC_STORAGE_PRIVATE_BLOCKED/);
+  assert.deepEqual(readdirSync(work),[]);
+ }finally{
+  for(const record of records)record.bytes.fill(0);
+  rmSync(work,{recursive:true,force:true});
+ }
 });
