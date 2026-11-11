@@ -72,3 +72,7 @@ jobs:
           MENTIONCHECK_STAGING_SUPABASE_ANON_KEY: ${{ secrets.MENTIONCHECK_STAGING_SUPABASE_ANON_KEY }}
           MENTIONCHECK_STAGING_SUPABASE_SERVICE_KEY: ${{ secrets.MENTIONCHECK_STAGING_SUPABASE_SERVICE_KEY }}
         run: node scripts/recette/staging-auth-ab.mjs
+      - name: RGPD sur fixture creee dans ce run staging (export, demande, apercu, effacement)
+        run: |
+          node --check scripts/recette/staging-rgpd-erasure.mjs
+          node scripts/recette/staging-rgpd-erasure.mjs
