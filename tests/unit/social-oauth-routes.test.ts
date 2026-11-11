@@ -57,6 +57,7 @@ vi.mock('@/lib/social/oauth/exchange', () => ({
   },
 }));
 
+import { OAuthProviderStageError } from '@/lib/social/oauth/exchange';
 import { GET as listProviders } from '@/app/api/social-accounts/oauth/providers/route';
 import { POST as startOAuth } from '@/app/api/social-accounts/oauth/start/route';
 import { GET as callbackOAuth } from '@/app/api/social-accounts/oauth/callback/[provider]/route';
@@ -225,7 +226,7 @@ describe('Routes OAuth sociales', () => {
     url.searchParams.set('code', 'temporary-code');
     url.searchParams.set('state', authorization.searchParams.get('state')!);
     mocks.exchange.mockRejectedValueOnce(
-      Object.assign(new Error('OAuth provider response unavailable.'), { stage: 'channel' }),
+      new OAuthProviderStageError('channel'),
     );
     const result = await callbackOAuth(
       new Request(url),
