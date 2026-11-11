@@ -1,5 +1,15 @@
 # Reprise MentionCheck — 6 novembre 2026
 
+## Point de reprise vérifié — 11 novembre 2026 (audit Task Force, sans changement applicatif)
+
+- GitHub `main` : `527e45aa98a9267afb4ea78896dbd51495411e6d`, jobs CI `quality` et média SUCCESS ; PR #128 maintenue **draft**, SHA d'audit `b10999e4af8d776e44f8af89cade105a91f69ddf`, [CI #43009448934](https://github.com/totorina47501-wq/Project3/actions/runs/43009448934) SUCCESS et [Auth staging #43009439812](https://github.com/totorina47501-wq/Project3/actions/runs/43009439812) SUCCESS. Preview Cloudflare SUCCESS uniquement ; SHA servi par Worker Production non attesté.
+- Production SQL (lecture seule) : 2 utilisateurs Auth, 2 profils, 2 lignes de quotas, 0 abonnement Stripe actif, 13 objets Storage / 3 buckets, table promotion Solo absente ; Staging : 0 utilisateur/profil/objet et table promotion présente. Migrations quotas/promotion/bridge uniquement en staging. Aucun déploiement/migration de production.
+- Supabase Pro : snapshots physiques attestés par capture opérateur du 11/11 à 05:19:11 UTC et du 10/11 à 05:19:32 UTC ; connecteur sans liste des snapshots, aucune restauration isolée effectuée. Devis indicatif du connecteur pour **un projet supplémentaire : 10 USD/mois**, frais réels de clonage à confirmer dans le Dashboard ; **aucun projet créé**. Storage nécessite son export/retest distinct et chiffré. Voir `docs/64-production-private-backup.md`.
+- Supabase Security Advisor Production : protection contre les mots de passe compromis **DÉSACTIVÉE**, 5 avertissements RPC `SECURITY DEFINER` accessibles aux comptes authentifiés et 6 tables RLS sans policy (tables fermées à contrôler). Activer/configurer Auth uniquement après vérification opérateur, puis tester inscription/login/reset sur Staging et contrôler Production. Aucun changement de configuration Auth effectué ici.
+- Stripe Live lecture seule : **3 produits / 3 prix mensuels existants** (Solo 9 EUR, Pro 19 EUR, Studio 49 EUR), **1 webhook** existant à `https://mentioncheck.app/api/stripe/webhook` (enabled, 7 types d'événements), portail actif mais liens CGV/confidentialité absents. Ne pas créer de doublons ; aucune vente, facturation ou activation Live effectuée ; flags Worker de production à vérifier séparément.
+- **NO GO commercial** jusqu'aux restaurations réelles PostgreSQL + Storage, protection Auth, migration atomique des quotas pré-GO, dossiers juridiques/Stripe et attestation du runtime. Preuves centralisées dans [issue #16](https://github.com/totorina47501-wq/Project3/issues/16). Aucun appel IA API payant.
+
+
 ## Auto-intégration des PR Copilot à faible risque — 9 novembre 2026
 
 - **Motif** : les PR #106 et #109 ont nécessité un passage manuel de brouillon à prêt/fusion malgré Copilot terminé et CI verte. Le workflow existant limitait volontairement l'auto-merge aux seuls tests/docs ; son réveil dépendait surtout de la CI, alors que le run cloud agent peut finir *après* elle.

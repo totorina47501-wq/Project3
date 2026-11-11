@@ -193,3 +193,13 @@ régression de la page Paramètres déjà présente dans la version
 Stripe Sandbox et demande une recette Auth staging répétée.
 
 Voir [procédure privée de sauvegarde/restauration Production](64-production-private-backup.md) ; aucune sauvegarde ni preuve de restauration production n'existe encore.
+
+## Recontrôle fournisseur — 11 novembre 2026 (lecture seule)
+
+Sur `main` `527e45aa` et PR #128 `b10999e4`, la CI est SUCCESS ; recette Auth/RLS/RGPD Staging SUCCESS au run #43009439812. **La présence d'un build Preview ne prouve pas le runtime du Worker Production.**
+
+L'advisor sécurité Supabase Production confirme explicitement `auth_leaked_password_protection` **WARN / Disabled** malgré le passage Pro. Cinq RPC `SECURITY DEFINER` accessibles à `authenticated` restent signalées (tests A/B existants, ne pas retirer les permissions sans analyse produit), et six tables RLS sans policy restent fermées par conception. Le connecteur disponible ne permet pas de changer les options de GoTrue ; activation via [Auth settings](https://supabase.com/dashboard/project/zcztvberuihphqklhjsr/auth/providers) et contrôle du Security Advisor requis. Tester inscription, connexion et reset avant GO. Les mots de passe historiques peuvent faire l'objet d'exigences nouvelles : ne pas dégrader la connexion sans recette.
+
+Lecture Stripe **Live sans mutation** : 3 produits et 3 prix existants (Solo **9 EUR**, Pro **19 EUR**, Studio **49 EUR** / mois), un seul endpoint webhook existant `https://mentioncheck.app/api/stripe/webhook` avec 7 types d'événements, portail actif ; **liens CGV et confidentialité du portail vides**. Ne pas dupliquer, ni interpréter le statut `enabled` de l'endpoint comme autorisation d'encaissement. Les flags Cloudflare `BILLING_ENABLED=false` et `STRIPE_LIVE_APPROVED=false` doivent être revérifiés dans les secrets/variables effectifs avant GO. Aucune opération de paiement effectuée.
+
+**Verrou maintenu** : restauration complète PostgreSQL et Storage non attestée, quota Production non migré, utilisateur historique non activé pour 30 jours, protection Auth incomplète, identité légale/CGV non finalisées. Issue #16 ouverte, PR #128 draft, aucune création de clone facturé.

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updated": "2026-11-10",
+  "updated": "2026-11-11",
   "scope": "Code de la branche, non preuve de déploiement ni de commercialisation.",
   "features": [
     {
@@ -26,7 +26,8 @@
       ],
       "next": [
         "Connexion réelle validée le 5 novembre 2026 sur le Worker via compte technique isolé, ensuite désactivé. Les parcours locaux restent couverts par Playwright ; voir docs/37-real-openai-validation.md.",
-        "Checklist opératoire Auth Security Advisor (mots de passe compromis) documentée, sans activation automatique : docs/12-privacy-security.md."
+        "Checklist opératoire Auth Security Advisor (mots de passe compromis) documentée, sans activation automatique : docs/12-privacy-security.md.",
+        "Audit Supabase Security Advisor Production 11/11 : protection native des mots de passe compromis DESACTIVEE malgré Pro ; activation manuelle + tests login/reset nécessaires. Cinq RPC SECURITY DEFINER WARN à conserver sous revue ; voir issue #16."
       ]
     },
     {
@@ -281,7 +282,8 @@
         "Page /tarifs améliorée : cartes responsives, comparaison accessible, FAQ et positionnement Pro ; prix et quotas restent indicatifs, Stripe live désactivé.",
         "Gratuit 3/1/3 distinct de Solo payant 30/5/20 ; migration SQL et tests locaux sur PR #114, staging à certifier avant tout déploiement production.",
         "Staging : Checkout Solo/Pro/Studio authentifié + portail et vrais événements Stripe signés création/résiliation certifiés ; sans carte ni vente. Code live prêt derrière garde-fous légaux/fiscaux/IA ; paiement par carte test non certifié.",
-        "Dossier juridique de pré-lancement à compléter : docs/61-dossier-lancement-commercial-2026.md. TVA française : mention CIBS de septembre 2026, 293 B en tolérance jusqu'à fin 2027."
+        "Dossier juridique de pré-lancement à compléter : docs/61-dossier-lancement-commercial-2026.md. TVA française : mention CIBS de septembre 2026, 293 B en tolérance jusqu'à fin 2027.",
+        "Lecture Stripe Live 11/11 : 3 produits et 3 prix mensuels existants (Solo 9, Pro 19, Studio 49 EUR), webhook unique enabled et portail actif mais URLs légales absentes ; garder BILLING_ENABLED=false et STRIPE_LIVE_APPROVED=false jusqu'au GO explicite."
       ]
     },
     {
@@ -606,7 +608,8 @@
       "next": [
         "Code, SQL et tests préparés ; aucun octroi dans ce lot. Migration staging puis production coordonnée, sélection et activation seulement lors du GO public certifié.",
         "PROMO_SOLO_ENABLED reste false tant que la nouvelle table n'est pas présente et les tests d'accès authentifiés ne sont pas passés.",
-        "PR #128 : bridge pré-GO activation_pending pour 2 profils historiques, Solo 30/5/20 sans lancer le compteur 30 jours ; preuve SQL PGlite, application staging nécessaire, aucune mutation production."
+        "PR #128 : bridge pré-GO activation_pending pour 2 profils historiques, Solo 30/5/20 sans lancer le compteur 30 jours ; preuve SQL PGlite, application staging nécessaire, aucune mutation production.",
+        "Staging : 3 migrations (quotas, promotion, bridge) présentes et recettes authentifiées/CI #128 SUCCESS au SHA b10999e4. Production : aucune de ces 3 migrations, 2 bénéficiaires historiques sans abonnement. Restauration complète préalable NON prouvée, cutover atomique INTERDIT avant certificat et autorisation."
       ]
     }
   ]
