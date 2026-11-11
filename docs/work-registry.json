@@ -142,7 +142,7 @@
       ],
       "next": [
         "Transfert privé PNG réel via client HTTP, confirmation serveur et SHA-256 persisté validés le 5 novembre 2026. Restent les limites mémoire Cloudflare à 50 MiB, l’immuabilité Storage et les parcours navigateur concurrents authentifiés ; voir docs/37-real-openai-validation.md.",
-        "PRA Storage : CLI lecture seule opt-in intégrée au MediaRunner EXISTANT sur PR #128 ; aucun endpoint ni déclenchement auto, vérification réelle non exécutée, restauration SQL/Storage non certifiée ; docs/41-cloudflare-containers.md."
+        "PRA certifié au périmètre des preuves #16 : clone PostgreSQL/Auth indépendant restauré, 13/13 agrégats SQL concordants ; Storage 13/13 ZIP source/copie déclarés opérateur et SHA-256 individuels égaux (832860 octets), bucket privé PRA avec 13 copies vérifiées par métadonnées SQL. Provenance ZIP non signée par Supabase. Pas de nouvelle copie, MediaRunner ou clone. Voir issue #16 commentaire #6794494490 et docs/64-production-private-backup.md."
       ]
     },
     {
@@ -233,7 +233,8 @@
       ],
       "next": [
         "Aperçu et journal dry_run testés hors ligne ; aucune mutation SQL/Storage destructive. Permissions distantes et toute procédure opérateur restent à valider séparément.",
-        "Circuit opérateur préparé (identité, rétention légale, export, suppression Auth/Storage à valider manuellement, audit de complétion) : docs/12-privacy-security.md."
+        "Circuit opérateur préparé (identité, rétention légale, export, suppression Auth/Storage à valider manuellement, audit de complétion) : docs/12-privacy-security.md.",
+        "Effacement complet Auth/SQL/Storage uniquement sur fixture synthétique staging vérifié dans le run #42982377973. Ne pas le répéter ; exécuteur réel client non activé et suppression chez sous-traitants/backups non certifiée."
       ]
     },
     {
@@ -610,8 +611,8 @@
         "Code, SQL et tests préparés ; aucun octroi dans ce lot. Migration staging puis production coordonnée, sélection et activation seulement lors du GO public certifié.",
         "PROMO_SOLO_ENABLED reste false tant que la nouvelle table n'est pas présente et les tests d'accès authentifiés ne sont pas passés.",
         "PR #128 : bridge pré-GO activation_pending pour 2 profils historiques, Solo 30/5/20 sans lancer le compteur 30 jours ; preuve SQL PGlite, application staging nécessaire, aucune mutation production.",
-        "Staging : 3 migrations (quotas, promotion, bridge) présentes et recettes authentifiées/CI #128 SUCCESS au SHA b10999e4. Production : aucune de ces 3 migrations, 2 bénéficiaires historiques sans abonnement. Restauration complète préalable NON prouvée, cutover atomique INTERDIT avant certificat et autorisation.",
-        "P0-B : essais Docker/MediaRunner/Storage local de la PR #128 retirés ; procédure Supabase Pro « Restore to a New Project » retenue, avec restitution indépendante des octets Storage. Aucun restore réel prouvé, aucun GO Production. Voir docs/64-production-private-backup.md."
+        "Trois migrations quotas/promotion/bridge sont déjà installées sur staging, aucune en Production. 2 profils Solo historiques sans abonnement Stripe actif ; transition atomique et GO séparé nécessaires pour préserver leurs droits sans démarrer prématurément les 30 jours. Correctif UI pré-GO et workflow RGPD au commit 1850998, remarques Codex résolues, tests unitaires/SQL/Playwright réussis ; statut global CI encore à confirmer.",
+        "PRA : restauration native de Production vers le clone Supabase isolé et comparée 13/13 SQL ; reprise des octets contrôlée par 13/13 SHA-256 égaux entre ZIP déclarés source/copie, réserve sur provenance indépendante. Pas de deuxième clone/restore ; preuve canonique issue #16 commentaire #6794494490. Maintenir autres gates Auth, RGPD, release ouvertes."
       ]
     }
   ]

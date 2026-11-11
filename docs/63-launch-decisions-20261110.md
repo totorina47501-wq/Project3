@@ -2,6 +2,8 @@
 **Choix approuvés par l'exploitant ; statut : PRÉPARATION TECHNIQUE, AUCUNE OUVERTURE COMMERCIALE.**
 Ces choix n'établissent aucune immatriculation, certification, souscription, dépense API ni paramétrage fournisseur.
 
+**Mise à jour factuelle anti-doublons (11/11/2026) :** rollback de deux versions STAGING [PASS](https://github.com/totorina47501-wq/Project3/actions/runs/42981396379) ; clone PRA PostgreSQL/Auth restauré PASS ; fichiers Storage 13/13 SHA-256 égaux via archives déclarées Production/PRA, 832860 octets, mais **provenance ZIP non signée par Supabase** ([preuve #16](https://github.com/totorina47501-wq/Project3/issues/16#issuecomment-6794494490)). Ces exercices ne sont **pas à refaire**. Migrations Solo uniquement staging, protection Auth, RGPD utilisateurs réels, légal/Stripe et SHA runtime Production encore ouverts. CI du commit `1850998` : les étapes qualité/média sont toutes SUCCESS, mais conclusion globale encore `in_progress` au contrôle. Les paragraphes datés antérieurs ci-dessous sont historiques.
+
 ## Décisions fermes et effets
 | Sujet | Décision | Effet en code / exploitation |
 | --- | --- | --- |
@@ -192,7 +194,7 @@ avec un filtre strict sur `userData.id`, sans transmettre l'ID Stripe.
 régression de la page Paramètres déjà présente dans la version
 Stripe Sandbox et demande une recette Auth staging répétée.
 
-Voir [plan PRA Supabase natif Production](64-production-private-backup.md) : les snapshots physiques fournisseur sont attestés, mais aucune restauration isolée de données et des octets Storage n'est encore prouvée.
+Voir [plan PRA Supabase natif Production](64-production-private-backup.md) : restauration PostgreSQL/Auth sur clone réel et comparaison ciblée des 13 octets-objets Storage par archives Production/PRA déclarées déjà attestées, provenance ZIP non signée. Ne pas reproduire ces preuves.
 
 ## Recontrôle fournisseur — 11 novembre 2026 (lecture seule)
 
@@ -202,4 +204,4 @@ L'advisor sécurité Supabase Production confirme explicitement `auth_leaked_pas
 
 Lecture Stripe **Live sans mutation** : 3 produits et 3 prix existants (Solo **9 EUR**, Pro **19 EUR**, Studio **49 EUR** / mois), un seul endpoint webhook existant `https://mentioncheck.app/api/stripe/webhook` avec 7 types d'événements, portail actif ; **liens CGV et confidentialité du portail vides**. Ne pas dupliquer, ni interpréter le statut `enabled` de l'endpoint comme autorisation d'encaissement. Les flags Cloudflare `BILLING_ENABLED=false` et `STRIPE_LIVE_APPROVED=false` doivent être revérifiés dans les secrets/variables effectifs avant GO. Aucune opération de paiement effectuée.
 
-**Verrou maintenu** : restauration complète PostgreSQL et Storage non attestée, quota Production non migré, utilisateur historique non activé pour 30 jours, protection Auth incomplète, identité légale/CGV non finalisées. Issue #16 ouverte, PR #128 draft, aucune création de clone facturé.
+**Verrou maintenu, état actualisé :** PRA PostgreSQL/Auth déjà restauré sur clone isolé et 13/13 SHA-256 ZIP Storage concordants sous réserve de provenance ; quota Production non migré, deux comptes Solo historiques sans déclenchement des 30 jours, Auth et RGPD réels incomplets, identité légale/CGV non finalisées, runtime Production non attesté. Issue #16 ouverte, PR #128 draft ; aucun nouveau clone ni migration Production.

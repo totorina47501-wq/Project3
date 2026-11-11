@@ -2,7 +2,7 @@
 
 **Décision technique (11 novembre 2026) :** utiliser exclusivement la fonction officielle **Restore to a new project** à partir d'un snapshot PHYSICAL Supabase Pro pour la **base PostgreSQL/Auth**. Les essais expérimentaux de dump local Docker/age, l'exécution PRA sur Cloudflare MediaRunner et la CLI privée Storage sont **abandonnés et retirés de la PR #128**. Les procédures opérationnelles de restauration de schéma synthétique **staging** et de rollback logiciel restent intactes.
 
-**Statut réel au 11/11/2026 : PostgreSQL/Auth restaurés et comparés = PASS ; reprise des octets Storage = BLOCKED ; PRA complet et certification #16 = PARTIAL/NO GO.** Le projet PRA existant `sbquwigqlzfglukxdgau` est ACTIVE_HEALTHY ; les vérifications SQL indépendantes correspondent à Production. Les 13 entrées `storage.objects` du clone sont des **métadonnées**, pas des fichiers restaurés. La PR #128 reste en draft et l'issue #16 ouverte.
+**État consolidé au 11/11/2026 : PostgreSQL/Auth restaurés sur clone isolé = PASS ; preuve de concordance binaire Storage = PASS ciblé, 13/13 SHA-256 individuels sur archives distinctes déclarées Production/PRA (832860 octets) ; PRA global = PARTIAL / NO GO commercial.** Le projet PRA `sbquwigqlzfglukxdgau` est ACTIVE_HEALTHY, les 13/13 agrégats SQL concordent, et le bucket privé `pra-storage-proof-20261111` contient 13 copies / 832860 octets (contrôle SQL). **Limites :** provenance des archives fondée sur déclaration opérateur, pas sur signature Supabase ; les clés d'origine des objets Storage ne sont pas prouvées reconstituées dans le clone. [Preuve canonique #16](https://github.com/totorina47501-wq/Project3/issues/16#issuecomment-6794494490). Ne pas relancer de clone ni refaire l'exercice ; PR #128 draft, #16 ouverte.
 
 ## 1. Protection déjà en place et périmètre
 
@@ -34,13 +34,13 @@ Références officielles : [Restore to a New Project](https://supabase.com/docs/
 
 ## 3. Porte indépendante Supabase Storage (13 fichiers au relevé)
 
-**État vérifié au 11/11/2026 :** `verification-media` = **5 objets / 781 559 octets**, `verification-media-derived` = **8 objets / 51 301 octets**, `deal-contracts` = **0 objet**. Trois buckets privés avec leurs métadonnées et politiques RLS présentes dans le clone. **Aucun octet Storage indépendant récupéré et comparé : cette porte reste BLOCKED.**
+**État vérifié au 11/11/2026 :** `verification-media` = **5 objets / 781 559 octets**, `verification-media-derived` = **8 objets / 51 301 octets**, `deal-contracts` = **0 objet**. Les archives fournies ont été comparées sur leurs octets décompressés : **5/5 + 8/8 chemins, tailles et SHA-256 individuels identiques**, total **832860 octets** par ensemble. Les 13 copies existent dans un bucket privé de preuve du clone (inventaire SQL). **PASS ciblé binaire sous réserve de provenance opérateur**, non signature indépendante du fournisseur ; ne pas refaire.
 
-La restauration PostgreSQL PHYSICAL **n'est pas** une restauration des médias. Réaliser une procédure opérateur **distincte** au moyen des APIs Storage privées officielles : inventaire exact des buckets/objets, export chiffré vers un espace privé contrôlé, puis **upload de tous les octets** vers un Storage de recette indépendant avec service_role exclusivement côté serveur et sans exposition publique. Vérifier la liste complète, les tailles et SHA-256 individuels des octets source et récupérés, les contrôles d'accès des buckets, la cohérence des chemins et les politiques RLS.
+La restauration PostgreSQL PHYSICAL **n'est pas** une restauration automatique des médias. L'exercice binaire indépendant a **déjà été réalisé** via les archives et le bucket privé de preuve ; les instructions suivantes ne sont qu'une **procédure de reprise future** si un autre sinistre ou une exigence plus forte de provenance apparaît. Aucun nouveau transfert ni export n'est à lancer au titre de la certification actuelle.
 
 **Ne pas coder un nouveau script de copie Client/Storage tant que le service de destination, la méthode privée de transfert, la gestion des secrets et la politique de rétention ne sont pas approuvés.** Aucune donnée réelle ne passe par les workflows GitHub, les conteneurs média ou Staging. Selon le mode de duplication du fournisseur, les métadonnées Storage dans le clone peuvent différer : les inspecter avant toute opération, ne jamais forcer un overwrite/désynchroniser les métadonnées.
 
-### Voie officielle unique sans nouveaux scripts GitHub
+### Procédure de reprise future — ne pas répéter les transferts certifiés le 11/11
 
 L'API **Storage S3** Supabase est compatible avec un client S3 privé tel que **rclone** : [authentification S3](https://supabase.com/docs/guides/storage/s3/authentication), [guide fournisseur de copie S3 → S3](https://supabase.com/docs/guides/self-hosting/copy-from-platform-s3). Pour notre contexte **deux projets Supabase gérés**, reprendre seulement le protocole standard de transfert et **adapter la destination**. Il ne s'agit pas d'un projet self-hosted.
 
@@ -51,9 +51,9 @@ L'API **Storage S3** Supabase est compatible avec un client S3 privé tel que **
 5. Ne publier dans l'issue #16 **que** le nombre d'objets concordants, le nombre d'octets, la confirmation 13/13 SHA-256, le statut des contrôles privés/RLS, les horodatages et la preuve de nettoyage, **sans noms, tokens ni empreintes personnelles**.
 6. Après validation, supprimer et vérifier la disparition **des copies temporaires seulement**, révoquer les clés S3 temporaires, puis programmer explicitement la suppression du projet PRA quand toutes les portes de certification seront closes.
 
-**Garde-fou :** le plugin Supabase actuel ne peut pas exécuter cette copie binaire. N'inventer ni contrôle SHA-256 ni upload ; l'existence des 13 lignes `storage.objects` n'est **pas** un test positif. La limitation doit être levée par un opérateur sur environnement privé avant la certification complète.
+**Garde-fou :** le connecteur Supabase ne télécharge pas les octets et ne signe pas leur provenance. Les contrôles SHA-256 réels des archives et l'inventaire SQL du bucket privé sont deux preuves distinctes ; ne pas assimiler les métadonnées seules à un succès et ne pas prétendre à une preuve d'origine fournisseur signée. Aucun nouvel upload ou clone pour dupliquer ce test.
 
-Preuve actuelle : `SQL_RESTORE_VERIFIED=true` pour PostgreSQL/Auth (comparaison SQL sur clone réel), `STORAGE_BINARY_RESTORE_VERIFIED=false` (pas d'octets relus), `FULL_PRA_CERTIFIED=false`. **P0-B reste PARTIAL avec porte Storage BLOCKED ; pas de GO commercial.**
+Preuve actuelle : `SQL_RESTORE_VERIFIED=true`, `STORAGE_ZIP_SHA256_MATCH_13_OF_13=true`, `PRA_PRIVATE_PROOF_BUCKET_13_OBJECTS=true`, `STORAGE_PROVIDER_SIGNED_PROVENANCE=false`, `FULL_PRA_CERTIFIED=false`. **P0-B SQL PASS et Storage PASS ciblé sous réserve ; #16 demeure PARTIAL / NO GO commercial.**
 
 ## 4. Autres portes à préserver
 
@@ -66,4 +66,4 @@ Preuve actuelle : `SQL_RESTORE_VERIFIED=true` pour PostgreSQL/Auth (comparaison 
 
 Retirés de la PR #128 : `production-private-backup.sh`, `production-private-storage.mjs`, `production-private-backup.test.ts`, `pra-storage.mjs`, `pra-storage-run.mjs`, `pra-storage.test.mjs`. Aucun de ces composants n'était sur `main` ni activé comme service en Production. Les anciens essais n'ont **jamais** restauré la Production ou les 13 objets réels ; les anciennes preuves restent dans l'historique de l'issue #16, mais ne constituent plus la procédure recommandée.
 
-**PRA full restore = BLOCKED jusqu'à preuve réelle.** Voir [issue #16](https://github.com/totorina47501-wq/Project3/issues/16) et [PR #128](https://github.com/totorina47501-wq/Project3/pull/128).
+**PostgreSQL restauré et comparaison binaire Storage prouvés au périmètre décrit ; certification globale PRA PARTIAL, lancement NO GO.** Poursuivre Auth/RGPD, règles de rétention et contrôles release ; ne pas créer de deuxième exercice. Voir [issue #16](https://github.com/totorina47501-wq/Project3/issues/16) et [PR #128](https://github.com/totorina47501-wq/Project3/pull/128).

@@ -2,6 +2,21 @@
 
 **Date :** 10 novembre 2026
 
+## État de certification courant — réconciliation anti-doublons du 11 novembre 2026
+
+**Source de vérité** : [issue #16](https://github.com/totorina47501-wq/Project3/issues/16), [preuve PRA](https://github.com/totorina47501-wq/Project3/issues/16#issuecomment-6794494490), [PR #128](https://github.com/totorina47501-wq/Project3/pull/128). Le commit correctif `1850998` comprend uniquement les fixes Solo pré-GO/UI et branche RGPD déjà demandés, les deux fils de revue Codex étant résolus. **CI [#43094510822](https://github.com/totorina47501-wq/Project3/actions/runs/43094510822)** : 31 étapes qualité et 7 étapes média terminées SUCCESS, mais run global encore `in_progress` au contrôle ; **ne pas inférer un statut global final SUCCESS**.
+
+| Chantier | Statut consolidé | Preuve existante / limite |
+| --- | --- | --- |
+| P0-A rollback Cloudflare interversions | **PASS STAGING** | [Run #42981396379](https://github.com/totorina47501-wq/Project3/actions/runs/42981396379) : code A/B de SHAs différents, B→A, restauration version initiale et HTTP ; pas un rollback de données PostgreSQL |
+| P0-B reprise PostgreSQL et Storage | **PASS SQL + PASS ciblé Storage sous réserve** | Clone Supabase `sbquwigqlzfglukxdgau` : 13/13 agrégats concordants. Storage : 13/13 octets-fichiers SHA-256 égaux, 832860 octets entre ZIP déclarés Production/PRA ; bucket privé de preuve 13 copies, contrôlé SQL. **Origine des ZIP non signée par Supabase** ; ne pas refaire |
+| P0-C quotas / promotion Solo | **PARTIAL** | 3 migrations sur staging, aucune en Production. 2 profils Solo historiques, 0 souscription Stripe active ; pont pré-GO et test UI existants. Cutover atomique uniquement après GO distinct et contrôles |
+| P1-D sécurité Auth/RLS/RPC | **PASS scénarios staging, PARTIAL global** | [Auth/RPC A-B #42982377973](https://github.com/totorina47501-wq/Project3/actions/runs/42982377973). Auth Production HIBP désactivé au contrôle ; revérifier configuration fournisseur et tests |
+| P1-E RGPD | **PASS fixture synthétique staging, PARTIAL réel** | [Run #42982377973](https://github.com/totorina47501-wq/Project3/actions/runs/42982377973) : export, demande, révocation refresh, nettoyage Auth/SQL/Storage QA. Exécuteur suppression client réel, sous-traitants, caches, backups non certifiés |
+| P1-F E2E + Studio/release | **PASS scénarios ciblés staging, PARTIAL release** | [Auth #42982377973](https://github.com/totorina47501-wq/Project3/actions/runs/42982377973), [Studio #42982215401](https://github.com/totorina47501-wq/Project3/actions/runs/42982215401). SHA réel du Worker Production, CI finale et conditions juridiques/Stripe Live non validés |
+
+**Ne pas recréer** migrations, scripts de recette, PR, issue, sauvegarde, clone, ni relancer les tests déjà attestés sans changement pertinent. **NO GO commercial** jusqu'aux portes Auth/RGPD/Production/légal et autorisation distincte ; aucun nouveau coût IA ni activation Stripe Live. Les sections et matrices plus bas sont l'historique au moment de leur rédaction et ne remplacent pas ce tableau courant.
+
 **11 novembre — P0-C en cours (PR #128 uniquement) :** bridge Solo pré-GO versionné, tests PGlite à confirmer en CI. Deux comptes historiques en production n'ont pas de souscription active ; migrations quota/promotion/bridge **non exécutées en PROD**, sauvegarde données restaurable toujours non attestée. Cette évolution ne constitue pas un GO ni un acquittement de l'issue #16.
 
 **Verdict :** certification technique globale **PARTIELLE**, ouverture commerciale **NON CERTIFIÉE**. La présente preuve consolide les résultats existants ; aucune opération distante, migration, publication ou mutation n'a été exécutée dans cette reprise.
@@ -15,7 +30,7 @@
 - La PR OAuth Copilot [#125](https://github.com/totorina47501-wq/Project3/pull/125) reste ouverte : aucun fichier de ce lot n'est modifié ici.
 - Correctif de reprise appliqué dans ce lot : `scripts/recette/studio-api-staging-smoke.mjs`, `.github/workflows/mentioncheck-studio-api-staging.yml` et `.github/workflows/mentioncheck-launch-staging-auth.yml` acceptent explicitement la branche `codex/codex-certification-six-chantiers` en plus des branches historiques, pour relancer les recettes staging sans élargir le périmètre.
 
-## Matrice des six chantiers
+## Matrice historique des six chantiers (état initial, supplanté par la synthèse courante)
 
 | Chantier | Statut | Preuve (run + SHA) | Réserve précise |
 |---|---|---|---|
