@@ -70,3 +70,8 @@ jobs:
         run: npx @opennextjs/cloudflare deploy --config wrangler.staging.jsonc -- --keep-vars
       - name: Recette HTTP de deux équipes, scopes, quotas et expiration
         run: node scripts/recette/studio-api-staging-smoke.mjs
+      - name: RGPD certification staging sur compte synthetique, nettoyage verifie
+        if: github.ref == 'refs/heads/codex/codex-certification-six-chantiers'
+        run: |
+          node --check scripts/recette/staging-rgpd-erasure.mjs
+          node scripts/recette/staging-rgpd-erasure.mjs
