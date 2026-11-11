@@ -109,3 +109,7 @@ Audit `MediaRunner` : le Dockerfile actuel n'embarque pas PG17, le script `--ver
 ## Déblocage Storage local — nouveau chemin testé uniquement sur fixtures (11/11/2026)
 
 PR #128 : nouvelle CLI privée `scripts/recette/production-private-storage.mjs` et extension minime du lecteur Storage déjà présent pour archiver les octets dans `age`, puis les récupérer dans un répertoire local jetable avec SHA-256. Aucune route/cron/worker supplémentaire ; pas d'écriture Production ni de passage PII par CI. Le test de restitution utilise **uniquement une fixture synthétique**. Les véritables 13 objets n'ont pas encore été copiés, et le vrai PostgreSQL 17 de Production n'a toujours pas été restauré. **P0-B reste BLOCKED** ; aucune promotion Solo activée, aucun GO commercial. Voir `docs/64-production-private-backup.md` pour la recette opérateur (disque privé chiffré obligatoire).
+
+## SQL dump completeness guard — 11 November 2026
+
+PR #128 adds a fail-closed guard requiring Auth / application users / quotas / Storage metadata COPY data before an encrypted PostgreSQL archive can be created. Offline CI tests only. This prevents an absent managed schema from being mistakenly accepted, but DOES NOT demonstrate a real PostgreSQL or Storage restore. P0-B remains BLOCKED.

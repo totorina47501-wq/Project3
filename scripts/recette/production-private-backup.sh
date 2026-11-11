@@ -235,6 +235,15 @@ supabase db dump --db-url "$MENTIONCHECK_PROD_POSTGRES_URL" -f "$tmp/migration_h
 for f in roles.sql schema.sql data.sql migration_schema.sql migration_history.sql; do
   [[ -s "$tmp/$f" ]] || fail 'One required SQL export is empty'
 done
+# Fail closed if CLI omitted managed Auth/Storage data: a successful db dump is not enough.
+grep -Eq '^COPY ("auth"\."users"|auth\.users) \(' "$tmp/data.sql" ||
+  fail 'Missing Auth data; refuse incomplete backup'
+grep -Eq '^COPY ("public"\."users"|public\.users) \(' "$tmp/data.sql" ||
+  fail 'Missing app users data; refuse incomplete backup'
+grep -Eq '^COPY ("public"\."usage_monthly"|public\.usage_monthly) \(' "$tmp/data.sql" ||
+  fail 'Missing quota rows; refuse incomplete backup'
+grep -Eq '^COPY ("storage"\."objects"|storage\.objects) \(' "$tmp/data.sql" ||
+  fail 'Missing Storage metadata; refuse incomplete backup'
 tar -C "$tmp" -cf "$tmp/archive.tar" \
   roles.sql schema.sql data.sql migration_schema.sql migration_history.sql ||
   fail 'Cannot package all SQL dumps'

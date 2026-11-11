@@ -196,3 +196,7 @@ node scripts/recette/production-private-storage.mjs --verify-storage-restore-loc
 Les totaux 13 / 832860 / 5 doivent être **rafraîchis** à la source avant exécution. Aucun chemin, fichier, hash client, contenu média ou secret n'apparaît dans les résultats publiables. La suppression temporaire logique ne garantit pas l'effacement physique SSD ; le disque de travail doit être chiffré.
 
 **Précision de preuve :** `LOCAL_STORAGE_BYTES_RECOVERED` ne prouve qu'un replay local des octets du backup, ni le service Storage API ni une restauration PostgreSQL. Les résultats attendus du script `production-private-backup.sh --verify-restore` nécessitent séparément une vraie base PostgreSQL 17 locale et une archive de données issue de production. Aucune sauvegarde physique Pro n'a été restaurée ici. **P0-B = BLOCKED** jusqu'à exercice réel et comparaison indépendant.
+
+## Fail-closed check for managed SQL data (11 November 2026)
+
+Before encrypting any SQL archive, production-private-backup.sh now requires data COPY sections for auth.users, public.users, public.usage_monthly and storage.objects. A successful Supabase CLI exit alone is insufficient: managed schemas may be omitted depending on CLI mode/version. This is a STRUCTURAL guard, not a row-count check or a real restoration. The isolated --verify-restore must still compare all four source totals and fail if data are missing. No production extraction was performed during this change.

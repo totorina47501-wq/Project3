@@ -95,3 +95,13 @@ describe('Production private backup — offline Docker restore verification', ()
     expect(source).not.toMatch(/docker run[^\n]*(?:--publish|-p [0-9]|-v \/)/);
   });
 });
+
+describe('Production private backup COPY coverage contract', () => {
+  it('checks Auth, profiles, quotas and Storage metadata before encryption', () => {
+    for (const name of ['Missing Auth data', 'Missing app users data',
+      'Missing quota rows', 'Missing Storage metadata']) {
+      expect(source).toContain(name);
+      expect(source.indexOf(name)).toBeLessThan(source.indexOf('age -r "$recipient" -o'));
+    }
+  });
+});
