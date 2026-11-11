@@ -59,7 +59,43 @@ unset MENTIONCHECK_PROD_POSTGRES_URL
 
 Le script utilise la **CLI Supabase officielle** pour exporter les rôles, le schéma, les données et l'historique des migrations ; chiffre une archive avec `age` ; vérifie qu'elle peut être déchiffrée et que les octets correspondent ; ne conserve que `*.tar.age` et son SHA-256. Aucun chemin de sortie ne doit pointer dans Git. L'intégrité cryptographique **ne prouve pas** la restauration SQL : la prochaine étape est obligatoire.
 
-## 3. Restaurer sur une instance locale jetable, jamais sur staging/prod
+## 3. Restaurer automatiquement dans Docker éphémère (recommandé)
+
+**Nouvelle capacité dans la PR #128 :** le script **existant** \`scripts/recette/production-private-backup.sh\` possède les deux modes \`--backup\` et \`--verify-restore\`. Le premier produit désormais **cinq fichiers** SQL (rôles, schéma, données, schéma d'historique des migrations et historique) au sein d'une archive chiffrée \`age\`. Le second vérifie sur une base PostgreSQL **Supabase PG17** éphémère, sur le **seul ordinateur privé** de l'opérateur. Pas de nouveau projet Supabase, pas de GitHub Actions avec données clients, pas de R2 requis.
+
+Pré-requis : volume **hôte chiffré**, Docker **local** avec contexte \`default\`, image \`supabase/postgres:17.6.1.084\` téléchargée **manuellement** après revue de provenance ; elle est ensuite utilisée avec \`--pull=never\`. L'image est un laboratoire de compatibilité PostgreSQL 17, **pas une copie de tous les services Auth/Storage/Edge de Supabase**. En cas de divergence de version/extension, le script échoue (aucun contournement des erreurs). Prévoir au moins 1 GiB de mémoire temporaire pour \`PGDATA\` et de la RAM supplémentaire pour le service.
+
+Depuis un shell sur cet ordinateur, **après une sauvegarde privée réelle avec \`--backup\`**, et après avoir contrôlé les totaux source à la même date de capture (SQL lecture seule, **pas d'identifiants personnels**) :
+
+\`\`\`bash
+# Première fois seulement, sur machine privée : inspecter et récupérer l'image versionnée.
+docker pull supabase/postgres:17.6.1.084
+
+export MC_BACKUP_WORKDIR="$HOME/mentioncheck-private-work"
+export MC_BACKUP_AGE_IDENTITY="$HOME/.local/share/mentioncheck-secret/backup-age-key.txt"
+export MC_ENCRYPTED_ARCHIVE="/chemin/prive/vers/la-sauvegarde.tar.age"
+
+# Renseigner les valeurs AGRÉGÉES relevées sur la Production lors du backup.
+# Valeurs 2/2/2/13 : EXEMPLE du dernier préflight (11/11), à revalider avant usage.
+export MC_EXPECT_AUTH_USERS=2
+export MC_EXPECT_APP_USERS=2
+export MC_EXPECT_QUOTA_ROWS=2
+export MC_EXPECT_STORAGE_METADATA=13
+
+# RESTORE DOCKER UNIQUEMENT ; aucune URL de base distante dans l'environnement.
+unset MENTIONCHECK_PROD_POSTGRES_URL MENTIONCHECK_STAGING_POSTGRES_URL
+bash scripts/recette/production-private-backup.sh --verify-restore
+\`\`\`
+
+**Barrières techniques :** le script refuse les runners CI, le Docker distant, les fichiers dans Git, toute URL PostgreSQL distante et les clés lisibles par d'autres utilisateurs. Il vérifie l'empreinte SHA-256 du chiffré et la liste stricte des fichiers de l'archive ; il crée un conteneur **sans réseau externe, sans ports publiés, sans bind mount hôte**, avec \`PGDATA\` sur **tmpfs**, exécute la restauration SQL transactionnelle avec \`ON_ERROR_STOP=1\`, puis teste les quatre totaux attendus, la présence des tables, RLS, policies, fonctions, contraintes, extensions et historique. \`trap\` détruit le conteneur et le répertoire SQL temporaire à la sortie (un disque chiffré est obligatoire ; l'effacement des blocs SSD n'est pas prouvé).
+
+**Preuve possible :** marqueur \`MC_LOGICAL_DOCKER_RESTORE_VERIFIED\` uniquement si toutes ces conditions passent ; **ne pas publier les logs SQL ni l'archive**. La preuve locale ne constitue pas une restauration des sauvegardes *physical* fournisseur. Le test ne copie pas non plus les octets Supabase Storage : le second marqueur est **\`STORAGE_OBJECT_BYTES_NOT_RESTORED\`**. **Certification PRA complète = BLOCKED** jusqu'à export, déchiffrement et restauration des 13 fichiers avec comparaison SHA-256 dans un service Storage isolé, et vérification explicite des composants Supabase non testés (Auth fonctionnel, éventuelles clés/chiffrement Vault, cron/webhooks).
+
+**Aucune exécution réelle de ce mode sur les données Production depuis ChatGPT** : le connecteur donne accès à des agrégats SQL, pas à un disque privé chiffré ni à une clé \`age\`. Le contrôle CI pour cette fonctionnalité est **strictement hors ligne** (syntaxe/refus de contextes interdits), pas une simulation présentée comme restauration réelle.
+
+### Méthode manuelle historique — option de dépannage (non attestée)
+
+
 
 Déchiffrer l'archive en mémoire / volume local chiffré, sous répertoire `chmod 700`, et créer un projet Supabase **local neuf** avec `supabase init` puis `supabase start`, sur Docker **local** et sans accès public. La base cible doit être une instance distincte ne contenant aucune donnée importante.
 

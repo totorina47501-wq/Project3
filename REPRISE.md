@@ -277,3 +277,7 @@ Le dernier `lastError` de l’objet est historique ; ne pas conclure à une pann
 si phase=idle et les jobs sont completed. Deux incompatibilités fetch natives
 ont été reproduites et corrigées. Ne pas retester en consommant des médias
 réels ou des appels OpenAI sans nécessité.
+
+## PRA Docker privé : fonctionnalité ajoutée dans la PR #128 (11/11)
+
+Le script `scripts/recette/production-private-backup.sh` conserve le mode `--backup` et offre `--verify-restore` pour un laboratoire Supabase PG17 Docker isolé, sans réseau, sur un poste privé chiffré. Tests de sécurité hors ligne dans `tests/unit/production-private-backup.test.ts`. Aucun backup Production ni clone Supabase n'a été déclenché par cette modification ; **aucune certification de restauration réelle** n'est revendiquée. Export et contrôle des octets Storage séparés requis. Instructions opérateur : `docs/64-production-private-backup.md`. Garder issue #16 ouverte, PR #128 en draft, flags Live OFF.
