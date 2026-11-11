@@ -133,7 +133,7 @@ begin
 
   v_secret := vault.create_secret(
     p_token_secret,
-    'social-oauth-' || p_platform::text,
+    'social-oauth-' || p_platform::text || '-' || gen_random_uuid()::text,
     'Server-only OAuth access token bundle'
   );
   if v_old_secret is not null then
