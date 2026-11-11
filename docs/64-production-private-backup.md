@@ -1,14 +1,18 @@
 # MentionCheck — sauvegarde PostgreSQL Production privée et restauration isolée
 
-**Statut : PROCÉDURE PRÊTE, EXPORT PRODUCTION NON RÉALISÉ.** Seul le propriétaire d'un poste de confiance avec le mot de passe PostgreSQL peut exécuter cette procédure. Aucune sauvegarde réelle ne doit être communiquée dans ChatGPT, commitée dans GitHub, envoyée dans les logs CI ou copiée vers Supabase Staging.
+**Statut : SUPABASE PRO CONFIRMÉ ; PREMIER BACKUP FOURNISSEUR NON CONTRÔLÉ ; EXPORT PRIVÉ PRODUCTION NON RÉALISÉ.** Seul le propriétaire d'un poste de confiance avec le mot de passe PostgreSQL peut exécuter cette procédure. Aucune sauvegarde réelle ne doit être communiquée dans ChatGPT, commitée dans GitHub, envoyée dans les logs CI ou copiée vers Supabase Staging.
 
 ## Périmètre vérifié le 11 novembre 2026
 
-- Supabase **Production** : projet `zcztvberuihphqklhjsr`, PostgreSQL **17.11**, organisation Supabase **Free**. 2 comptes Auth, 2 profils app, 2 lignes de quotas mensuels, 0 souscription Stripe, 13 objets Storage, 3 buckets ; taille PostgreSQL 14 Mo lors du préflight en lecture seule.
+- Supabase **Production** : projet `zcztvberuihphqklhjsr`, PostgreSQL **17.11**, organisation Supabase **Pro** depuis le 11 novembre 2026 (**forfait vérifié via connecteur Supabase**). 2 comptes Auth, 2 profils app, 2 lignes de quotas mensuels, 0 souscription Stripe, 13 objets Storage, 3 buckets ; taille PostgreSQL 14 Mo lors du préflight en lecture seule.
 - Supabase **Staging** : projet `ukvgnkxgzyhswgpnvyzz` ; **ne jamais** y importer ni restaurer une sauvegarde production, même temporairement.
-- Le plan Free n'a pas de sauvegarde quotidienne automatique. L'export logique officiel Supabase CLI est roles + schema + data. Les **octets des objets Storage ne sont pas inclus** : backup et restauration des 13 objets à traiter séparément. Le niveau de certification complète reste **BLOCKED** jusqu'aux deux preuves.
+- Le plan **Pro** fournit des sauvegardes automatiques PostgreSQL quotidiennes (7 jours de rétention), **mais aucune sauvegarde individuelle n'a encore été vérifiée** : le connecteur Supabase ne liste pas les snapshots. Vérifier un backup terminé et sa date dans le [Dashboard Backups Production](https://supabase.com/dashboard/project/zcztvberuihphqklhjsr/database/backups/scheduled). L'export privé CLI reste recommandé pour un secours hors site (rôles + schéma + données). Les **octets des objets Storage ne sont pas inclus** : backup et restauration séparée des 13 objets. La certification de restauration complète reste **BLOCKED** jusqu'aux preuves réelles, et non seulement au passage sur Pro.
 - Le script préparé dans la PR #128 est `scripts/recette/production-private-backup.sh`. **Aucun workflow GitHub n'exécute ce script**, et celui-ci interdit volontairement GitHub Actions/CI.
 - Documentation fournisseur : [Supabase Backups](https://supabase.com/docs/guides/platform/backups) et [CLI Backup/Restore](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore).
+
+## Contrôle immédiat de la sauvegarde fournisseur Pro
+
+Ouvrir [Database → Backups → Scheduled](https://supabase.com/dashboard/project/zcztvberuihphqklhjsr/database/backups/scheduled) et relever uniquement **statut final, date UTC et ID/horodatage non sensible** d'une sauvegarde terminée. Si aucune sauvegarde n'apparaît juste après l'upgrade, ne pas affirmer qu'elle existe. Cette vérification ne lance aucune restauration ni écriture, et ne peut actuellement pas être effectuée par le connecteur Supabase disponible dans ChatGPT. Même après un backup présent, exiger une restauration **isolée** et la copie des octets Storage avant GO.
 
 ## 1. Préparer le poste de confiance (hors GitHub, hors chat)
 

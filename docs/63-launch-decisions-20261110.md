@@ -6,7 +6,7 @@ Ces choix n'établissent aucune immatriculation, certification, souscription, d�
 | Sujet | Décision | Effet en code / exploitation |
 | --- | --- | --- |
 | Exploitant | Entrepreneur individuel au régime micro-entreprise en France | Dossier EI / micro ; attendre immatriculation réelle, RNE, SIREN/SIRET, identité/adresse, activité déclarée, revue fiscalité et vente B2B/B2C. Ne pas afficher comme déjà créé |
-| Supabase Auth | Conserver Free, accepter le risque résiduel lié à la détection native des mots de passe compromis | Refus de mots de passe faibles à l'inscription applicative, limitation anti-rafales par IP Cloudflare, politique Auth fournisseur minimale et décision de risque documentée ; ne pas annoncer la protection native active |
+| Supabase Auth (mise à jour 11/11) | Organisation passée à **Pro** (vérifiée directement par connecteur) | Vérifier et activer dans Auth la détection des mots de passe compromis maintenant éligible ; tests reset + Auth avant GO ; ne pas prétendre que l'option est déjà activée |
 | Utilisateurs historiques | Deux comptes bénéficiaires de Solo promotionnel | 30 jours gratuits depuis activation effective post-certification ; droits indépendants de Stripe et limités en base par fenêtre, pas de carte ni de renouvellement ; sélection des bénéficiaires par préflight |
 | OpenAI | Enveloppe pilote **25 USD par mois maximum visé** | Configurer projet OpenAI dédié avec Monthly spend limit 25 USD et **Enforce a hard limit**, alerte à 20 USD (80%). Le plafond est un contrôle fournisseur à vérifier, et peut être légèrement dépassé ; **aucune dépense autorisée par cette documentation seule** |
 | Commercialisation | Publique après certification complète | Pas de bêta commerciale ni de facturation live avant preuves Auth/RGPD, RGPD/CGV, tests paiement, migration cohérente, rollback et identité Stripe validée |
@@ -120,12 +120,15 @@ compte sans Stripe revient à 3/1/3, sans remise à zéro automatique du mois.
 Ne pas activer `PROMO_SOLO_ENABLED` ni `BILLING_ENABLED` sur la seule
 base d'un test local ; exiger DB/Worker réels et preuves signées.
 
-## Supabase Free : acceptation de risque sous conditions
-La fonction de protection native `Leaked Password Protection` de Supabase est **Pro+** ; elle reste absente sur Free. Le choix Free n'est **pas** une certification de sécurité ni une acceptation de toutes les attaques par mots de passe compromis.
+## Supabase Pro — changement vérifié le 11 novembre 2026
 
-Compensations préparées : nouvelle inscription application au moins 12 caractères et trois familles sur quatre, confirmation email conservée dans Supabase, limitation Cloudflare par IP hachée avant les appels Auth (30 requêtes/minute/IP partagé login+register), contrôle d'origine et réponses publiques sans secret. Les mots de passe existants restent connectables ; le reset/les méthodes directes Supabase Auth peuvent contourner la validation applicative : configurer **aussi** la politique minimale dans Supabase Auth et tester les réinitialisations. Les limitations Cloudflare ne constituent pas un détecteur de mots de passe divulgués ni une protection totale contre les proxys multiples.
+L'organisation `Mentioncheck` (`pbltrqddhyvjpneeddre`) a bien le forfait **Pro** (`tier_pro`), vérifié par le connecteur Supabase. Cette évolution remplace la décision historique d'exploitation sur Free, sans modifier les comptes ni le schéma. L'option de protection des mots de passe compromis est éligible sur Pro, mais son **activation effective et les tests de reset/connexion restent à vérifier** dans les paramètres Auth ; ne pas annoncer une protection native active sans preuve.
 
-**Décision de risque résiduel** : exploitation temporaire sur Free **acceptée par le propriétaire** ; registre des risques à revoir avant chaque lancement, avec MFA et surveillance des événements de connexion lorsque disponibles. Le lancement public reste bloqué tant que les tests de brute-force, les réglages Auth fournisseur, la limitation et la revue sécurité finale n'ont pas été attestés. En cas d'incident, suspendre les inscriptions et réévaluer l'upgrade.
+Les compensations applicatives déjà préparées sont conservées : mot de passe à l'inscription d'au moins 12 caractères et trois familles sur quatre, confirmation email, limitation des rafales à l'entrée, contrôle d'origine, réponses sans secret. Les réglages Supabase Auth du fournisseur restent nécessaires et la prévention par IP ne remplace pas la détection des secrets divulgués.
+
+**Sauvegardes :** Pro prévoit les sauvegardes PostgreSQL quotidiennes et 7 jours de rétention. **Le forfait est confirmé, pas la présence d'un premier snapshot.** Vérifier l'horodatage d'un backup terminé sur le [Dashboard Production](https://supabase.com/dashboard/project/zcztvberuihphqklhjsr/database/backups/scheduled). Un backup du fournisseur ne démontre pas à lui seul une restauration dans une base isolée ; la procédure de [copie privée hors site](64-production-private-backup.md) reste disponible. Les binaires Supabase Storage ne sont pas inclus dans les sauvegardes de la base. **Aucune restauration sur Production pour faire un test.**
+
+Le GO reste suspendu aux preuves Auth, RLS, restauration isolée de données PostgreSQL, sauvegarde des objets Storage, RGPD, quotas et décision commerciale.
 
 ## Budget IA piloté sans promesse de plafond absolu
 - Projet API OpenAI dédié à MentionCheck : limite mensuelle **25 USD**, alerte **20 USD**, **Enforce a hard limit** activé par le propriétaire du projet (preuve de capture non sensible). Surveiller le montant réel de facturation, pas seulement l'estimation `cost_usd` de MentionCheck.
@@ -134,7 +137,7 @@ Compensations préparées : nouvelle inscription application au moins 12 caract�
 
 ## Gate public : liste minimale à cocher
 - [ ] Formalités EI micro faites via le guichet unique ; SIREN/SIRET reçu ; revue B2C/B2B, TVA, facturation et mentions légales/CGV/RGPD publiées.
-- [ ] Auth Supabase Free : paramètres du fournisseur vérifiés, test de reset, MFA/support, preuve d'anti-rafale et acceptation du risque résiduel signée par l'opérateur.
+- [ ] Auth Supabase Pro : vérifier et activer la protection des mots de passe compromis ; tests login/reset, MFA/support et anti-rafale, avec preuve des réglages réels.
 - [ ] Preuves E2E authentifiées staging et cible finale, RLS, contrôle des RPC/permissions, RGPD export et suppression, capacité et quotas.
 - [ ] Backup/restauration PostgreSQL adapté, rollback de **deux versions différentes**, SHA Cloudflare + CI `main` verts.
 - [ ] Migration promotion et quotas appliquée de manière coordonnée, exactement deux bénéficiaires activés pour 30 jours **au lancement**, affichage/quotas revérifiés.
