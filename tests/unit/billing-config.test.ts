@@ -50,13 +50,16 @@ describe('Commercialisation strictement fermée par défaut',()=>{
     STRIPE_LIVE_TAX_REVIEW:'approved',STRIPE_LIVE_TERMS_REVIEW:'approved',
     STRIPE_LIVE_E2E_REVIEW:'passed',
     OPENAI_PAUSED:'false',OPENAI_TEXT_ENABLED:'true',OPENAI_VISION_ENABLED:'true',OPENAI_API_KEY:'sk-proj-fixture',
-    NEXT_PUBLIC_APP_URL:'https://mentioncheck.toto-rina47501.workers.dev'};
+    NEXT_PUBLIC_APP_URL:'https://mentioncheck.app'};
   it('exige identité vérifiée, TVA, CGV, E2E et URL production avant la moindre transaction',()=>{
     for(const key of ['STRIPE_LIVE_APPROVED','STRIPE_LIVE_LEGAL_REGISTRATION',
        'STRIPE_LIVE_TAX_REVIEW','STRIPE_LIVE_TERMS_REVIEW','STRIPE_LIVE_E2E_REVIEW',
        'NEXT_PUBLIC_APP_URL'] as const) {
       expect(billingGate({...validLive,[key]:''}).enabled).toBe(false);
     }
+    expect(billingGate({...validLive,NEXT_PUBLIC_APP_URL:'https://mentioncheck.toto-rina47501.workers.dev'}).enabled).toBe(false);
+    expect(billingGate({...validLive,NEXT_PUBLIC_APP_URL:'https://www.mentioncheck.app'}).enabled).toBe(false);
+    expect(billingGate({...validLive,NEXT_PUBLIC_APP_URL:'http://mentioncheck.app'}).enabled).toBe(false);
     expect(billingGate({...validLive,STRIPE_LIVE_LEGAL_REGISTRATION:'not-a-company'}).enabled).toBe(false);
     expect(billingGate({...validLive,STRIPE_SECRET_KEY:'sk_test_wrong'}).enabled).toBe(false);
     expect(billingGate({...validLive,STRIPE_WEBHOOK_SECRET:''}).enabled).toBe(false);
