@@ -1,5 +1,12 @@
 # Reprise MentionCheck — 6 novembre 2026
 
+## État courant prioritaire (11 novembre 2026, après clone Supabase)
+
+**Source de vérité : issue #16 et PR #128 existantes (HEAD de base de preuve : `24aa6f7151571cab13489ac26cc258fcf8a3c241`).** Le clone PRA `sbquwigqlzfglukxdgau` est `ACTIVE_HEALTHY` ; **restauration PostgreSQL/Auth PASS** (13/13 sections de données/cataloque SQL concordantes), mais **aucune restauration des 13 octets-objets Storage** (**832 860 octets de métadonnées**, non des octets restaurés). **P0-B PARTIAL / Storage BLOCKED.** Ne pas relancer de clone payant ou de prototypes Docker/Cloudflare, ne pas confondre Storage SQL avec fichiers. Pour l'exercice Storage, utiliser **S3 privé Supabase sur un hôte de confiance** avec SHA-256 du contenu et contrôle de suppression. Ce mécanisme nécessite des secrets/runtime non fournis au connecteur. Voir [docs/64](docs/64-production-private-backup.md).
+
+CI/recettes SHA avant cette actualisation documentaire : [CI #43050141101](https://github.com/totorina47501-wq/Project3/actions/runs/43050141101), [Auth #43050125348](https://github.com/totorina47501-wq/Project3/actions/runs/43050125348), [Studio #43050125205](https://github.com/totorina47501-wq/Project3/actions/runs/43050125205) = **SUCCESS**. Préserver les 2 promotions Solo historiques, facturation Stripe Live OFF, Production sans mutation, PR draft, #16 ouverte. Les passages ci-dessous représentent **des snapshots antérieurs** et ne doivent pas contredire cette entrée.
+
+
 ## Point de reprise vérifié — 11 novembre 2026 (audit Task Force, sans changement applicatif)
 
 - GitHub `main` : `527e45aa98a9267afb4ea78896dbd51495411e6d`, jobs CI `quality` et média SUCCESS ; PR #128 maintenue **draft**, SHA d'audit `b10999e4af8d776e44f8af89cade105a91f69ddf`, [CI #43009448934](https://github.com/totorina47501-wq/Project3/actions/runs/43009448934) SUCCESS et [Auth staging #43009439812](https://github.com/totorina47501-wq/Project3/actions/runs/43009439812) SUCCESS. Preview Cloudflare SUCCESS uniquement ; SHA servi par Worker Production non attesté.
