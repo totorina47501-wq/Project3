@@ -611,7 +611,7 @@
         "PROMO_SOLO_ENABLED reste false tant que la nouvelle table n'est pas présente et les tests d'accès authentifiés ne sont pas passés.",
         "PR #128 : bridge pré-GO activation_pending pour 2 profils historiques, Solo 30/5/20 sans lancer le compteur 30 jours ; preuve SQL PGlite, application staging nécessaire, aucune mutation production.",
         "Staging : 3 migrations (quotas, promotion, bridge) présentes et recettes authentifiées/CI #128 SUCCESS au SHA b10999e4. Production : aucune de ces 3 migrations, 2 bénéficiaires historiques sans abonnement. Restauration complète préalable NON prouvée, cutover atomique INTERDIT avant certificat et autorisation.",
-        "PR #128 : le script privé existant ajoute --verify-restore (Docker PG17 éphémère sans réseau, restauration SQL avec agrégats et historique, CI refuse toute donnée réelle). Restauration Production réelle et octets Storage NON certifiés ; voir docs/64-production-private-backup.md."
+        "P0-B : essais Docker/MediaRunner/Storage local de la PR #128 retirés ; procédure Supabase Pro « Restore to a New Project » retenue, avec restitution indépendante des octets Storage. Aucun restore réel prouvé, aucun GO Production. Voir docs/64-production-private-backup.md."
       ]
     }
   ]

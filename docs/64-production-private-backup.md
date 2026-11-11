@@ -1,202 +1,49 @@
-# MentionCheck — sauvegarde PostgreSQL Production privée et restauration isolée
+# MentionCheck — PRA Production : restauration native Supabase (projet isolé)
 
-**Statut : SUPABASE PRO CONFIRMÉ ; SNAPSHOTS PHYSICAL VISIBLES DANS LE DASHBOARD LE 11/11 ; RESTAURATION ISOLÉE NON VALIDÉE ; EXPORT PRIVÉ PRODUCTION NON RÉALISÉ.** Seul le propriétaire d'un poste de confiance avec le mot de passe PostgreSQL peut exécuter cette procédure. Aucune sauvegarde réelle ne doit être communiquée dans ChatGPT, commitée dans GitHub, envoyée dans les logs CI ou copiée vers Supabase Staging.
+**Décision technique (11 novembre 2026) :** utiliser exclusivement la fonction officielle **Restore to a new project** à partir d'un snapshot PHYSICAL Supabase Pro pour la **base PostgreSQL/Auth**. Les essais expérimentaux de dump local Docker/age, l'exécution PRA sur Cloudflare MediaRunner et la CLI privée Storage sont **abandonnés et retirés de la PR #128**. Les procédures opérationnelles de restauration de schéma synthétique **staging** et de rollback logiciel restent intactes.
 
-## Périmètre vérifié le 11 novembre 2026
+**Statut : préparation / BLOCKED.** Aucun nouveau projet créé, aucun snapshot restauré, aucun objet Storage binaire récupéré sur une destination indépendante. La PR #128 reste draft et l'issue #16 ouverte. Une sauvegarde fournisseur visible ou une CI verte ne suffit pas à certifier la restauration réelle.
 
-- Supabase **Production** : projet `zcztvberuihphqklhjsr`, PostgreSQL **17.11**, organisation Supabase **Pro** depuis le 11 novembre 2026 (**forfait vérifié via connecteur Supabase**). 2 comptes Auth, 2 profils app, 2 lignes de quotas mensuels, 0 souscription Stripe, 13 objets Storage, 3 buckets ; taille PostgreSQL 14 Mo lors du préflight en lecture seule.
-- Supabase **Staging** : projet `ukvgnkxgzyhswgpnvyzz` ; **ne jamais** y importer ni restaurer une sauvegarde production, même temporairement.
-- Le plan **Pro** fournit des sauvegardes automatiques PostgreSQL quotidiennes (7 jours de rétention), **et des sauvegardes PHYSICAL sont désormais visibles sur la capture transmise par l'exploitant le 11/11/2026** : le connecteur Supabase ne permet toujours pas de les lister ni de démontrer leur restauration. Vérifier un backup terminé et sa date dans le [Dashboard Backups Production](https://supabase.com/dashboard/project/zcztvberuihphqklhjsr/database/backups/scheduled). L'export privé CLI reste recommandé pour un secours hors site (rôles + schéma + données). Les **octets des objets Storage ne sont pas inclus** : backup et restauration séparée des 13 objets. La certification de restauration complète reste **BLOCKED** jusqu'aux preuves réelles, et non seulement au passage sur Pro.
-- Le script préparé dans la PR #128 est `scripts/recette/production-private-backup.sh`. **Aucun workflow GitHub n'exécute ce script**, et celui-ci interdit volontairement GitHub Actions/CI.
-- Documentation fournisseur : [Supabase Backups](https://supabase.com/docs/guides/platform/backups) et [CLI Backup/Restore](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore).
+## 1. Protection déjà en place et périmètre
 
-## Inventaire sauvegardes fournisseur — preuve visuelle du 11/11/2026
+- **Source :** `zcztvberuihphqklhjsr` (MentionCheck Production, Supabase Pro, PostgreSQL 17.11, région `eu-central-1`). Deux comptes Auth et profils, deux lignes de quotas, 19 migrations, 28 tables publiques toutes RLS, 13 objets Storage (832 860 octets), trois buckets privés, cinq enregistrements médias SHA-256. Ces chiffres datent d'un relevé **en lecture seule du 11/11/2026** ; les recalculer au moment de l'exercice.
+- **Staging :** `ukvgnkxgzyhswgpnvyzz`, version applicative différente, zéro compte client / fichier lors du relevé. **Ne jamais importer un snapshot Production en Staging.**
+- **Snapshots fournisseur :** capture exploitant montrant des sauvegardes PHYSICAL le 11/11/2026 à 05:19:11 UTC et le 10/11/2026 à 05:19:32 UTC. Vérifier un snapshot fini dans le Dashboard avant de démarrer. Les sauvegardes Supabase Pro sont quotidiennes, avec **7 jours** de rétention selon la documentation officielle.
+- **Budget :** le connecteur Supabase renvoie un coût de base de **10 USD/mois pour un projet additionnel** dans l'organisation actuelle. **Ce devis n'est pas le prix final du clone** : Supabase reproduit aussi les ressources et affiche le montant effectif avant validation. Aucune dépense n'est déclenchée sans confirmation explicite du devis.
+- **Confidentialité :** les données personnelles restent chez le même fournisseur et dans la région source. Il s'agit néanmoins d'une **nouvelle copie de données réelles** nécessitant accès restreint, durée de conservation définie et nettoyage. Ne jamais publier les noms, chemins Storage, identifiants clients, tokens, logs SQL ni contenu dans ChatGPT/GitHub/CI.
 
-**Preuve visuelle fournie par l'exploitant le 11/11/2026 à 12:05 (Europe/Paris) :** l'onglet Supabase Production `Database Backups > Scheduled backups` liste des snapshots **PHYSICAL** datés du **11/11/2026 à 05:19:11 UTC** et du **10/11/2026 à 05:19:32 UTC**, ainsi que plusieurs jours antérieurs ; un bouton `Restore` apparaît sur les entrées. Cette preuve confirme la **présence dans le Dashboard** de sauvegardes physiques accessibles à la restauration. Elle ne prouve ni une restauration réussie, ni l'intégrité complète du contenu, ni une protection des octets Storage. Aucune restauration production n'a été lancée.
+Références officielles : [Restore to a New Project](https://supabase.com/docs/guides/platform/clone-project), [Database Backups](https://supabase.com/docs/guides/platform/backups).
 
-La méthode officielle [Restore to a new project](https://supabase.com/docs/guides/platform/clone-project) crée un projet indépendant **avec frais mensuels supplémentaires** et copie les données PostgreSQL, mais pas les octets Storage. Aucun clonage ne doit être lancé sans revue du montant annoncé et autorisation explicite. Cette copie ne doit jamais être confondue avec un test sur le projet Production ; arrêter les cron/webhooks/connexions externes sur la copie avant tout essai. **Le jalon `backup_present` est documenté ; `isolated_restore_verified` reste non validé.**
+## 2. Procédure opérateur : snapshot Production vers projet distinct
 
-## Contrôle immédiat de la sauvegarde fournisseur Pro
+1. Sur le **projet source Production**, ouvrir [Database → Backups → Restore to a New Project](https://supabase.com/dashboard/project/zcztvberuihphqklhjsr/database/backups/restore-to-new-project). **Ne pas utiliser « Restore » en place** dans les sauvegardes du projet source, ni le connecteur `restore_project(project_id)` dont la cible est le projet lui-même.
+2. Choisir **un snapshot PHYSICAL Production existant**, noter uniquement l'horodatage UTC et son état terminé. Le connecteur ChatGPT actuel ne fournit pas le listing natif de ces snapshots ; ne pas inventer de backup ID.
+3. Lire le **coût chiffré affiché avant création** ; vérifier qu'il est accepté et que le nouveau projet restera en `eu-central-1`. Le nom doit identifier un exercice PRA isolé, jamais le projet ou le domaine réel.
+4. Avant de permettre des connexions clientes, restreindre l'accès au clone. **Toute tâche PostgreSQL, extension, cron, webhook, pg_net, fonction ou connexion sortante susceptible de produire un effet externe doit être identifiée et désactivée dès que la copie est accessible.** La restauration est une copie réelle, pas un environnement synthétique.
+5. Déclencher une seule restauration vers le **nouveau projet** par le Dashboard. Vérifier son statut final et noter le **nouveau project_ref**. Le serveur source, les deux clients Solo historiques et les quotas Production ne doivent subir **aucune écriture**.
+6. Exécuter seulement des requêtes **agrégées en lecture seule** sur le clone : PostgreSQL 17, comptes `auth.users`, profils, quotas, migrations, tables/contraintes/fonctions, politiques et RLS. Comparer à l'état **de la source lors du snapshot** et non seulement à l'état courant si les données ont changé. Vérifier qu'aucune promotion Solo ni abonnement n'a été déclenché.
+7. Préparer un compte de preuve minimal et consigner dans **l'issue #16 existante** : date, backup UTC, project_ref de l'exercice (si approprié), comparaison des comptes/catalogues, PASS/FAIL et tout avertissement sans données personnelles. Le clone n'est pas un environnement commercial.
+8. **Ne pas fermer l'issue** avant l'exercice Storage indépendant, les points Auth/RGPD et les autres portes de lancement. Décider explicitement de la suppression du clone après les preuves, puis vérifier sa disparition ; ne pas laisser une copie de production facturée indéfiniment.
 
-Ouvrir [Database → Backups → Scheduled](https://supabase.com/dashboard/project/zcztvberuihphqklhjsr/database/backups/scheduled) et relever uniquement **statut final, date UTC et ID/horodatage non sensible** d'une sauvegarde terminée. Si aucune sauvegarde n'apparaît juste après l'upgrade, ne pas affirmer qu'elle existe. Cette vérification ne lance aucune restauration ni écriture, et ne peut actuellement pas être effectuée par le connecteur Supabase disponible dans ChatGPT. Même après un backup présent, exiger une restauration **isolée** et la copie des octets Storage avant GO.
+**Limites officielles de la duplication :** la base et les comptes Auth peuvent être restaurés, mais **pas les octets des objets Storage, ni les réglages Auth/Edge Functions/API keys/Realtimes/services** sans vérification et reconfiguration indépendantes. Les extensions et tâches SQL dupliquées peuvent aussi initier des appels externes ; il faut les neutraliser.
 
-## 1. Préparer le poste de confiance (hors GitHub, hors chat)
+## 3. Porte indépendante Supabase Storage (13 fichiers au relevé)
 
-Installer **Supabase CLI**, **Docker local**, **age + age-keygen**, **Node.js**, `tar` et `sha256sum`. Inspecter les commandes avec `supabase db dump --help` et `docker context inspect default`. Le disque contenant les fichiers SQL temporaires doit être **chiffré** ; sinon **ne pas lancer l'export**. Les fichiers SQL en clair sont détruits du répertoire temporaire en sortie de script, mais l'effacement sécurisé de blocs SSD n'est pas garanti.
+La restauration PostgreSQL PHYSICAL **n'est pas** une restauration des médias. Réaliser une procédure opérateur **distincte** au moyen des APIs Storage privées officielles : inventaire exact des buckets/objets, export chiffré vers un espace privé contrôlé, puis **upload de tous les octets** vers un Storage de recette indépendant avec service_role exclusivement côté serveur et sans exposition publique. Vérifier la liste complète, les tailles et SHA-256 individuels des octets source et récupérés, les contrôles d'accès des buckets, la cohérence des chemins et les politiques RLS.
 
-Créer la clé privée `age` sur ce poste, la sauvegarder **hors ligne séparément** et ne jamais la déposer dans la base, le dépôt ou un service de chat :
+**Ne pas coder un nouveau script de copie Client/Storage tant que le service de destination, la méthode privée de transfert, la gestion des secrets et la politique de rétention ne sont pas approuvés.** Aucune donnée réelle ne passe par les workflows GitHub, les conteneurs média ou Staging. Selon le mode de duplication du fournisseur, les métadonnées Storage dans le clone peuvent différer : les inspecter avant toute opération, ne jamais forcer un overwrite/désynchroniser les métadonnées.
 
-```sh
-mkdir -p "$HOME/.local/share/mentioncheck-secret"
-chmod 700 "$HOME/.local/share/mentioncheck-secret"
-age-keygen -o "$HOME/.local/share/mentioncheck-secret/backup-age-key.txt"
-chmod 600 "$HOME/.local/share/mentioncheck-secret/backup-age-key.txt"
-mkdir -p "$HOME/mentioncheck-encrypted-backups" "$HOME/mentioncheck-private-work"
-chmod 700 "$HOME/mentioncheck-encrypted-backups" "$HOME/mentioncheck-private-work"
-```
+Preuve exigée : `SQL_RESTORE_VERIFIED=true` seulement **après exercice réel** sur un projet indépendant ; `STORAGE_BINARY_RESTORE_VERIFIED=true` seulement **après récupération et relecture des octets** dans une destination indépendante. En cas d'échec sur une des deux portes : **P0-B BLOCKED**, pas de GO commercial.
 
-**Important :** ces deux dossiers ne doivent pas être situés dans un dépôt Git, et le dossier de travail doit être sur un **volume local chiffré**. Si l'identité `age` existe déjà, la conserver : ne pas générer une nouvelle clé qui rendrait les archives antérieures illisibles.
+## 4. Autres portes à préserver
 
-## 2. Exporter avec une connexion production en TLS (lecture seule logique)
+- **P0-C Solo :** ne pas appliquer les migrations en Production ni activer le délai promotionnel 30 jours des **deux comptes existants** avant le GO explicite.
+- **Sécurité :** protection des mots de passe compromis actuellement signalée désactivée dans Supabase Auth ; cinq fonctions `SECURITY DEFINER` accessibles à `authenticated` à examiner et six tables RLS sans policy (fermées par défaut) à vérifier.
+- **RGPD :** vérifier l'effacement réel de la copie après test, la rétention des snapshots, la suppression des fichiers de récupération et les effets fournisseurs ; un test synthétique staging n'y suffit pas.
+- **Commercial :** pas de paiement Stripe Live, pas de migration Production, pas de déploiement Worker et pas d'appel API OpenAI payant dans le seul cadre du PRA.
 
-Sur le Dashboard Supabase Production, **Connect** permet de récupérer le DSN PostgreSQL direct ou Session pooler : [projet de production](https://supabase.com/dashboard/project/zcztvberuihphqklhjsr). Le mot de passe de connexion est un secret de base PostgreSQL, **pas** la clé `sb_secret_`. Ne pas envoyer le DSN ici. Le script refuse un DSN staging, un pooler transactionnel 6543, tout DSN hors production ou sans `sslmode=require`.
+## 5. Historique des essais abandonnés
 
-Exécuter **depuis le poste de confiance** (le shell doit déjà disposer d'une URL de production remplie en privé) :
+Retirés de la PR #128 : `production-private-backup.sh`, `production-private-storage.mjs`, `production-private-backup.test.ts`, `pra-storage.mjs`, `pra-storage-run.mjs`, `pra-storage.test.mjs`. Aucun de ces composants n'était sur `main` ni activé comme service en Production. Les anciens essais n'ont **jamais** restauré la Production ou les 13 objets réels ; les anciennes preuves restent dans l'historique de l'issue #16, mais ne constituent plus la procédure recommandée.
 
-```sh
-export MC_BACKUP_DIR="$HOME/mentioncheck-encrypted-backups"
-export MC_BACKUP_WORKDIR="$HOME/mentioncheck-private-work"
-export MC_BACKUP_AGE_IDENTITY="$HOME/.local/share/mentioncheck-secret/backup-age-key.txt"
-
-# Renseigner MENTIONCHECK_PROD_POSTGRES_URL en privé depuis Supabase Connect,
-# avec sslmode=require (ne jamais l'écrire dans Git, chat ou historique shell).
-read -rs -p "URL PostgreSQL Production (TLS): " MENTIONCHECK_PROD_POSTGRES_URL
-printf '\n'
-export MENTIONCHECK_PROD_POSTGRES_URL
-bash scripts/recette/production-private-backup.sh --backup
-unset MENTIONCHECK_PROD_POSTGRES_URL
-```
-
-Le script utilise la **CLI Supabase officielle** pour exporter les rôles, le schéma, les données et l'historique des migrations ; chiffre une archive avec `age` ; vérifie qu'elle peut être déchiffrée et que les octets correspondent ; ne conserve que `*.tar.age` et son SHA-256. Aucun chemin de sortie ne doit pointer dans Git. L'intégrité cryptographique **ne prouve pas** la restauration SQL : la prochaine étape est obligatoire.
-
-## 3. Restaurer automatiquement dans Docker éphémère (recommandé)
-
-**Nouvelle capacité dans la PR #128 :** le script **existant** `scripts/recette/production-private-backup.sh` possède les deux modes `--backup` et `--verify-restore`. Le premier produit désormais **cinq fichiers** SQL (rôles, schéma, données, schéma d'historique des migrations et historique) au sein d'une archive chiffrée `age`. Le second vérifie sur une base PostgreSQL **Supabase PG17** éphémère, sur le **seul ordinateur privé** de l'opérateur. Pas de nouveau projet Supabase, pas de GitHub Actions avec données clients, pas de R2 requis.
-
-Pré-requis : volume **hôte chiffré**, Docker **local** avec contexte `default`, image `supabase/postgres:17.6.1.084` téléchargée **manuellement** après revue de provenance ; elle est ensuite utilisée avec `--pull=never`. L'image est un laboratoire de compatibilité PostgreSQL 17, **pas une copie de tous les services Auth/Storage/Edge de Supabase**. En cas de divergence de version/extension, le script échoue (aucun contournement des erreurs). Prévoir au moins 1 GiB de mémoire temporaire pour `PGDATA` et de la RAM supplémentaire pour le service.
-
-Depuis un shell sur cet ordinateur, **après une sauvegarde privée réelle avec `--backup`**, et après avoir contrôlé les totaux source à la même date de capture (SQL lecture seule, **pas d'identifiants personnels**) :
-
-```bash
-# Première fois seulement, sur machine privée : inspecter et récupérer l'image versionnée.
-docker pull supabase/postgres:17.6.1.084
-
-export MC_BACKUP_WORKDIR="$HOME/mentioncheck-private-work"
-export MC_BACKUP_AGE_IDENTITY="$HOME/.local/share/mentioncheck-secret/backup-age-key.txt"
-export MC_ENCRYPTED_ARCHIVE="/chemin/prive/vers/la-sauvegarde.tar.age"
-
-# Renseigner les valeurs AGRÉGÉES relevées sur la Production lors du backup.
-# Valeurs 2/2/2/13 : EXEMPLE du dernier préflight (11/11), à revalider avant usage.
-export MC_EXPECT_AUTH_USERS=2
-export MC_EXPECT_APP_USERS=2
-export MC_EXPECT_QUOTA_ROWS=2
-export MC_EXPECT_STORAGE_METADATA=13
-
-# RESTORE DOCKER UNIQUEMENT ; aucune URL de base distante dans l'environnement.
-unset MENTIONCHECK_PROD_POSTGRES_URL MENTIONCHECK_STAGING_POSTGRES_URL
-bash scripts/recette/production-private-backup.sh --verify-restore
-```
-
-**Barrières techniques :** le script refuse les runners CI, le Docker distant, les fichiers dans Git, toute URL PostgreSQL distante et les clés lisibles par d'autres utilisateurs. Il vérifie l'empreinte SHA-256 du chiffré et la liste stricte des fichiers de l'archive ; il crée un conteneur **sans réseau externe, sans ports publiés, sans bind mount hôte**, avec `PGDATA` sur **tmpfs**, exécute la restauration SQL transactionnelle avec `ON_ERROR_STOP=1`, puis teste les quatre totaux attendus, la présence des tables, RLS, policies, fonctions, contraintes, extensions et historique. `trap` détruit le conteneur et le répertoire SQL temporaire à la sortie (un disque chiffré est obligatoire ; l'effacement des blocs SSD n'est pas prouvé).
-
-**Preuve possible :** marqueur `MC_LOGICAL_DOCKER_RESTORE_VERIFIED` uniquement si toutes ces conditions passent ; **ne pas publier les logs SQL ni l'archive**. La preuve locale ne constitue pas une restauration des sauvegardes *physical* fournisseur. Le test ne copie pas non plus les octets Supabase Storage : le second marqueur est **`STORAGE_OBJECT_BYTES_NOT_RESTORED`**. **Certification PRA complète = BLOCKED** jusqu'à export, déchiffrement et restauration des 13 fichiers avec comparaison SHA-256 dans un service Storage isolé, et vérification explicite des composants Supabase non testés (Auth fonctionnel, éventuelles clés/chiffrement Vault, cron/webhooks).
-
-**Aucune exécution réelle de ce mode sur les données Production depuis ChatGPT** : le connecteur donne accès à des agrégats SQL, pas à un disque privé chiffré ni à une clé `age`. Le contrôle CI pour cette fonctionnalité est **strictement hors ligne** (syntaxe/refus de contextes interdits), pas une simulation présentée comme restauration réelle.
-
-### Méthode manuelle historique — option de dépannage (non attestée)
-
-
-
-Déchiffrer l'archive en mémoire / volume local chiffré, sous répertoire `chmod 700`, et créer un projet Supabase **local neuf** avec `supabase init` puis `supabase start`, sur Docker **local** et sans accès public. La base cible doit être une instance distincte ne contenant aucune donnée importante.
-
-```sh
-# Sur le poste privé, avec chemin de l'archive validée.
-mkdir -p "$HOME/mentioncheck-private-work/restore"
-chmod 700 "$HOME/mentioncheck-private-work/restore"
-age -d -i "$MC_BACKUP_AGE_IDENTITY" "$MC_ENCRYPTED_ARCHIVE" \
-  | tar -x -C "$HOME/mentioncheck-private-work/restore"
-# Instancier le Supabase local jetable dans un autre dossier :
-mkdir -p "$HOME/mentioncheck-private-work/local-supabase"
-(cd "$HOME/mentioncheck-private-work/local-supabase" && supabase init --yes && supabase start)
-```
-
-Après le démarrage de Supabase local, utiliser la commande suivante **uniquement** sur le port local `54322` (aucun DSN Production ou staging dans cette étape) :
-
-```sh
-export MC_RESTORE_DIR="$HOME/mentioncheck-private-work/restore"
-export MC_LOCAL_POSTGRES="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
-psql "$MC_LOCAL_POSTGRES" --single-transaction --set ON_ERROR_STOP=1 \
-  --file "$MC_RESTORE_DIR/roles.sql" \
-  --file "$MC_RESTORE_DIR/schema.sql" \
-  --command 'SET session_replication_role = replica' \
-  --file "$MC_RESTORE_DIR/data.sql"
-# Restaurer l'historique seulement si le schéma supabase_migrations cible
-# existe et l'opération est compatible ; ne pas écraser des lignes existantes.
-psql "$MC_LOCAL_POSTGRES" --set ON_ERROR_STOP=1 \
-  -c "select count(*) from auth.users;" \
-  -c "select count(*) from public.users;" \
-  -c "select count(*) from public.usage_monthly;" \
-  -c "select count(*) from storage.objects;"
-```
-
-En cas de conflit sur un rôle ou une table préinstallée, le test **échoue** : ne pas supprimer d'objet distant, ni contourner `ON_ERROR_STOP`. Le SQL de restauration local et le versionnement du catalogue doivent être réconciliés avant de pouvoir annoncer une sauvegarde restaurable.
-
-Sur le **seul PostgreSQL LOCAL**, exécuter la restauration documentée par Supabase (rôles → schéma → données) avec `psql --single-transaction --set ON_ERROR_STOP=1`; la session des données nécessite `SET session_replication_role=replica` pour éviter les triggers de doublon. Si la restauration échoue à cause d'un rôle, d'une extension, d'une table gérée Auth ou d'une incompatibilité de version PG17, **ne pas modifier production** ni ignorer l'erreur. Corriger seulement l'environnement local jetable et consigner le résultat. Ne jamais utiliser les commandes `restore_project`, `db reset`, `db push` ou `pg_restore --clean` vers le projet distant.
-
-Vérifications attendues **dans la base restaurée locale** : `auth.users` = 2, `public.users` = 2, `usage_monthly` = 2, `subscriptions` = 0, table de promotions absente avant cutover. Comparer les comptes agrégés avec un nouveau préflight source en lecture seule, sans écrire d'identifiants, emails, secrets ou dump dans les logs. Vérifier tables, fonctions, RLS, contraintes, extensions et migrations restaurées. Détruire ensuite tout le laboratoire local et les fichiers temporaires en clair, en gardant seulement le chiffré et la clé privée hors site.
-
-> **Pas de déclaration de PASS avant restauration réellement exécutée et comparaison.** La CI des tests synthétiques déjà existante ne constitue pas une sauvegarde de production.
-
-## 4. Supabase Storage (13 objets) — porte séparée obligatoire
-
-Le dump PostgreSQL exporte les métadonnées dans `storage.objects`, **pas les octets binaires**. L'opérateur doit réaliser un inventaire privé des 13 chemins dans les 3 buckets, exporter chaque objet avec une méthode Storage API sûre sur le même poste privé, conserver les chemins et empreintes SHA-256 dans une archive chiffrée séparée, puis restaurer les objets dans un environnement local isolé et comparer leurs empreintes. Ne pas publier le contenu des médias ni leurs noms clients.
-
-**Si les objets ne sont pas protégés et restaurables, la certification sauvegarde complète reste PARTIAL**, même avec un PostgreSQL restauré.
-
-## 5. Preuve de clôture P0-C / issue #16
-
-Ne publier dans [l'issue #16](https://github.com/totorina47501-wq/Project3/issues/16) **que** les métadonnées non sensibles : date UTC, durée, versions CLI/Postgres, SHA du code, checksum de l'archive chiffrée, nombre de tables, counts agrégés, verdict restauré PASS/FAIL, couverture Storage, emplacement privé de la copie hors site (sans révéler son chemin si personnel). Ne jamais publier SQL, données, URL PostgreSQL, mot de passe ou clé `age`.
-
-**Ensuite seulement** : préparer le cutover **transactionnel unique** quotas + promotions + bridge + deux attributions `activation_pending` en production, avec rollback. Les 30 jours de Solo ne commenceront qu'au **GO commercial explicite** ; `BILLING_ENABLED=false` et Stripe Live restent désactivés.
-
-## Relevé opérationnel complémentaire — 11 novembre 2026
-
-- **État Production relu par SQL en lecture seule :** 2 comptes Auth, 2 profils, 2 lignes de quota, 0 abonnement Stripe actif, **13 objets Storage dans 3 buckets**, `promotional_solo_access` absente. Staging : 0 compte/objet, table promotion présente. Aucune modification de données.
-- **Preuve backup fournisseur** : les snapshots physiques du 11/11 à 05:19:11 UTC et du 10/11 à 05:19:32 UTC sont visibles sur une capture exploitant déjà documentée. **Le connecteur Supabase ne peut pas actualiser la liste des backups** ; ne pas déclarer un nouveau snapshot vérifié par API ou une restauration PASS.
-- **Prix nouveau projet** : le connecteur Supabase `get_cost(project, org)` a renvoyé **10 USD/mois**, comme tarif de création indicative. La fonctionnalité officielle « Restore to a New Project » réplique les ressources de la source et affiche une estimation de frais propre à l'opération. **Le coût réel affiché avant confirmation doit être approuvé explicitement par l'exploitant. Aucun clone commandé ou payé.**
-- **Mécanismes externes** : le catalogue PostgreSQL de la Production indique 0 extension `pg_net` ou `pg_cron` installée au moment du contrôle. Cela ne suffit **pas** à exclure tout webhook, job, intégration serveur ou envoi sortant. Avant toute restauration indépendante, inventorier et neutraliser ces chemins sur la copie, sans laisser les données clients accéder à un service tiers.
-- **Statut** : `backup_present` documenté via capture, `isolated_restore_verified=false`, `storage_binary_restore_verified=false`. La migration Producton Solo reste bloquée ; ne pas déplacer de données vers Staging ni vers GitHub.
-
-
-## Alternative Cloudflare existante — phase lecture Storage non certifiante (11/11)
-
-Pour éviter tout nouveau projet Supabase, VPS ou abonnement, une vérification **en lecture seule** des octets Storage a été ajoutée **dans la même image `MediaRunner` existante** : `workers/media-jobs/src/pra-storage-run.mjs`. Elle est inactive par défaut, n'a aucun endpoint public et ne démarre aucun Container. Voir [docs/41-cloudflare-containers.md](41-cloudflare-containers.md#pra-privé-sur-le-mediarunner-existant--préparation-opt-in-du-11112026).
-
-Cette phase recalcule les SHA-256 de tous les fichiers accessibles et compare les 5 empreintes de `media_assets`, **sans créer de dump, copie durable ni nouvelle base**. Ce n'est pas une preuve de restauration SQL ou Storage. Docker-in-Docker n'est pas ajouté : le conteneur média tourne sous l'utilisateur non privilégié `node` et Cloudflare indique que Docker-in-Docker nécessite `root`. Un moteur PostgreSQL 17 compatible Supabase et une sauvegarde logique isolée restent nécessaires pour P0-B. Aucun outil actuel de cette session ne peut confirmer le quota Cloudflare restant ni accéder aux secrets PostgreSQL : **aucune exécution Production lancée**. Politique 0 € additionnel stricte.
-
-## Addendum PRA MediaRunner / coûts — 11 novembre 2026
-
-Une vérification directe du code montre que le mode `--verify-restore` existant est une **restauration Docker locale**, pas un restore sur Cloudflare MediaRunner. Le `Dockerfile` MediaRunner actuel ne contient ni serveur PostgreSQL 17 ni commande `age` ; le conteneur `basic` partage les ressources avec les traitements médias prioritaires. Il est interdit d'activer un nouveau process sur Production sans bilan du quota Cloudflare disponible et coordination atomique avec la file média. Une déclaration de confirmation du quota dans une variable d'environnement ne constitue pas un compteur de facturation. Aucun runtime ni conteneur n'a été déclenché.
-
-L'inventaire SQL en lecture seule du 11/11 confirme 13 objets / 832860 octets et 5 empreintes médias vérifiables, mais ne démontre **ni export indépendant des fichiers**, ni restauration des bytes Storage. Une archive de restauration doit rester chiffrée, hors Staging et hors CI. Le protocole Docker local déjà préparé est le repli sans nouvelle souscription ; il reste non exécuté sur des données de Production. **PRA intégral = BLOCKED**, même si les sauvegardes physiques Supabase Pro sont présentes.
-
-## Déblocage sans Cloudflare — archive privée Storage et récupération locale (11/11/2026)
-
-**Nouveau chemin distinct, non exécuté sur les fichiers réels :** `scripts/recette/production-private-storage.mjs` réutilise le lecteur `pra-storage.mjs`, ses trois buckets privés, son contrôle de file média, les cinq SHA existants et son inventaire strict. Il récupère les **13 octets-objets** sur un poste privé de confiance (aucun upload vers CI/GitHub/Staging), les place **uniquement en mémoire** dans une archive JSON, chiffre immédiatement avec `age` pour le disque privé, vérifie le déchiffrement, puis permet une **récupération indépendante dans des fichiers temporaires locaux** avec SHA-256 pour chaque objet. Les noms clients restent dans le chiffré ; les fichiers de restauration temporaires sont numérotés. Aucun serveur Supabase Storage indépendant n'est démarré : `storageApiRestored=false`, et **cela ne certifie pas le PRA complet**.
-
-Opérateur uniquement sur un ordinateur de confiance, **disque chiffré** et dépendances déjà installées (`node`, `npm ci`, `git`, `age`, `age-keygen`). La clé `SUPABASE_SERVICE_KEY` doit être fournie en privé, jamais dans Git/chat. Les dossiers et clé ont des permissions 0700/0600 et sont hors de tout dépôt Git. Le script refuse CI, Docker distant, PostgreSQL distant, staging et toute destination sensible; il n'utilise aucun service de paiement ni IA.
-
-```bash
-export MC_PRA_LOCAL_STORAGE_ENABLED=true
-export MC_BACKUP_DIR="$HOME/mentioncheck-encrypted-backups"
-export MC_BACKUP_WORKDIR="$HOME/mentioncheck-private-work"
-export MC_BACKUP_AGE_IDENTITY="$HOME/.local/share/mentioncheck-secret/backup-age-key.txt"
-export SUPABASE_URL="https://zcztvberuihphqklhjsr.supabase.co"
-# Renseigner SUPABASE_SERVICE_KEY via saisie privée non enregistrée dans l'historique.
-export MC_PRA_EXPECT_OBJECTS=13
-export MC_PRA_EXPECT_BYTES=832860
-export MC_PRA_EXPECT_MEDIA_HASHES=5
-node scripts/recette/production-private-storage.mjs --backup-storage-local
-# Puis sélectionner localement le fichier .json.age produit, sans le partager.
-unset SUPABASE_SERVICE_KEY SUPABASE_URL
-export MC_STORAGE_ENCRYPTED_ARCHIVE="/chemin/prive/mentioncheck-storage-...json.age"
-node scripts/recette/production-private-storage.mjs --verify-storage-restore-local
-```
-
-Les totaux 13 / 832860 / 5 doivent être **rafraîchis** à la source avant exécution. Aucun chemin, fichier, hash client, contenu média ou secret n'apparaît dans les résultats publiables. La suppression temporaire logique ne garantit pas l'effacement physique SSD ; le disque de travail doit être chiffré.
-
-**Précision de preuve :** `LOCAL_STORAGE_BYTES_RECOVERED` ne prouve qu'un replay local des octets du backup, ni le service Storage API ni une restauration PostgreSQL. Les résultats attendus du script `production-private-backup.sh --verify-restore` nécessitent séparément une vraie base PostgreSQL 17 locale et une archive de données issue de production. Aucune sauvegarde physique Pro n'a été restaurée ici. **P0-B = BLOCKED** jusqu'à exercice réel et comparaison indépendant.
-
-## Fail-closed check for managed SQL data (11 November 2026)
-
-Before encrypting any SQL archive, production-private-backup.sh now requires data COPY sections for auth.users, public.users, public.usage_monthly and storage.objects. A successful Supabase CLI exit alone is insufficient: managed schemas may be omitted depending on CLI mode/version. This is a STRUCTURAL guard, not a row-count check or a real restoration. The isolated --verify-restore must still compare all four source totals and fail if data are missing. No production extraction was performed during this change.
+**PRA full restore = BLOCKED jusqu'à preuve réelle.** Voir [issue #16](https://github.com/totorina47501-wq/Project3/issues/16) et [PR #128](https://github.com/totorina47501-wq/Project3/pull/128).

@@ -192,7 +192,7 @@ avec un filtre strict sur `userData.id`, sans transmettre l'ID Stripe.
 régression de la page Paramètres déjà présente dans la version
 Stripe Sandbox et demande une recette Auth staging répétée.
 
-Voir [procédure privée de sauvegarde/restauration Production](64-production-private-backup.md) ; aucune sauvegarde ni preuve de restauration production n'existe encore.
+Voir [plan PRA Supabase natif Production](64-production-private-backup.md) : les snapshots physiques fournisseur sont attestés, mais aucune restauration isolée de données et des octets Storage n'est encore prouvée.
 
 ## Recontrôle fournisseur — 11 novembre 2026 (lecture seule)
 

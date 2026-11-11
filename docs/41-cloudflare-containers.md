@@ -152,48 +152,7 @@ Le runner est opérationnel dans Cloudflare : ne pas demander un nouvel hôte
 ou recopier des secrets pour refaire ce raccordement. Il prépare les médias ;
 l’analyse IA vidéo et la transcription restent des développements distincts.
 
-## PRA privé sur le MediaRunner existant — préparation opt-in du 11/11/2026
+## Limite opérationnelle : restauration PRA hors MediaRunner
 
-**Pourquoi réutiliser MediaRunner :** l'image existante est déjà déployée avec un seul Container Cloudflare `basic` (0,25 vCPU, 1 GiB de RAM, 4 Go de disque, juridiction UE). Les sources `workers/media-jobs/src` sont déjà copiées dans le **Dockerfile existant**. Aucun nouveau Worker, Container binding, Dockerfile, instance, plan, route publique ni cron PRA n'est créé pour ce lot.
+Le runner média Cloudflare **reste inchangé** et réservé aux traitements médias. Les essais PRA basés sur les commandes internes du conteneur ont été retirés de la PR #128 : un MediaRunner n'est ni une instance PostgreSQL indépendante, ni un endroit sûr pour copier des données clients en production. La restauration réelle se prépare via la fonctionnalité native Supabase **Restore to a New Project** et une procédure Storage séparée. Voir [docs/64-production-private-backup.md](64-production-private-backup.md).
 
-**Livrable technique initial, sans exécution payante :**
-- `workers/media-jobs/src/pra-storage.mjs` : bibliothèque **lecture seule**. Vérification de la liste stricte des 3 buckets privés (`deal-contracts`, `verification-media`, `verification-media-derived`), parcours récursif/paginé des objets, lecture de chaque octet via Storage, comparaison des tailles et des SHA-256 enregistrés pour les `media_assets`. Max 100 objets et 16 MiB en mémoire. **Aucune écriture SQL, Storage ou filesystem.**
-- `workers/media-jobs/src/pra-storage-run.mjs --verify-storage-readback` : point d'entrée opt-in **interne au conteneur**, non relié aux routes HTTP ou alarmes. N'utilise que les secrets Supabase serveur déjà exploités par le runner média, sous réserve de leur disponibilité au moment d'une future exécution. Émet **uniquement les totaux** et le statut `PARTIAL_READBACK_ONLY`, jamais les chemins, SHA, identifiants clients ou erreurs brutes.
-- Garde-fous obligatoires : `MC_PRA_STORAGE_ENABLED=true`, `MC_PRA_INCLUDED_QUOTA_CONFIRMED=true`, cible PROD Supabase exacte, 3 totaux sources attendus non sensibles, pas de CI ni d'URL PostgreSQL distante ; aucun démarrage automatique. Les tests hors ligne réutilisent `node --test workers/media-jobs/tests/*.test.mjs` et les fixtures.
-- À la dernière lecture Supabase Production : **13 objets**, **832860 octets**, **5 médias avec SHA-256 enregistré**. Ces valeurs sont des **préconditions à relever de nouveau au moment de l'essai**, pas des constantes fiables pour un futur backup.
-
-**Commande à exécuter uniquement par mécanisme `exec()` interne sur le conteneur EXISTANT déjà actif, lorsque la file média est vide, après contrôle de la consommation Cloudflare et du budget restant (pas de route publique et aucune exécution lancée dans ce lot) :**
-
-```sh
-# Environnement côté conteneur uniquement, jamais dans un commit ou un log :
-# SUPABASE_URL et SUPABASE_SERVICE_KEY déjà fournis au runner média.
-export MC_PRA_STORAGE_ENABLED=true
-export MC_PRA_INCLUDED_QUOTA_CONFIRMED=true
-export MC_PRA_EXPECT_OBJECTS=13
-export MC_PRA_EXPECT_BYTES=832860
-export MC_PRA_EXPECT_MEDIA_HASHES=5
-node workers/media-jobs/src/pra-storage-run.mjs --verify-storage-readback
-```
-
-La commande exige confirmation **réelle** du quota disponible ; une variable n'est pas une protection de facturation technique. **Cloudflare Workers Paid facture les dépassements** : mémoire, CPU, disque, egress et Worker/DO, et le reste des quotas du compte n'est pas accessible via les connecteurs de cette discussion. Ne jamais exécuter le contrôle pour « essayer » avant vérification du compte. Références : https://developers.cloudflare.com/containers/platform/pricing/ et https://developers.cloudflare.com/containers/guides/execute-commands/ .
-
-**Distinction cruciale :** un téléchargement + contrôle SHA-256 **n'est pas** une restauration des objets dans un Storage indépendant ; cette première phase permet uniquement de prouver que les fichiers sont actuellement lisibles et cohérents. Le Dockerfile actuel n'embarque **pas PostgreSQL 17**, et l'accès au backup SQL/au secret PostgreSQL n'est pas disponible via le connecteur. Ne pas présenter cette phase comme `isolated_restore_verified` ou `storage_binary_restore_verified`. **Issue #16 reste bloquée** jusqu'à restauration locale PostgreSQL 17 et Storage sur copies isolées, sans risque de coûts additionnels. Ne pas remplacer le runtime média par un Docker-in-Docker tournant en root.
-
-**Priorité média :** le code PRA vérifie d'abord en lecture seule que `media_processing_jobs` ne contient aucun statut `queued` ou `processing`. S'il y en a un, il bloque **avant toute lecture Storage**. Ce préflight ne constitue pas une réservation atomique : toute future commande `exec()` devra également être sérialisée dans le contrôleur Cloudflare et interrompue si la file se remplit ; ne jamais lancer un PRA concurrent à un job média.
-
-## Gate de faisabilité PRA complet — 11/11/2026, après CI `84c92f26`
-
-**Verdict : préparation PARTIAL ; restauration intégrale Production BLOCKED.** Le conteneur `MediaRunner` fonctionne, mais l'image courante (Node 22 + FFmpeg, utilisateur non-root) **n'embarque ni serveur PostgreSQL 17, ni `age`**, et le script privé `production-private-backup.sh --verify-restore` utilise Docker **local seulement** (interdit dans CI et sur une machine Cloudflare distante). Ne pas prétendre qu'il suffit de lancer le script actuel par `exec()`. Un `exec()` Cloudflare exécute un processus dans un conteneur **déjà actif** : il ne crée pas un second hôte, ne fournit pas un environnement PostgreSQL, et son temps CPU/mémoire/disque peut être facturé. Source fournisseur : https://developers.cloudflare.com/containers/guides/execute-commands/ .
-
-**Aucune modification de l'image, du contrôleur, des déclencheurs, de Production ou des variables Cloudflare dans cette PR de sécurisation.** Sur le type `basic` (0,25 vCPU, 1 GiB RAM, 4 Go éphémères), lancer un serveur PostgreSQL concurrent au média ne permet pas de garantir la priorité média ni les marges mémoire. Installer PostgreSQL 17 dans l'image, transférer un dump Production et sa clé de déchiffrement, ou démarrer `MediaRunner` uniquement pour un PRA exige au préalable un mécanisme privé prouvé, un verrouillage effectif avec l'ordonnanceur média, un quota Cloudflare **restant vérifié**, une limitation cgroup/espace/temps, une preuve de purge et un test de non-régression. Aucun de ces prérequis n'est actuellement attesté ; **ne pas déclencher ce calcul**.
-
-Le contrôle Storage opt-in déjà préparé reste **lecture seule**. Il vérifie maintenant la file média en préflight, avant chaque bucket et en postflight pour refuser un PASS si un job devient visible pendant l'inventaire. Cette vérification répétée n'est **pas atomique** et ne garantit toujours pas l'absence de chevauchement : aucun lancement réel ne doit être tenté sans sérialisation côté contrôleur. Aucun objet Storage n'est restauré ni sauvegardé de façon durable. Les données Production ne doivent jamais être placées sur Staging ou un runner GitHub.
-
-Contrôle SQL Production en lecture seule (11/11) : 2 Auth, 2 profils, 2 quotas, 13 objets / 832860 octets / 3 buckets tous privés, 5 empreintes enregistrées et 0 job en file au moment de la requête. Staging : 0 Auth / 0 profil / 0 objet. C'est un inventaire, pas la preuve d'un backup ou d'une restauration. La limitation de quota Cloudflare reste inconnue via les connecteurs disponibles. Pricing : https://developers.cloudflare.com/containers/platform/pricing/ .
-
-**Voie de certification sans nouvelle infrastructure :** conserver une copie `age` sur un poste de confiance chiffré et utiliser la recette Docker local déjà prévue hors GitHub/Cloudflare pour restaurer PostgreSQL 17, puis restaurer séparément les octets des 13 objets dans un répertoire privé temporaire avec relecture SHA-256 et effacement contrôlé. Il faut confirmer matériel, accès et preuve d'exécution ; cette voie n'est pas une exécution Cloudflare et **n'est pas validée** à ce stade. Dans tous les cas, un contrôle des 5 SHA déjà persistés ne remplace pas la comparaison indépendante des 13 objets.
-
-
-## Extension hors Cloudflare pour lever la porte Storage
-
-Afin de ne **pas** démarrer MediaRunner ou consommer de temps CPU Containers, la PR #128 prépare la récupération locale indépendante de Storage : `scripts/recette/production-private-storage.mjs` (réutilise `pra-storage.mjs`, modes opt-in et archive chiffrée `age`). Ne déployer ni connecter cette CLI aux alarmes et routes du Worker. Le test CI n'emploie que des octets synthétiques, sans données personnelles. L'exercice réel exige un poste privé chiffré, une clé conservée hors Git et les droits Storage Production ; pas de promesse de 0 € si les quotas réseau sont dépassés. Détails dans `docs/64-production-private-backup.md`.

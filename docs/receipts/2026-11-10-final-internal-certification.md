@@ -88,28 +88,8 @@ Pour le GO production ultérieur : confirmer immatriculation et CGV, backup/rest
 
 **Synthèse :** P0-A rollback code staging PASS historique ; P0-B restauration Production données+Storage BLOCKED ; P0-C migration Production QUOTAS BLOCKED ; P1-D Auth/RLS staging PASS ciblé mais Auth HIBP prod BLOCKED ; P1-E RGPD synthétique PASS mais cycle client réel PARTIAL ; P1-F CI/E2E staging PASS mais runtime SHA Production et parcours commercial NOT GO. Issue #16 et PR #128 doivent rester ouvertes.
 
-## Préparation PRA Docker éphémère — lot existant #128
+## Réorientation PRA Production — décision du 11 novembre 2026
 
-Automatisation limitée au script privé déjà existant `scripts/recette/production-private-backup.sh` : nouveau mode `--verify-restore` refusant les URLs DB distantes, réseau Docker OFF, PGDATA en tmpfs, archive `age` et SHA-256 obligatoires, restauration PostgreSQL 17 + migrations et contrôles du catalogue/agrégats. Le mode `--backup` inclut désormais le schéma de l'historique des migrations, pour pouvoir tester également cette partie. Tests de refus ajoutés **au fichier Vitest existant**. Mode de test non exécuté sur données Production ; CI statique/negative prévue, aucun conteneur contenant PII démarré par GitHub Actions. **PRA = BLOCKED**, octets Storage non exportés ni restaurés ; aucun GO quotas Production. Consignes : [docs/64-production-private-backup.md](../64-production-private-backup.md).
+Les tentatives d'implémentation (Docker PostgreSQL sur poste privé, contrôle Storage MediaRunner Cloudflare et archive Storage locale) ont été **retirées de la PR #128** après constat qu'aucune n'avait permis de restaurer réellement les données Production. Leurs tests sur fixtures et les notes historiques de l'[issue #16](https://github.com/totorina47501-wq/Project3/issues/16) restent consultables **en historique uniquement** et ne sont pas revendiqués comme preuve.
 
-
-## Cloudflare MediaRunner réutilisé — préparation PRA Storage (11/11)
-
-Dans la PR #128 existante, ajout **désactivé** d'un contrôle de relecture Storage `pra-storage.mjs` + CLI `pra-storage-run.mjs`, avec tests `workers/media-jobs/tests/pra-storage.test.mjs`. Aucune route, aucun cron, aucun déclenchement de conteneur, aucun changement au worker média. Vérification du catalogue Prod par lecture SQL : 13 objets, 832860 octets, 5 médias à SHA-256 enregistré. Le contrôle n'a **pas été exécuté sur ces fichiers réels** : disponibilité du temps/container Cloudflare et secrets non vérifiée ; coût additionnel interdit. Aucun export durable ni restore PostgreSQL/Storage : P0-B BLOCKED et issue #16 reste ouverte. Détails : [docs/41-cloudflare-containers.md](../41-cloudflare-containers.md).
-
-Préflight supplémentaire : lecture de `media_processing_jobs` avec `head:true,count:exact` et refus si une tâche média est `queued` ou `processing` ; test synthétique de refus et absence de téléchargement Storage. Ce contrôle n'est pas un lock atomique et ne justifie toujours aucun lancement Live.
-
-## Reprise P0-B — contrôles anti-doublons du 11/11/2026
-
-Baseline PR #128 `84c92f26ad3d7cb59483acf32c7fde4157aec652` : GitHub Actions CI `43019676809` SUCCESS (quality + runner média), Auth Staging `43019668182` SUCCESS, Studio API Staging `43019668387` SUCCESS. Les workflows d'auto-fusion sont SKIPPED conformément à la porte de sécurité. Vérification SQL Production lecture seule : 2 Auth / 2 profils / 2 quotas, 13 objets / 832860 octets, 3 buckets privés, 5 SHA médias, 0 job média actif ; Staging 0 Auth / 0 profil / 0 objet. Aucun export de fichier, aucun appel IA, aucune mutation Production.
-
-Audit `MediaRunner` : le Dockerfile actuel n'embarque pas PG17, le script `--verify-restore` dépend de Docker local et refuse Cloudflare ; aucune donnée Production ne peut être restaurée dans une instance indépendante avec ces seuls composants déjà exécutables. La relecture Storage, après renforcement des contrôles de file média (préflight, entre buckets et postflight), reste une vérification opt-in **sans restauration**. La sérialisation avec les vrais jobs et la disponibilité du quota Cloudflare inclus ne sont pas démontrées. Aucune activation de la vérification live, aucune création de service ni dépôt de PII dans les CI. **P0-B Production = BLOCKED ; #16 reste ouverte, PR draft.** La CI du commit qui portera cet addendum doit être vérifiée séparément avant toute affirmation PASS.
-
-
-## Déblocage Storage local — nouveau chemin testé uniquement sur fixtures (11/11/2026)
-
-PR #128 : nouvelle CLI privée `scripts/recette/production-private-storage.mjs` et extension minime du lecteur Storage déjà présent pour archiver les octets dans `age`, puis les récupérer dans un répertoire local jetable avec SHA-256. Aucune route/cron/worker supplémentaire ; pas d'écriture Production ni de passage PII par CI. Le test de restitution utilise **uniquement une fixture synthétique**. Les véritables 13 objets n'ont pas encore été copiés, et le vrai PostgreSQL 17 de Production n'a toujours pas été restauré. **P0-B reste BLOCKED** ; aucune promotion Solo activée, aucun GO commercial. Voir `docs/64-production-private-backup.md` pour la recette opérateur (disque privé chiffré obligatoire).
-
-## SQL dump completeness guard — 11 November 2026
-
-PR #128 adds a fail-closed guard requiring Auth / application users / quotas / Storage metadata COPY data before an encrypted PostgreSQL archive can be created. Offline CI tests only. This prevents an absent managed schema from being mistakenly accepted, but DOES NOT demonstrate a real PostgreSQL or Storage restore. P0-B remains BLOCKED.
+**Nouvelle méthode retenue :** snapshot PHYSICAL Supabase Pro → **nouveau projet Supabase indépendant** via l'interface native, puis récupération/vérification des **octets Storage dans un service isolé distinct**. Coût de base du nouveau projet indiqué par le connecteur : 10 USD/mois, à valider sur devis définitif avant exécution. Aucune restauration réelle ni dépense déclenchée par ce nettoyage ; aucune modification Production. PR #128 draft, P0-B **BLOCKED** et certification #16 ouverte tant que les deux véritables portes de restore ne sont pas PASS. Procédure : [docs/64](../64-production-private-backup.md).

@@ -278,10 +278,8 @@ si phase=idle et les jobs sont completed. Deux incompatibilités fetch natives
 ont été reproduites et corrigées. Ne pas retester en consommant des médias
 réels ou des appels OpenAI sans nécessité.
 
-## PRA Docker privé : fonctionnalité ajoutée dans la PR #128 (11/11)
+## PRA Production — décision de simplification (11/11/2026)
 
-Le script `scripts/recette/production-private-backup.sh` conserve le mode `--backup` et offre `--verify-restore` pour un laboratoire Supabase PG17 Docker isolé, sans réseau, sur un poste privé chiffré. Tests de sécurité hors ligne dans `tests/unit/production-private-backup.test.ts`. Aucun backup Production ni clone Supabase n'a été déclenché par cette modification ; **aucune certification de restauration réelle** n'est revendiquée. Export et contrôle des octets Storage séparés requis. Instructions opérateur : `docs/64-production-private-backup.md`. Garder issue #16 ouverte, PR #128 en draft, flags Live OFF.
+Les six fichiers expérimentaux de restauration Docker locale, de récupération Storage via ordinateur et de lecture Storage dans Cloudflare MediaRunner ont été **retirés de la PR #128**, n'ayant jamais servi à une restauration réelle. Le code du runner média et les workflows existants de **rollback/staging** restent inchangés. Le chemin désormais unique pour PostgreSQL/Auth est la **restauration PHYSICAL Supabase Pro vers un nouveau projet isolé** (nouveau coût à valider), complétée séparément par une restauration effective des 13 objets Storage dans une destination isolée. Le forfait Pro et les backups fournisseur ne sont pas la preuve d'un restore réussi.
 
-## Reprise Cloudflare MediaRunner PRA — option zéro coût additionnel, 11/11
-
-Réutiliser `MediaRunner` EXISTANT : module `workers/media-jobs/src/pra-storage.mjs` et CLI `pra-storage-run.mjs`, uniquement en lecture Storage, **non déclenchés**. Le Dockerfile existant embarque ces fichiers par sa copie de sources. Aucun Worker nouveau/cron/binding/instance/image parallèle, aucune modification Production ni secret exposé. Test hors ligne dans `workers/media-jobs/tests/pra-storage.test.mjs`. La vraie restauration PostgreSQL 17 et Storage reste BLOQUÉE ; ne pas confondre relecture de fichiers et restauration. Pas de déploiement de PRA live avant vérification du quota Cloudflare sans dépassement. Voir `docs/41-cloudflare-containers.md`, `docs/64-production-private-backup.md`, issue #16.
+Voir [docs/64-production-private-backup.md](docs/64-production-private-backup.md). Maintenir PR #128 en **draft**, issue #16 **ouverte**, migrations/promotions Solo Production et Stripe Live désactivés jusqu'aux preuves.
