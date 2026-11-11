@@ -67,3 +67,8 @@ jobs:
         run: npx @opennextjs/cloudflare deploy --config wrangler.staging.jsonc -- --keep-vars
       - name: Recette HTTP Auth + fermeture Stripe + utilisateur synthétique jetable
         run: node scripts/recette/auth-staging-smoke.mjs
+      - name: Recette existante RLS/RPC A-B, Storage prive et nettoyage strict
+        env:
+          MENTIONCHECK_STAGING_SUPABASE_ANON_KEY: ${{ secrets.MENTIONCHECK_STAGING_SUPABASE_ANON_KEY }}
+          MENTIONCHECK_STAGING_SUPABASE_SERVICE_KEY: ${{ secrets.MENTIONCHECK_STAGING_SUPABASE_SERVICE_KEY }}
+        run: node scripts/recette/staging-auth-ab.mjs
