@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readPraStorageConfig,verifyPraStorageReadback,PRA_BUCKETS} from '../src/pra-storage.mjs';
 const sha=b=>createHash('sha256').update(b).digest('hex');
-function fixture({changed=false,additionalBucket=false,assets=1,busy=false}={}){
+function fixture({changed=false,additionalBucket=false,assets=1,busy=false,busyAfterProbes=0}={}){
  const original=Buffer.from('private-fixture-no-personal-data');
  const expected=sha(original);
  const calls=[];
+ let queueProbes=0;
  const bucketData={
   'verification-media':[{name:'folder',id:null,metadata:null}],
   'verification-media/folder':[{name:'original.png',id:'object1',metadata:{size:original.length}}],
@@ -31,7 +32,10 @@ function fixture({changed=false,additionalBucket=false,assets=1,busy=false}={}){
   }),
   },
   from:table=>{
-   if(table==='media_processing_jobs')return {select:()=>({in:async()=>({count:busy?1:0,error:null})})};
+   if(table==='media_processing_jobs')return {select:()=>({in:async()=>{
+    queueProbes++;
+    return {count:busy || (busyAfterProbes>0 && queueProbes>=busyAfterProbes)?1:0,error:null};
+   }})};
    assert.equal(table,'media_assets');
    return {select:()=>({range:async()=>({data:
      assets===1?[{storage_path:'folder/original.png',media_sha256:expected}]:[],
@@ -101,4 +105,17 @@ it('does not read Storage when the existing media queue has pending work',async(
    client:f.client,expectedObjects:1,expectedBytes:f.size,expectedMediaHashes:1,
  }),/MC_PRA_STORAGE_BLOCKED/);
  assert.equal(f.calls.length,0);
+});
+
+it('fails closed if media work appears after initial preflight or before success',async()=>{
+ const early=fixture({busyAfterProbes:2});
+ await assert.rejects(verifyPraStorageReadback({
+  client:early.client,expectedObjects:1,expectedBytes:early.size,expectedMediaHashes:1,
+ }),/MC_PRA_STORAGE_BLOCKED/);
+ assert(!early.calls.some(call=>call.startsWith('download:')));
+ const late=fixture({busyAfterProbes:5});
+ await assert.rejects(verifyPraStorageReadback({
+  client:late.client,expectedObjects:1,expectedBytes:late.size,expectedMediaHashes:1,
+ }),/MC_PRA_STORAGE_BLOCKED/);
+ assert(late.calls.some(call=>call.startsWith('download:')));
 });

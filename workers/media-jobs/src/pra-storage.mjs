@@ -41,17 +41,21 @@ export async function verifyPraStorageReadback({client,expectedObjects,expectedB
     if(!r || r.error) FAIL();
     return r.data;
   };
-  // Active media jobs forbid PRA: the sole Cloudflare basic instance stays reserved for media.
-  // This is a read-only preflight, not a lock; the controller must also serialize any future exec.
-  guard();
-  let queue;
-  try{
-    queue=await client.from('media_processing_jobs')
-      .select('id',{head:true,count:'exact'})
-      .in('status',['queued','processing']);
-  }catch{FAIL();}
-  guard();
-  if(!queue || queue.error || queue.count!==0) FAIL();
+  // Recheck before each bucket and before PASS. This remains a read-only
+  // observation, NOT an atomic lock against a newly enqueued media job.
+  // Future container exec must be serialized by the Cloudflare controller.
+  const assertMediaIdle=async()=>{
+    guard();
+    let queue;
+    try{
+      queue=await client.from('media_processing_jobs')
+        .select('id',{head:true,count:'exact'})
+        .in('status',['queued','processing']);
+    }catch{FAIL();}
+    guard();
+    if(!queue || queue.error || queue.count!==0) FAIL();
+  };
+  await assertMediaIdle();
 
   // Fail closed if a fourth bucket has appeared: a successful partial inventory is not proof.
   const buckets=await checked(client.storage.listBuckets());
@@ -74,6 +78,7 @@ export async function verifyPraStorageReadback({client,expectedObjects,expectedB
   let count=0,bytes=0,verifiedMediaHashes=0;
   const seen=new Set(),seenFolders=new Set();
   for(const name of PRA_BUCKETS){
+    await assertMediaIdle();
     const result=await checked(client.storage.getBucket(name));
     if(!result || result.public!==false) FAIL();
     const bucket=client.storage.from(name);
@@ -128,6 +133,7 @@ export async function verifyPraStorageReadback({client,expectedObjects,expectedB
       }
     }
   }
+  await assertMediaIdle();
   if(count!==expectedObjects || bytes!==expectedBytes ||
      verifiedMediaHashes!==expectedMediaHashes || mediaHashes.size!==0) FAIL();
   return Object.freeze({
