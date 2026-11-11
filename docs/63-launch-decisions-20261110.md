@@ -186,3 +186,5 @@ avec un filtre strict sur `userData.id`, sans transmettre l'ID Stripe.
 **Aucun GRANT, RLS ni policy n'est élargi.** Ce correctif traite une
 régression de la page Paramètres déjà présente dans la version
 Stripe Sandbox et demande une recette Auth staging répétée.
+
+Voir [procédure privée de sauvegarde/restauration Production](64-production-private-backup.md) ; aucune sauvegarde ni preuve de restauration production n'existe encore.
