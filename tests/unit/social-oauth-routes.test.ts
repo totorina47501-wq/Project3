@@ -51,8 +51,12 @@ vi.mock('@/lib/social/oauth/exchange', () => ({
   exchangeSocialOAuthCode: mocks.exchange,
   revokeSocialOAuthToken: mocks.revoke,
   OAuthProviderStageError: class extends Error {
-    constructor(public readonly stage: 'token' | 'channel') {
-      super('OAuth provider response unavailable.');
+    constructor(
+      public readonly stage: 'token' | 'channel',
+      message: string,
+      public readonly reason?: 'invalid_client' | 'invalid_grant' | 'redirect_uri_mismatch' | 'invalid_request',
+    ) {
+      super(message);
     }
   },
 }));
@@ -236,6 +240,33 @@ describe('Routes OAuth sociales', () => {
     expect(result.headers.get('location')).toContain('social_oauth=unavailable');
     expect(result.headers.get('location')).toContain('social_oauth_error=channel');
     expect(result.headers.get('location')).not.toContain('temporary-code');
+    expect(mocks.save).not.toHaveBeenCalled();
+  });
+
+  it('redirige avec un code OAuth Google autorisé sans exposer le code de connexion', async () => {
+    enableYouTube();
+    const started = await startOAuth(new Request('https://local.test/api/social-accounts/oauth/start', {
+      method: 'POST',
+      headers: { Origin: 'https://local.test', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider: 'youtube' }),
+    }));
+    const destination = new URL(
+      (await started.json() as { authorizationUrl: string }).authorizationUrl,
+    );
+    const callback = new URL(callbackPath);
+    callback.searchParams.set('state', destination.searchParams.get('state')!);
+    callback.searchParams.set('code', 'SIMULATED_GOOGLE_SECRET_CODE');
+    mocks.exchange.mockRejectedValueOnce(
+      new OAuthProviderStageError('token', 'OAuth provider request unavailable.', 'invalid_client'),
+    );
+    const result = await callbackOAuth(
+      new Request(callback),
+      { params: Promise.resolve({ provider: 'youtube' }) },
+    );
+    const location = result.headers.get('location') ?? '';
+    expect(location).toContain('social_oauth_error=token');
+    expect(location).toContain('social_oauth_reason=invalid_client');
+    expect(location).not.toContain('SIMULATED_GOOGLE_SECRET_CODE');
     expect(mocks.save).not.toHaveBeenCalled();
   });
 

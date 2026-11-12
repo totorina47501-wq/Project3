@@ -113,6 +113,30 @@ describe('Échange OAuth simulé hors ligne', () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
+  it.each(['invalid_client', 'invalid_grant', 'redirect_uri_mismatch', 'invalid_request'] as const)(
+    'classe le rejet du jeton Google %s sans révéler la réponse fournisseur',
+    async (code) => {
+      const fetcher = vi.fn(async () => response({
+        error: code,
+        error_description: 'INTERNAL_GOOGLE_DETAILS_MUST_STAY_PRIVATE',
+      }, 400));
+      await expect(exchangeSocialOAuthCode({
+        provider: 'youtube',
+        config: config('youtube'),
+        redirectUri: config('youtube').redirectUri,
+        authorizationCode: 'simulated-code',
+        codeVerifier: 'simulated-verifier',
+        fetcher: fetcher as typeof fetch,
+        now,
+      })).rejects.toMatchObject({
+        stage: 'token',
+        reason: code,
+        message: 'OAuth provider request unavailable.',
+      });
+      expect(fetcher).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it('révoque au mieux un jeton non persistant si la recherche d’identité échoue', async () => {
     const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);

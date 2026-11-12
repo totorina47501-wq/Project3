@@ -13,10 +13,25 @@ type OAuthTokenBundle = {
   expiresAt: string;
 };
 
+export type GoogleTokenErrorReason = 'invalid_client' | 'invalid_grant' | 'redirect_uri_mismatch' | 'invalid_request';
+
+class GoogleTokenResponseError extends Error {
+  constructor(public readonly reason?: GoogleTokenErrorReason) {
+    super('OAuth provider request unavailable.');
+  }
+}
+
+function safeGoogleTokenReason(value: unknown): GoogleTokenErrorReason | undefined {
+  return value === 'invalid_client' || value === 'invalid_grant' ||
+    value === 'redirect_uri_mismatch' || value === 'invalid_request'
+    ? value : undefined;
+}
+
 export class OAuthProviderStageError extends Error {
   constructor(
     public readonly stage: 'token' | 'channel',
     message: string,
+    public readonly reason?: GoogleTokenErrorReason,
   ) {
     super(message);
     this.name = 'OAuthProviderStageError';
@@ -110,7 +125,20 @@ async function requestJson(
     redirect: 'error',
     signal: AbortSignal.timeout(TOKEN_TIMEOUT_MS),
   });
-  if (!response.ok) throw new Error('OAuth provider request unavailable.');
+  if (!response.ok) {
+    // Never expose a Google response body; only allowlisted, fixed error codes.
+    if (url === socialOAuthProviders.youtube.tokenEndpoint) {
+      let reason: GoogleTokenErrorReason | undefined;
+      try {
+        const body = object(JSON.parse(await boundedResponseText(response)));
+        reason = safeGoogleTokenReason(body?.error);
+      } catch {
+        // Malformed remote response remains generic.
+      }
+      throw new GoogleTokenResponseError(reason);
+    }
+    throw new Error('OAuth provider request unavailable.');
+  }
   const text = await boundedResponseText(response);
   let parsed: unknown;
   try {
@@ -160,6 +188,9 @@ async function tokenResponse(
     return data;
   }
   if (response.error || response.error_description) {
+    if (provider === 'youtube') {
+      throw new GoogleTokenResponseError(safeGoogleTokenReason(response.error));
+    }
     throw new Error('OAuth provider request unavailable.');
   }
   return response;
@@ -236,7 +267,11 @@ export async function exchangeSocialOAuthCode(input: {
       /^OAuth provider (?:request|response) unavailable\.$/.test(error.message)
         ? error.message
         : 'OAuth provider response unavailable.';
-    throw new OAuthProviderStageError('token', safeMessage);
+    throw new OAuthProviderStageError(
+      'token',
+      safeMessage,
+      error instanceof GoogleTokenResponseError ? error.reason : undefined,
+    );
   }
   const expiresAt = new Date(
     (input.now ?? new Date()).getTime() + expiresIn * 1000,

@@ -47,7 +47,16 @@ export function SocialAccounts({initialItems,initialTotal,initialConnectedTotal=
     const query=new URLSearchParams(window.location.search);
     const outcome=query.get('social_oauth');
     const errorStage=query.get('social_oauth_error');
+    const oauthReason=query.get('social_oauth_reason');
     const oauthMessage=outcome==='connected'?'Compte connecté via OAuth.'
+      :outcome==='unavailable'&&errorStage==='token'&&oauthReason==='invalid_client'
+        ?'Google refuse le client OAuth : vérifie que SOCIAL_OAUTH_YOUTUBE_CLIENT_ID et SOCIAL_OAUTH_YOUTUBE_CLIENT_SECRET sur le Worker staging correspondent au même client dans Google Cloud.'
+      :outcome==='unavailable'&&errorStage==='token'&&oauthReason==='invalid_grant'
+        ?'Google refuse le code OAuth ou le vérificateur PKCE. Démarre une nouvelle connexion et vérifie le client et l’URI de retour configurés.'
+      :outcome==='unavailable'&&errorStage==='token'&&oauthReason==='redirect_uri_mismatch'
+        ?'Google refuse l’URI de retour : vérifie que le callback staging est identique dans Google Cloud et MentionCheck.'
+      :outcome==='unavailable'&&errorStage==='token'&&oauthReason==='invalid_request'
+        ?'Google refuse les paramètres de la requête de jeton OAuth. Vérifie le type de client Google et la configuration du staging.'
       :outcome==='unavailable'&&errorStage==='channel'
         ?'Google a autorisé la connexion, mais la chaîne YouTube n’a pas pu être récupérée. Vérifie que YouTube Data API v3 est activée et que ce compte Google possède une chaîne YouTube.'
       :outcome==='unavailable'&&errorStage==='token'

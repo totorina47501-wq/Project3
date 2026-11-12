@@ -20,6 +20,7 @@ function returnToSettings(
   result: 'connected' | 'unavailable',
   provider?: string,
   stage?: 'token' | 'channel' | 'storage',
+  reason?: 'invalid_client' | 'invalid_grant' | 'redirect_uri_mismatch' | 'invalid_request',
 ) {
   const publicOrigin = process.env.SOCIAL_OAUTH_PUBLIC_ORIGIN;
   const allowedOrigins = (process.env.SOCIAL_OAUTH_ALLOWED_ORIGINS ?? '')
@@ -48,6 +49,9 @@ function returnToSettings(
   destination.searchParams.set('social_oauth', result);
   if (provider) destination.searchParams.set('provider', provider);
   if (result === 'unavailable' && stage) destination.searchParams.set('social_oauth_error', stage);
+  if (result === 'unavailable' && stage === 'token' && reason) {
+    destination.searchParams.set('social_oauth_reason', reason);
+  }
   return new Response(null, {
     status: 303,
     headers: {
@@ -107,6 +111,7 @@ export async function GET(request: Request, context: Context) {
       'unavailable',
       provider,
       error instanceof OAuthProviderStageError ? error.stage : undefined,
+      error instanceof OAuthProviderStageError ? error.reason : undefined,
     );
   }
 }
