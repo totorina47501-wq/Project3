@@ -29,5 +29,10 @@ describe('Documents juridiques MentionCheck en prépublication', () => {
     expect(html).toContain('CNIL');
     expect(html).toContain('pas encore certifiée');
     expect(html).toContain('prépublication');
+    expect(html).toContain('180 jours');
+    expect(html).toContain('GTM-P83X0PBJ');
+    expect(html).toContain('G-JKXWT2NBWT');
+    expect(html).toContain('deux ans');
+    expect(html).toContain('transferts de données');
   });
 });

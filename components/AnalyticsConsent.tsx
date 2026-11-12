@@ -5,10 +5,35 @@ import Link from 'next/link';
 import Script from 'next/script';
 import { usePathname } from 'next/navigation';
 
-const ANALYTICS_STORAGE_KEY = 'mentioncheck.analytics-consent.v1';
+const ANALYTICS_STORAGE_KEY = 'mentioncheck.analytics-consent.v2';
+const LEGACY_ANALYTICS_STORAGE_KEY = 'mentioncheck.analytics-consent.v1';
+// Refresh both acceptance and refusal after approximately six months (CNIL guidance).
+const ANALYTICS_CONSENT_TTL_MS = 180 * 24 * 60 * 60 * 1000;
 const GOOGLE_TAG_URL = 'https://www.googletagmanager.com/gtm.js?id=GTM-P83X0PBJ';
 
 type AnalyticsChoice = 'loading' | 'undecided' | 'accepted' | 'rejected';
+
+function readStoredChoice(): 'undecided' | 'accepted' | 'rejected' {
+  try {
+    // Legacy values had no date, so their validity cannot be established.
+    window.localStorage.removeItem(LEGACY_ANALYTICS_STORAGE_KEY);
+    const raw = window.localStorage.getItem(ANALYTICS_STORAGE_KEY);
+    if (!raw) return 'undecided';
+    const stored = JSON.parse(raw) as { choice?: unknown; savedAt?: unknown };
+    if (
+      stored &&
+      (stored.choice === 'accepted' || stored.choice === 'rejected') &&
+      typeof stored.savedAt === 'number' &&
+      Number.isFinite(stored.savedAt) &&
+      stored.savedAt <= Date.now() &&
+      Date.now() - stored.savedAt < ANALYTICS_CONSENT_TTL_MS
+    ) return stored.choice;
+    window.localStorage.removeItem(ANALYTICS_STORAGE_KEY);
+  } catch {
+    // Storage can be unavailable or malformed; without a valid choice, no Google tag.
+  }
+  return 'undecided';
+}
 
 function clearGoogleAnalyticsCookies() {
   const names = document.cookie
@@ -38,20 +63,14 @@ export function AnalyticsConsent() {
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
-    let stored: string | null = null;
-    try {
-      stored = window.localStorage.getItem(ANALYTICS_STORAGE_KEY);
-    } catch {
-      // Private browsing may disable storage. No stored choice means no tracking.
-    }
-    setChoice(stored === 'accepted' || stored === 'rejected' ? stored : 'undecided');
+    setChoice(readStoredChoice());
   }, []);
 
   function select(next: 'accepted' | 'rejected') {
     const withdrawing = next === 'rejected' && choice === 'accepted';
 
     try {
-      window.localStorage.setItem(ANALYTICS_STORAGE_KEY, next);
+      window.localStorage.setItem(ANALYTICS_STORAGE_KEY, JSON.stringify({ choice: next, savedAt: Date.now() }));
     } catch {
       // Keep the choice for this page only when persistent storage is unavailable.
     }

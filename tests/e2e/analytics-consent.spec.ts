@@ -42,7 +42,12 @@ test('Google tag seulement après accord, retrait persistant', async ({ page }) 
   await page.getByRole('button', { name: 'Gérer les cookies' }).click();
   await page.getByRole('button', { name: 'Refuser les statistiques' }).click();
   await expect(page.locator('script[src*="googletagmanager.com"]')).toHaveCount(0);
-  expect(await page.evaluate(() => window.localStorage.getItem('mentioncheck.analytics-consent.v1'))).toBe('rejected');
+  const saved = await page.evaluate(() => {
+    const raw = window.localStorage.getItem('mentioncheck.analytics-consent.v2');
+    return raw ? JSON.parse(raw) as { choice: string; savedAt: number } : null;
+  });
+  expect(saved?.choice).toBe('rejected');
+  expect(saved?.savedAt).toEqual(expect.any(Number));
 });
 
 test('un visiteur sans choix peut utiliser login sans bannière bloquante', async ({ page }) => {
@@ -57,4 +62,19 @@ test('un visiteur sans choix peut utiliser login sans bannière bloquante', asyn
   await expect(page.getByRole('button', { name: 'Gérer les cookies' })).toBeVisible();
   await page.getByRole('button', { name: 'Gérer les cookies' }).click();
   await expect(page.getByRole('region', { name: 'Choix des cookies statistiques' })).toBeVisible();
+});
+
+test('un ancien accord sans date ou expiré ne charge jamais Google avant un nouveau choix', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('mentioncheck.analytics-consent.v1', 'accepted');
+    window.localStorage.setItem(
+      'mentioncheck.analytics-consent.v2',
+      JSON.stringify({ choice: 'accepted', savedAt: Date.now() - 181 * 24 * 60 * 60 * 1000 })
+    );
+  });
+  await page.goto('/');
+  await expect(page.getByRole('region', { name: 'Choix des cookies statistiques' })).toBeVisible();
+  await expect(page.locator('script[src*="googletagmanager.com"]')).toHaveCount(0);
+  expect(await page.evaluate(() => window.localStorage.getItem('mentioncheck.analytics-consent.v1'))).toBeNull();
+  expect(await page.evaluate(() => window.localStorage.getItem('mentioncheck.analytics-consent.v2'))).toBeNull();
 });
