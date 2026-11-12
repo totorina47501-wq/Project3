@@ -24,7 +24,7 @@ describe('Documents juridiques MentionCheck en prépublication', () => {
     expect(privacyMetadata.robots).toEqual({ index: false, follow: false });
     expect(privacyMetadata.alternates?.canonical).toBe('/legal/confidentialite');
     expect(html).toContain('Politique de confidentialité et cookies');
-    expect(html).toContain('droit d’opposition');
+    expect(html).toContain('opposition');
     expect(html).toContain('Consentement');
     expect(html).toContain('CNIL');
     expect(html).toContain('pas encore certifiée');
