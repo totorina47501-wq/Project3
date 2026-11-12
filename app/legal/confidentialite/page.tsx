@@ -11,8 +11,8 @@ const sections = [
   {
     "title": "Responsable du traitement et contact",
     "body": [
-      `Le service MentionCheck est exploité sous le nom déclaré ${BRAND.legalName}. SIRET communiqué par l’exploitant : ${BRAND.siret} (sans vérification de ce numéro). La forme juridique exacte, le siège publiable et le contact RGPD doivent encore être renseignés dans les mentions légales. Tant que ces informations ne sont pas publiées, cette politique demeure une version de prépublication.`,
-      "Pour exercer vos droits ou signaler un incident, utilisez le canal officiel de contact qui devra être indiqué dans les mentions légales et accessible depuis les paramètres. N'envoyez pas de données sensibles à un canal non vérifié."
+      `Le responsable du traitement est ${BRAND.legalName} (${BRAND.tradeName}), exploitant du service MentionCheck, domicilié ${BRAND.legalAddress}. SIRET : ${BRAND.siret}.`,
+      `Pour exercer vos droits ou signaler un incident relatif aux données personnelles, utilisez ${BRAND.contactEmail} ou écrivez à l'adresse indiquée ci-dessus. N'envoyez pas d'informations sensibles ou de mots de passe par e-mail.`
     ]
   },
   {
@@ -107,12 +107,12 @@ export default function Confidentialite() {
     <Link href="/" className="text-sm font-semibold text-indigo-700 underline">Retour à MentionCheck</Link>
     <header className="space-y-3">
       <h1 className="font-heading text-4xl font-bold">Politique de confidentialité et cookies</h1>
-      <p className="text-sm text-slate-600">Document de travail du 12 novembre 2026 — service MentionCheck / éditeur déclaré MentionCheckCorp</p>
+      <p className="text-sm text-slate-600">Document de travail du 12 novembre 2026 — {BRAND.legalName} ({BRAND.tradeName})</p>
     </header>
     <p role="note" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
-      <strong>Prépublication : politique non encore approuvée.</strong> Avant commercialisation, confirmer l’identité et les
-      coordonnées du responsable, le contact RGPD, les durées de conservation réelles, les contrats de sous-traitance,
-      les transferts et l’effectivité de l’effacement des données. Aucune suppression totale n’est garantie par cette version.
+      <strong>Conformité à compléter avant commercialisation :</strong> durées effectives de conservation,
+      contrats de sous-traitance, transferts de données internationaux et effectivité de l’effacement complet.
+      Aucune suppression totale n’est garantie par cette version.
     </p>
     {sections.map(section => <section key={section.title} className="space-y-3">
       <h2 className="font-heading text-xl font-bold">{section.title}</h2>
