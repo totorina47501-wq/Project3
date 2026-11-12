@@ -33,9 +33,10 @@ test('Google tag seulement après accord, retrait persistant', async ({ page }) 
   await page.goto('/');
   await expect(page.locator('script[src*="googletagmanager.com"]')).toHaveCount(0);
   await page.getByRole('button', { name: 'Autoriser les statistiques' }).click();
-  await expect(page.locator('script[src*="gtm.js?id=GTM-WQKLMJPM"]')).toHaveCount(1);
+  await expect(page.locator('script[src*="gtm.js?id=GTM-P83X0PBJ"]')).toHaveCount(1);
   await expect.poll(() => tags.length).toBe(1);
 
+  await page.goto('/legal/confidentialite');
   await page.getByRole('button', { name: 'Gérer les cookies' }).click();
   await page.getByRole('button', { name: 'Refuser les statistiques' }).click();
   await expect(page.locator('script[src*="googletagmanager.com"]')).toHaveCount(0);
@@ -46,8 +47,12 @@ test('un visiteur sans choix peut utiliser login sans bannière bloquante', asyn
   await page.goto('/login');
   await expect(page.getByRole('region', { name: 'Choix des cookies statistiques' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Se connecter' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Gérer les cookies' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Gérer les cookies' })).toHaveCount(0);
   await expect(page.locator('script[src*="googletagmanager.com"]')).toHaveCount(0);
+  await page.goto('/dashboard');
+  await expect(page.getByRole('button', { name: 'Gérer les cookies' })).toHaveCount(0);
+  await page.goto('/legal/confidentialite');
+  await expect(page.getByRole('button', { name: 'Gérer les cookies' })).toBeVisible();
   await page.getByRole('button', { name: 'Gérer les cookies' }).click();
   await expect(page.getByRole('region', { name: 'Choix des cookies statistiques' })).toBeVisible();
 });

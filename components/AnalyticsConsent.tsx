@@ -6,7 +6,7 @@ import Script from 'next/script';
 import { usePathname } from 'next/navigation';
 
 const ANALYTICS_STORAGE_KEY = 'mentioncheck.analytics-consent.v1';
-const GOOGLE_TAG_URL = 'https://www.googletagmanager.com/gtm.js?id=GTM-WQKLMJPM';
+const GOOGLE_TAG_URL = 'https://www.googletagmanager.com/gtm.js?id=GTM-P83X0PBJ';
 
 type AnalyticsChoice = 'loading' | 'undecided' | 'accepted' | 'rejected';
 
@@ -67,9 +67,10 @@ export function AnalyticsConsent() {
     }
   }
 
-  // On functional pages, keep consent optional and non-blocking: offer a small settings control.
-  // The prominent banner appears on the home page, where it cannot obstruct auth and dashboard forms.
+  // Never overlay account forms or mobile navigation. Visitors can revisit the
+  // cookie preference from the privacy policy, linked throughout the site.
   const showChoices = editing || (choice === 'undecided' && pathname === '/');
+  const showSettings = choice !== 'loading' && !showChoices && pathname === '/legal/confidentialite';
 
   return (
     <>
@@ -117,7 +118,7 @@ gtag('js', new Date());`}
         </section>
       )}
 
-      {choice !== 'loading' && !showChoices && (
+      {showSettings && (
         <button
           type="button"
           onClick={() => setEditing(true)}
