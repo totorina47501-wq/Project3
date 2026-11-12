@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { BRAND } from '@/lib/branding';
 import { openaiReadiness } from '@/lib/openai/config';
 import { billingGate } from '@/lib/billing/config';
+import { LeadFeedbackForm } from '@/components/LeadFeedbackForm';
 
 export const metadata: Metadata = {
   alternates: { canonical: '/' },
@@ -104,6 +105,24 @@ export default function Home() {
             {commercial ? 'Comparer les tarifs' : 'Comparer les tarifs indicatifs'}
           </Link>
         </section>
+        <section aria-labelledby="guide-cta" className="mb-16 rounded-3xl border border-slate-200 bg-white px-6 py-10 sm:px-10">
+          <h2 id="guide-cta" className="font-heading text-3xl font-bold text-primary">Checklist influence commerciale</h2>
+          <p className="mt-4 max-w-3xl leading-7 text-slate-600">
+            Téléchargez le guide MentionCheck sourcé et daté, avec un avertissement explicite:
+            information générale uniquement, pas un avis juridique.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <a href="/api/lead-magnet" download className="rounded-xl bg-primary px-6 py-3 font-semibold text-white hover:bg-slate-800">
+              Télécharger la checklist (.txt)
+            </a>
+            <Link href="/guide/checklist-influence" className="rounded-xl border border-slate-300 px-6 py-3 font-semibold text-primary hover:bg-slate-100">
+              Lire le guide complet
+            </Link>
+          </div>
+        </section>
+        <div className="mb-16">
+          <LeadFeedbackForm origin="landing" />
+        </div>
         <footer className="border-t border-slate-200 py-7 text-center text-sm text-slate-500">
           <nav aria-label="Informations publiques" className="mb-4 flex flex-wrap justify-center gap-5">
             <Link href="/tarifs" className="underline hover:text-accent">{commercial ? 'Tarifs' : 'Tarifs indicatifs'}</Link>

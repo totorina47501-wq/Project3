@@ -29,7 +29,7 @@ Statut : plan non déployé.
 
 ## Préparation éditoriale et vérification landing — 9 novembre 2026
 
-- `docs/marketing/guide-mentions-commerciales-influence.md` est un brouillon interne daté, fondé sur des sources officielles et explicitement soumis à validation juridique avant toute diffusion.
-- Le guide n’est pas publié, n’est pas lié depuis la landing et ne constitue ni un avis juridique ni une certification de conformité.
-- Les tests Playwright existants de landing vérifient les CTA, le caractère indicatif des tarifs, l’absence de collecte et de requêtes tierces sur l’accueil, la navigation clavier/mobile et les liens légaux.
+- `docs/marketing/guide-mentions-commerciales-influence.md` reste le brouillon éditorial interne ; une version publique condensée est exposée via `/guide/checklist-influence` et `GET /api/lead-magnet` avec disclaimer explicite.
+- La publication reste informative uniquement : ni avis juridique, ni certification de conformité.
+- Les tests Playwright de landing couvrent les CTA du guide, le téléchargement du lead magnet, la navigation clavier/mobile, la collecte de feedback bloquée (UI indisponible, API POST/DELETE 503) et l’absence de requêtes tierces au chargement.
 - Aucun formulaire de prospect, tracker, intégration SaaS Factory, attribution ou CRM n’est ajouté ; le canonical et le sitemap existants restent inchangés.
