@@ -138,6 +138,90 @@ describe('Échange OAuth simulé hors ligne', () => {
     },
   );
 
+  it.each([
+    ['empty', { items: [] }, 200],
+    ['signup-required', { error: { errors: [{ reason: 'youtubeSignupRequired' }] } }, 401],
+  ] as const)(
+    'détecte une chaîne YouTube absente (%s) sans conserver de jeton',
+    async (_caseName, channelBody, channelStatus) => {
+      const fetcher = vi.fn(async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url === socialOAuthProviders.youtube.tokenEndpoint) {
+          return response({ access_token: 'offline-yt-token', expires_in: 3600 });
+        }
+        if (url.includes('/channels?')) return response(channelBody, channelStatus);
+        if (url === socialOAuthProviders.youtube.revocationEndpoint) {
+          return new Response(null, { status: 200 });
+        }
+        throw new Error('Unexpected provider request');
+      });
+      await expect(exchangeSocialOAuthCode({
+        provider: 'youtube',
+        config: config('youtube'),
+        redirectUri: config('youtube').redirectUri,
+        authorizationCode: 'offline-code',
+        codeVerifier: 'offline-verifier',
+        fetcher: fetcher as typeof fetch,
+        now,
+      })).rejects.toMatchObject({
+        stage: 'channel',
+        reason: 'no_channel',
+        message: 'OAuth provider response unavailable.',
+      });
+      expect(fetcher).toHaveBeenCalledTimes(3);
+    },
+  );
+
+  it.each([
+    ['instagram', { access_token: 'ig-token', expires_in: 3600 }, null],
+    ['tiktok', { data: { access_token: 'tt-token', expires_in: 3600 } }, null],
+    ['linkedin', { access_token: 'li-token', expires_in: 3600 }, {}],
+  ] as const)(
+    'classe un profil %s absent sans inférer un compte inexistant',
+    async (provider, tokenData, profileData) => {
+      const fetcher = vi.fn(async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url === socialOAuthProviders[provider].tokenEndpoint) return response(tokenData);
+        if (provider === 'linkedin' && url === 'https://api.linkedin.com/v2/userinfo') return response(profileData);
+        if (url === socialOAuthProviders.tiktok.revocationEndpoint) return new Response(null, { status: 200 });
+        throw new Error('Unexpected provider request');
+      });
+      await expect(exchangeSocialOAuthCode({
+        provider,
+        config: config(provider),
+        redirectUri: config(provider).redirectUri,
+        authorizationCode: 'offline-code',
+        codeVerifier: null,
+        fetcher: fetcher as typeof fetch,
+        now,
+      })).rejects.toMatchObject({
+        stage: 'channel',
+        reason: 'profile_unavailable',
+      });
+    },
+  );
+
+  it('ne confond pas une API YouTube indisponible avec une chaîne absente', async () => {
+    const fetcher = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url === socialOAuthProviders.youtube.tokenEndpoint) {
+        return response({ access_token: 'yt-token', expires_in: 3600 });
+      }
+      if (url.includes('/channels?')) return response({ error: { errors: [{ reason: 'quotaExceeded' }] } }, 403);
+      if (url === socialOAuthProviders.youtube.revocationEndpoint) return new Response(null, { status: 200 });
+      throw new Error('Unexpected provider request');
+    });
+    await expect(exchangeSocialOAuthCode({
+      provider: 'youtube',
+      config: config('youtube'),
+      redirectUri: config('youtube').redirectUri,
+      authorizationCode: 'offline-code',
+      codeVerifier: 'offline-verifier',
+      fetcher: fetcher as typeof fetch,
+      now,
+    })).rejects.toMatchObject({ stage: 'channel', reason: undefined });
+  });
+
   it('révoque au mieux un jeton non persistant si la recherche d’identité échoue', async () => {
     const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);

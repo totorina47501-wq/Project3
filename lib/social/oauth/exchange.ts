@@ -14,6 +14,16 @@ type OAuthTokenBundle = {
 };
 
 export type GoogleTokenErrorReason = 'invalid_client' | 'invalid_grant' | 'redirect_uri_mismatch' | 'invalid_request';
+export type OAuthProfileErrorReason = 'no_channel' | 'profile_unavailable';
+export type OAuthProviderErrorReason = GoogleTokenErrorReason | OAuthProfileErrorReason;
+
+// Only classify known provider outcomes; never surface raw API response data.
+class OAuthProfileError extends Error {
+  constructor(public readonly reason: OAuthProfileErrorReason) {
+    super('OAuth provider response unavailable.');
+    this.name = 'OAuthProfileError';
+  }
+}
 
 class GoogleTokenResponseError extends Error {
   constructor(public readonly reason?: GoogleTokenErrorReason) {
@@ -31,7 +41,7 @@ export class OAuthProviderStageError extends Error {
   constructor(
     public readonly stage: 'token' | 'channel',
     message: string,
-    public readonly reason?: GoogleTokenErrorReason,
+    public readonly reason?: OAuthProviderErrorReason,
   ) {
     super(message);
     this.name = 'OAuthProviderStageError';
@@ -139,6 +149,20 @@ async function requestJson(
       }
       throw new GoogleTokenResponseError(reason);
     }
+    if (url === 'https://youtube.googleapis.com/youtube/v3/channels?part=id&mine=true') {
+      // Google documents youtubeSignupRequired for accounts without a channel.
+      // Whitelist that exact structured error only; never read or log raw messages.
+      try {
+        const body = object(JSON.parse(await boundedResponseText(response)));
+        const details = object(body?.error);
+        const errors = Array.isArray(details?.errors) ? details.errors : [];
+        if (errors.some((entry) => object(entry)?.reason === 'youtubeSignupRequired')) {
+          throw new OAuthProfileError('no_channel');
+        }
+      } catch (error) {
+        if (error instanceof OAuthProfileError) throw error;
+      }
+    }
     throw new Error('OAuth provider request unavailable.');
   }
   const text = await boundedResponseText(response);
@@ -198,6 +222,14 @@ async function tokenResponse(
   return response;
 }
 
+function profileHandle(provider: SocialOAuthProvider, value: unknown): string {
+  // A successful token exchange alone does not prove a usable social profile.
+  if (value === null || value === undefined || value === '') {
+    throw new OAuthProfileError('profile_unavailable');
+  }
+  return accountHandle(provider, value);
+}
+
 async function accountHandleFor(
   provider: SocialOAuthProvider,
   token: Record<string, unknown>,
@@ -205,11 +237,11 @@ async function accountHandleFor(
   fetcher: typeof fetch,
 ): Promise<string> {
   if (provider === 'instagram') {
-    return accountHandle(provider, token.user_id);
+    return profileHandle(provider, token.user_id);
   }
 
   if (provider === 'tiktok') {
-    return accountHandle(provider, token.open_id);
+    return profileHandle(provider, token.open_id);
   }
 
   if (provider === 'youtube') {
@@ -219,17 +251,20 @@ async function accountHandleFor(
       { headers: { Authorization: 'Bearer ' + accessToken } },
     );
     const items = profile.items;
-    if (!Array.isArray(items) || items.length === 0) {
+    if (!Array.isArray(items)) {
       throw new Error('OAuth provider response unavailable.');
     }
+    if (items.length === 0) {
+      throw new OAuthProfileError('no_channel');
+    }
     const channel = object(items[0]);
-    return accountHandle(provider, channel?.id);
+    return profileHandle(provider, channel?.id);
   }
 
   const profile = await requestJson(fetcher, 'https://api.linkedin.com/v2/userinfo', {
     headers: { Authorization: 'Bearer ' + accessToken },
   });
-  return accountHandle(provider, profile.sub);
+  return profileHandle(provider, profile.sub);
 }
 
 export async function exchangeSocialOAuthCode(input: {
@@ -283,7 +318,7 @@ export async function exchangeSocialOAuthCode(input: {
   let handle: string;
   try {
     handle = await accountHandleFor(input.provider, token, accessToken, fetcher);
-  } catch {
+  } catch (error) {
     try {
       await revokeSocialOAuthToken({
         provider: input.provider,
@@ -293,7 +328,11 @@ export async function exchangeSocialOAuthCode(input: {
         ...(input.now ? { now: input.now } : {}),
       });
     } catch {}
-    throw new OAuthProviderStageError('channel', 'OAuth provider response unavailable.');
+    throw new OAuthProviderStageError(
+      'channel',
+      'OAuth provider response unavailable.',
+      error instanceof OAuthProfileError ? error.reason : undefined,
+    );
   }
   return {
     handle,

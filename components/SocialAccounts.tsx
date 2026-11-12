@@ -2,6 +2,54 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { platformLabels, type SocialAccount, type SocialDraft, SOCIAL_PAGE_SIZE } from '@/lib/social/model';
 
+type SocialPlatform = SocialDraft['platform'];
+
+const socialOAuthTokenMessages: Record<SocialPlatform, string> = {
+  instagram: 'Instagram n’a pas finalisé la connexion. Vérifie les autorisations et la configuration de l’application Instagram, puis réessaie.',
+  tiktok: 'TikTok n’a pas finalisé la connexion. Vérifie les autorisations et la configuration de l’application TikTok, puis réessaie.',
+  youtube: 'L’échange du code de connexion avec Google a échoué. Vérifie la configuration OAuth Google du staging.',
+  linkedin: 'LinkedIn n’a pas finalisé la connexion. Vérifie les autorisations et la configuration de l’application LinkedIn, puis réessaie.',
+};
+const socialOAuthProfileMessages: Record<SocialPlatform, string> = {
+  instagram: 'Instagram a autorisé la connexion, mais le compte ou son identifiant n’est pas accessible. Vérifie que ton compte et les autorisations sont compatibles avec l’intégration Instagram.',
+  tiktok: 'TikTok a autorisé la connexion, mais le compte ou son identifiant n’est pas accessible. Vérifie les autorisations du profil TikTok et réessaie.',
+  youtube: 'Google a autorisé la connexion, mais la chaîne YouTube n’a pas pu être récupérée. Vérifie que YouTube Data API v3 est activée et que ta chaîne est accessible avec ce compte.',
+  linkedin: 'LinkedIn a autorisé la connexion, mais le profil n’a pas pu être récupéré. Vérifie les autorisations de ton profil LinkedIn et réessaie.',
+};
+
+export function socialOAuthFeedback(query: URLSearchParams): string {
+  const outcome = query.get('social_oauth');
+  if (outcome !== 'connected' && outcome !== 'unavailable') return '';
+  const rawProvider = query.get('provider');
+  const provider = rawProvider && Object.prototype.hasOwnProperty.call(platformLabels, rawProvider)
+    ? rawProvider as SocialPlatform
+    : null;
+  if (outcome === 'connected') {
+    return provider ? `Compte ${platformLabels[provider]} relié avec succès.` : 'Compte connecté via OAuth.';
+  }
+  if (!provider) return 'La connexion au réseau social n’a pas pu être finalisée.';
+  const stage = query.get('social_oauth_error');
+  const reason = query.get('social_oauth_reason');
+  if (provider === 'youtube' && stage === 'channel' && reason === 'no_channel') {
+    return 'Aucune chaîne YouTube trouvée. Ton compte Google a bien été autorisé, mais aucune chaîne YouTube accessible n’y est associée. Crée d’abord une chaîne YouTube avec ce compte, puis réessaie la connexion. Un compte Google seul ne suffit pas.';
+  }
+  if (stage === 'channel' && reason === 'profile_unavailable') {
+    return socialOAuthProfileMessages[provider];
+  }
+  if (stage === 'channel') return socialOAuthProfileMessages[provider];
+  if (stage === 'token') {
+    if (provider === 'youtube') {
+      if (reason === 'invalid_client') return 'Google refuse le client OAuth. Vérifie l’identifiant et le secret du même client dans Cloudflare staging.';
+      if (reason === 'invalid_grant') return 'Google refuse le code OAuth ou PKCE. Démarre une nouvelle connexion et vérifie le client et l’URI de retour.';
+      if (reason === 'redirect_uri_mismatch') return 'Google refuse l’URI de retour. Vérifie le callback staging dans Google Cloud.';
+      if (reason === 'invalid_request') return 'Google refuse les paramètres de la requête OAuth. Vérifie le client Google et la configuration staging.';
+    }
+    return socialOAuthTokenMessages[provider];
+  }
+  if (stage === 'storage') return `Le compte ${platformLabels[provider]} a été reconnu, mais son enregistrement sécurisé est indisponible. Réessaie plus tard.`;
+  return `Connexion ${platformLabels[provider]} non finalisée. L’autorisation a peut-être été refusée ou annulée. Réessaie et vérifie les autorisations demandées.`;
+}
+
 type Props={initialItems:SocialAccount[];initialTotal:number;initialConnectedTotal?:number;initialUnavailable?:boolean;plan:string};
 export function SocialAccounts({initialItems,initialTotal,initialConnectedTotal=0,initialUnavailable=false,plan}:Props){
   const [items,setItems]=useState(initialItems);
@@ -46,24 +94,7 @@ export function SocialAccounts({initialItems,initialTotal,initialConnectedTotal=
       .catch(()=>{});
     const query=new URLSearchParams(window.location.search);
     const outcome=query.get('social_oauth');
-    const errorStage=query.get('social_oauth_error');
-    const oauthReason=query.get('social_oauth_reason');
-    const oauthMessage=outcome==='connected'?'Compte connecté via OAuth.'
-      :outcome==='unavailable'&&errorStage==='token'&&oauthReason==='invalid_client'
-        ?'Google refuse le client OAuth : vérifie que SOCIAL_OAUTH_YOUTUBE_CLIENT_ID et SOCIAL_OAUTH_YOUTUBE_CLIENT_SECRET sur le Worker staging correspondent au même client dans Google Cloud.'
-      :outcome==='unavailable'&&errorStage==='token'&&oauthReason==='invalid_grant'
-        ?'Google refuse le code OAuth ou le vérificateur PKCE. Démarre une nouvelle connexion et vérifie le client et l’URI de retour configurés.'
-      :outcome==='unavailable'&&errorStage==='token'&&oauthReason==='redirect_uri_mismatch'
-        ?'Google refuse l’URI de retour : vérifie que le callback staging est identique dans Google Cloud et MentionCheck.'
-      :outcome==='unavailable'&&errorStage==='token'&&oauthReason==='invalid_request'
-        ?'Google refuse les paramètres de la requête de jeton OAuth. Vérifie le type de client Google et la configuration du staging.'
-      :outcome==='unavailable'&&errorStage==='channel'
-        ?'Google a autorisé la connexion, mais la chaîne YouTube n’a pas pu être récupérée. Vérifie que YouTube Data API v3 est activée et que ce compte Google possède une chaîne YouTube.'
-      :outcome==='unavailable'&&errorStage==='token'
-        ?'L’échange du code de connexion avec Google a échoué. Vérifie la configuration OAuth Google du staging.'
-      :outcome==='unavailable'&&errorStage==='storage'
-        ?'Le compte a été reconnu, mais son enregistrement sécurisé est indisponible.'
-      :outcome==='unavailable'?'La connexion au réseau social est indisponible.':'';
+    const oauthMessage=socialOAuthFeedback(query);
     if(outcome==='connected'||outcome==='unavailable')window.history.replaceState(null,'','/dashboard/settings');
     // changePage clears normal notifications; restore OAuth outcome after it completes.
     void changePage(1).then(()=>{if(active&&oauthMessage)setMessage(oauthMessage);});

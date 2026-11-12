@@ -4,6 +4,7 @@ import {
   exchangeSocialOAuthCode,
   revokeSocialOAuthToken,
   OAuthProviderStageError,
+  type OAuthProviderErrorReason,
 } from '@/lib/social/oauth/exchange';
 import { completeSocialOAuthCallback } from '@/lib/social/oauth/protocol';
 import { socialOAuthConfig } from '@/lib/social/oauth/providers';
@@ -20,7 +21,7 @@ function returnToSettings(
   result: 'connected' | 'unavailable',
   provider?: string,
   stage?: 'token' | 'channel' | 'storage',
-  reason?: 'invalid_client' | 'invalid_grant' | 'redirect_uri_mismatch' | 'invalid_request',
+  reason?: OAuthProviderErrorReason,
 ) {
   const publicOrigin = process.env.SOCIAL_OAUTH_PUBLIC_ORIGIN;
   const allowedOrigins = (process.env.SOCIAL_OAUTH_ALLOWED_ORIGINS ?? '')
@@ -49,7 +50,7 @@ function returnToSettings(
   destination.searchParams.set('social_oauth', result);
   if (provider) destination.searchParams.set('provider', provider);
   if (result === 'unavailable' && stage) destination.searchParams.set('social_oauth_error', stage);
-  if (result === 'unavailable' && stage === 'token' && reason) {
+  if (result === 'unavailable' && (stage === 'token' || stage === 'channel') && reason) {
     destination.searchParams.set('social_oauth_reason', reason);
   }
   return new Response(null, {

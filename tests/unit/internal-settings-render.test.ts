@@ -1,8 +1,42 @@
 import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { SocialAccounts } from '../../components/SocialAccounts';
+import { SocialAccounts, socialOAuthFeedback } from '../../components/SocialAccounts';
 import { AIPreferences } from '../../components/AIPreferences';
+describe('Messages OAuth explicites et sûrs par réseau', () => {
+  const feedback = (provider: string, stage: string, reason?: string) => socialOAuthFeedback(
+    new URLSearchParams({
+      social_oauth: 'unavailable',
+      provider,
+      social_oauth_error: stage,
+      ...(reason ? { social_oauth_reason: reason } : {}),
+    }),
+  );
+  it('explique une chaîne YouTube absente sans incrémenter de connexion', () => {
+    expect(feedback('youtube', 'channel', 'no_channel')).toContain('Aucune chaîne YouTube trouvée');
+    expect(feedback('youtube', 'channel', 'no_channel')).toContain('Crée d’abord une chaîne');
+    expect(feedback('youtube', 'channel', 'quotaExceeded')).not.toContain('Aucune chaîne YouTube trouvée');
+  });
+  it.each(['instagram', 'tiktok', 'linkedin'] as const)(
+    'différencie les erreurs de profil et de jeton pour %s',
+    (provider) => {
+      const noProfile = feedback(provider, 'channel', 'profile_unavailable');
+      const token = feedback(provider, 'token');
+      expect(noProfile).toContain(({ instagram: 'Instagram', tiktok: 'TikTok', linkedin: 'LinkedIn' })[provider]);
+      expect(token).toContain(({ instagram: 'Instagram', tiktok: 'TikTok', linkedin: 'LinkedIn' })[provider]);
+      expect(noProfile).not.toBe(token);
+      expect(noProfile).not.toContain('Google refuse');
+    },
+  );
+  it('couvre refus, stockage, succès et fournisseur inconnu', () => {
+    expect(feedback('linkedin', 'storage')).toContain('enregistrement sécurisé');
+    expect(feedback('instagram', 'authorization')).toContain('autorisation');
+    expect(socialOAuthFeedback(new URLSearchParams('social_oauth=connected&provider=youtube'))).toContain('YouTube relié');
+    expect(feedback('other', 'channel')).toContain('réseau social');
+    expect(socialOAuthFeedback(new URLSearchParams())).toBe('');
+  });
+});
+
 describe('Paramètres rendus sans fournisseur',()=>{
   it('affiche une déclaration sans prétendre à une connexion et bloque visuellement le quatrième Solo',()=>{
     const html=renderToStaticMarkup(createElement(SocialAccounts,{plan:'solo',initialTotal:3,initialItems:[{id:'local',platform:'instagram',handle:'camille',connection_kind:'manual',connected_at:'2026-11-04'}]}));

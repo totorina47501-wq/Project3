@@ -54,7 +54,7 @@ vi.mock('@/lib/social/oauth/exchange', () => ({
     constructor(
       public readonly stage: 'token' | 'channel',
       message: string,
-      public readonly reason?: 'invalid_client' | 'invalid_grant' | 'redirect_uri_mismatch' | 'invalid_request',
+      public readonly reason?: 'invalid_client' | 'invalid_grant' | 'redirect_uri_mismatch' | 'invalid_request' | 'no_channel' | 'profile_unavailable',
     ) {
       super(message);
     }
@@ -242,6 +242,33 @@ describe('Routes OAuth sociales', () => {
     expect(result.headers.get('location')).not.toContain('temporary-code');
     expect(mocks.save).not.toHaveBeenCalled();
   });
+
+  it.each(['no_channel', 'profile_unavailable'] as const)(
+    'redirige après un échec de profil %s sans enregistrer le compte',
+    async (reason) => {
+      enableYouTube();
+      const started = await startOAuth(new Request('https://local.test/api/social-accounts/oauth/start', {
+        method: 'POST',
+        headers: { Origin: 'https://local.test', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'youtube' }),
+      }));
+      const authorization = new URL((await started.json() as { authorizationUrl: string }).authorizationUrl);
+      const callback = new URL(callbackPath);
+      callback.searchParams.set('code', 'offline-secret-code');
+      callback.searchParams.set('state', authorization.searchParams.get('state')!);
+      mocks.exchange.mockRejectedValueOnce(new OAuthProviderStageError(
+        'channel', 'OAuth provider response unavailable.', reason,
+      ));
+      const result = await callbackOAuth(new Request(callback), {
+        params: Promise.resolve({ provider: 'youtube' }),
+      });
+      const location = result.headers.get('location') ?? '';
+      expect(location).toContain('social_oauth_error=channel');
+      expect(location).toContain('social_oauth_reason=' + reason);
+      expect(location).not.toContain('offline-secret-code');
+      expect(mocks.save).not.toHaveBeenCalled();
+    },
+  );
 
   it('redirige avec un code OAuth Google autorisé sans exposer le code de connexion', async () => {
     enableYouTube();
