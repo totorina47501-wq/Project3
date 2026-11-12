@@ -14,6 +14,8 @@ test('statistiques bloquées sans accord, refus simple et conservé', async ({ p
 
   await page.getByRole('button', { name: 'Refuser les statistiques' }).click();
   await page.reload();
+  await expect(page.locator('script[src*="googletagmanager.com"]')).toHaveCount(0);
+  await page.goto('/legal/confidentialite');
   await expect(page.getByRole('button', { name: 'Gérer les cookies' })).toBeVisible();
   await expect(page.locator('script[src*="googletagmanager.com"]')).toHaveCount(0);
   expect(thirdPartyRequests).toEqual([]);
