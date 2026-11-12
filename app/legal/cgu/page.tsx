@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { BRAND } from '@/lib/branding';
 
 export const metadata: Metadata = {
   title: 'Conditions générales d’utilisation et de vente — MentionCheck (prépublication)',
@@ -10,7 +11,7 @@ const clauses = [
   {
     "title": "1. Éditeur, portée et version",
     "body": [
-      "Le service MentionCheck (https://mentioncheck.app) est proposé par l'éditeur déclaré MentionCheckCorp. La forme juridique, l'immatriculation, le siège et les coordonnées de l'éditeur doivent être confirmés sur la page Mentions légales avant la souscription à une offre payante.",
+      `Le service MentionCheck (https://mentioncheck.app) est proposé par ${BRAND.legalName} (${BRAND.tradeName}), à ${BRAND.legalAddress}. SIRET : ${BRAND.siret}. Contact : ${BRAND.contactEmail}. Les autres mentions de l'éditeur figurent dans les mentions légales.`,
       "Les présentes conditions couvrent la consultation du site, l'utilisation de la démonstration gratuite et, après activation commerciale et acceptation expresse, les abonnements mensuels Solo, Pro et Studio. En cas de vente à un consommateur, les règles impératives du Code de la consommation prévalent sur toute stipulation contraire."
     ]
   },
@@ -101,19 +102,19 @@ const clauses = [
   {
     "title": "14. Réclamations, médiation et différends",
     "body": [
-      "Le support et les réclamations seront reçus à l'adresse officielle de contact indiquée dans les mentions légales une fois celle-ci vérifiée. Le client peut fournir les informations nécessaires à l'identification de son abonnement sans communiquer ses mots de passe ni ses numéros de carte.",
+      "Le support et les réclamations sont reçus à mentioncheckcorp@gmail.com. Le client peut fournir les informations nécessaires à l'identification de son abonnement sans communiquer ses mots de passe ni ses numéros de carte.",
       "En cas de litige avec un consommateur, une médiation gratuite doit pouvoir être sollicitée après réclamation écrite préalable et dans les conditions légales. Le médiateur compétent doit être choisi, effectivement conventionné et identifié par ses coordonnées avant l'ouverture des ventes. Les droits d'accès au juge et les règles de compétence protectrices des consommateurs demeurent inchangés."
     ]
   },
   {
     "title": "15. Droit applicable et contact",
     "body": [
-      "Le droit français est retenu sous réserve des dispositions impératives applicables aux consommateurs résidant dans d'autres pays, notamment de l'Union européenne. Les coordonnées complètes de l'éditeur, son identification officielle et un canal d'assistance opérationnel devront apparaître dans les mentions légales avant toute souscription."
+      "Le droit français est retenu sous réserve des dispositions impératives applicables aux consommateurs résidant dans d'autres pays, notamment de l'Union européenne. Les coordonnées de contact communiquées par l'éditeur sont publiées dans les mentions légales."
     ]
   }
 ] as const;
 const retractationModele = [
-  "À l'attention de : [DÉNOMINATION ET ADRESSE DU PROFESSIONNEL À RENSEIGNER]",
+  `À l'attention de : ${BRAND.legalName}, ${BRAND.legalAddress} — ${BRAND.contactEmail}`,
   "Je vous notifie par la présente ma rétractation du contrat de service MentionCheck commandé le : [DATE DE COMMANDE].",
   "Nom du consommateur : [NOM]. Adresse ou courriel : [COORDONNÉES]. Référence de commande : [RÉFÉRENCE].",
   "Date de notification : [DATE]. Signature du consommateur (uniquement en cas d'envoi papier) : [SIGNATURE].",
@@ -125,10 +126,10 @@ export default function Terms() {
     <Link href="/" className="text-sm font-semibold text-indigo-700 underline">Retour à MentionCheck</Link>
     <header className="space-y-3">
       <h1 className="font-heading text-4xl font-bold">Conditions générales d’utilisation et de vente</h1>
-      <p className="text-sm text-slate-600">Document de travail du 12 novembre 2026 — MentionCheckCorp (identité légale déclarée à confirmer)</p>
+      <p className="text-sm text-slate-600">Document de travail du 12 novembre 2026 — {BRAND.legalName} ({BRAND.tradeName})</p>
     </header>
     <p role="note" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
-      <strong>Prépublication — contrat non encore approuvé.</strong> Les coordonnées vérifiées de l’éditeur, son immatriculation,
+      <strong>Prépublication — contrat non encore approuvé.</strong> L’immatriculation,
       les conditions fiscales, le service client, le médiateur de la consommation et les parcours de paiement, résiliation et
       rétractation doivent être validés avant l’ouverture des ventes. Aucun paiement Live n’est autorisé par cette page.
     </p>

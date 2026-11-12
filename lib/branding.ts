@@ -1,6 +1,14 @@
 // Source unique de l'identité publique MentionCheck.
 export const BRAND = {
-  legalName: 'MentionCheckCorp',
+  // Informations déclarées par l'exploitant, sans vérification externe.
+  legalName: 'Ali Rassoul',
+  tradeName: 'aliaicorp',
+  legalAddress: '100 avenue Gambetta, 47500 Fumel, France',
+  siret: 'À venir',
+  vatNotice: 'À venir — TVA non applicable, art. 293 B du CGI',
+  contactEmail: 'mentioncheckcorp@gmail.com',
+  contactPhone: '0675814948',
+  publicationDirector: 'Ali Rassoul',
   publicName: 'MentionCheck',
   tagline: "L'IA qui check vos mentions légales avant publication.",
   domain: 'mentioncheck.app',
