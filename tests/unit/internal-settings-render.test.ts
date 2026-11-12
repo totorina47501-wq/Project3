@@ -20,8 +20,8 @@ describe('Paramètres rendus sans fournisseur',()=>{
         {id:'expired',platform:'tiktok',handle:'old',connection_kind:'expired',connected_at:'2026-11-04'},
       ],
     }));
-    expect(html).toContain('Comptes reliés : <!-- -->1');
-    expect(html).toContain('Autres comptes enregistrés : <!-- -->2');
+    expect(html).toContain('Comptes reliés : 1');
+    expect(html).toContain('Autres comptes enregistrés : 2');
     expect(html).toContain('Connexion OAuth active');
     expect(html).toContain('Déconnecter');
     expect(html).toMatch(/<button disabled=""[^>]*>Ajouter la déclaration<\/button>/);
