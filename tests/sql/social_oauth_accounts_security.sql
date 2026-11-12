@@ -84,6 +84,26 @@ do $$ begin
   end if;
 end $$;
 
+set local role service_role;
+do $$ declare owner_account uuid; server_account uuid;
+begin
+  owner_account:=public.save_social_oauth_account(
+    '20000000-0000-0000-0000-000000000001','youtube','UC_test_channel',
+    '{"accessToken":"owner-expiry-fixture"}',clock_timestamp()+interval '1 hour');
+  server_account:=public.save_social_oauth_account(
+    '20000000-0000-0000-0000-000000000002','youtube','UC_server_expiry',
+    '{"accessToken":"server-expiry-fixture"}',clock_timestamp()+interval '1 hour');
+  perform set_config('test.oauth_expiry_owner_account',owner_account::text,true);
+  perform set_config('test.oauth_expiry_server_account',server_account::text,true);
+end $$;
+reset role;
+update public.social_accounts
+set access_token_expires_at=clock_timestamp()-interval '1 second'
+where id in (
+  current_setting('test.oauth_expiry_owner_account')::uuid,
+  current_setting('test.oauth_expiry_server_account')::uuid
+);
+
 do $$ begin
   if has_function_privilege('anon','public.save_social_oauth_account(uuid,public.social_platform,text,text,timestamptz)','EXECUTE')
     or has_function_privilege('authenticated','public.save_social_oauth_account(uuid,public.social_platform,text,text,timestamptz)','EXECUTE')
@@ -100,15 +120,62 @@ do $$ begin
   if not has_function_privilege('authenticated','public.expire_social_oauth_accounts(uuid)','EXECUTE') then
     raise exception 'Owner expiry maintenance is unavailable';
   end if;
+  if has_function_privilege('anon','public.expire_social_oauth_accounts(uuid)','EXECUTE')
+    or not has_function_privilege('service_role','public.expire_social_oauth_accounts(uuid)','EXECUTE') then
+    raise exception 'Expiry maintenance is exposed or unavailable to the server role';
+  end if;
 end $$;
 
 set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','20000000-0000-0000-0000-000000000001',true);
 do $$ begin
   begin
-    perform public.expire_social_oauth_accounts('20000000-0000-0000-0000-000000000002');
+    perform set_config('request.jwt.claim.sub','',true);
+    perform public.expire_social_oauth_accounts('20000000-0000-0000-0000-000000000001');
+    raise exception 'NULL-actor expiration accepted' using errcode='XX000';
+  exception when insufficient_privilege then null; end;
+  perform set_config('request.jwt.claim.sub','20000000-0000-0000-0000-000000000002',true);
+  begin
+    perform public.expire_social_oauth_accounts('20000000-0000-0000-0000-000000000001');
     raise exception 'Cross-owner expiration accepted' using errcode='XX000';
   exception when insufficient_privilege then null; end;
+  perform set_config('request.jwt.claim.sub','20000000-0000-0000-0000-000000000001',true);
+  perform public.expire_social_oauth_accounts('20000000-0000-0000-0000-000000000001');
+end $$;
+reset role;
+
+do $$ begin
+  if (select connection_kind from public.social_accounts
+      where id=current_setting('test.oauth_expiry_owner_account')::uuid)<>'expired'
+    or exists(select 1 from vault.secrets
+      where secret='{"accessToken":"owner-expiry-fixture"}')
+    or (select connection_kind from public.social_accounts
+      where id=current_setting('test.oauth_expiry_server_account')::uuid)<>'oauth' then
+    raise exception 'Owner expiration failed or crossed the tenant boundary';
+  end if;
+end $$;
+
+set local role service_role;
+select set_config('request.jwt.claim.role','service_role',true);
+select set_config('request.jwt.claim.sub','',true);
+select public.expire_social_oauth_accounts(
+  '20000000-0000-0000-0000-000000000002');
+reset role;
+
+do $$ begin
+  if (select connection_kind from public.social_accounts
+      where id=current_setting('test.oauth_expiry_server_account')::uuid)<>'expired'
+    or exists(select 1 from vault.secrets
+      where secret='{"accessToken":"server-expiry-fixture"}') then
+    raise exception 'Service-role expiry failed to remove its Vault secret';
+  end if;
+end $$;
+
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','20000000-0000-0000-0000-000000000001',true);
+do $$ begin
   perform public.remove_social_account(
     current_setting('test.oauth_account_id')::uuid);
   if exists(select 1 from public.social_accounts

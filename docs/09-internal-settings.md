@@ -56,10 +56,13 @@ interrupteur et ses identifiants :
 | LinkedIn | `SOCIAL_OAUTH_LINKEDIN_ENABLED` | `SOCIAL_OAUTH_LINKEDIN_CLIENT_ID` / `SOCIAL_OAUTH_LINKEDIN_CLIENT_SECRET` |
 
 Ne pas placer les identifiants ou jetons dans le navigateur, une URL, un journal,
-`.env.example` ou le dépôt. La migration
-`20261110220000_social_oauth_vault_accounts.sql` doit être appliquée à
-l’environnement de test avant toute activation ; elle n’a pas été appliquée à
-une base distante dans le cadre de ce travail.
+`.env.example` ou le dépôt. Les migrations initiales
+`20261110210000_social_oauth_transactions.sql` et
+`20261110220000_social_oauth_vault_accounts.sql` sont déjà appliquées sur le
+staging Supabase ; ne pas les rejouer sous leurs versions locales. La migration
+corrective `20261112072300_social_oauth_expiry_actor.sql` vérifie l’acteur nul
+sans retirer l’expiration du propriétaire ou du rôle serveur ; elle reste à
+revoir avant toute application distante.
 
 Le démarrage est un POST same-origin. Le `state` aléatoire est lié au propriétaire
 et au `session_id` de la session Supabase validée, seul son SHA-256 est stocké,
@@ -110,8 +113,9 @@ scraping, import média ou publication n’est implémenté.
 | Validation | Résultat |
 |---|---|
 | Échange simulé hors ligne, state/PKCE/callback/anti-replay, contrôles d’accès et tests SQL locaux | **PASS** (suite locale seulement ; le stub SQL ne teste pas le chiffrement Vault natif). |
+| Expiration OAuth : acteur nul refusé, autre propriétaire refusé, propriétaire et service_role autorisés | **PASS** local après migration corrective ; application staging en attente de revue. |
 | Identifiants/app review/callbacks et permissions des quatre plateformes | **BLOCKED** (non fournis/non vérifiés). |
-| E2E staging avec comptes jetables | **BLOCKED** (aucun compte ou secret staging utilisé). |
+| E2E staging avec comptes jetables | **BLOCKED** (des tentatives antérieures n’ont pas persisté de compte OAuth ; le parcours complet après le dernier correctif reste à prouver). |
 | Activation en production, migration distante et recette de production | **BLOCKED** (non effectuées et interdites par ce lot). |
 
 Avant une activation ultérieure, il faut créer les applications développeur,

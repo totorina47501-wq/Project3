@@ -371,10 +371,11 @@
       ],
       "migrations": [
         "supabase/migrations/20261110210000_social_oauth_transactions.sql",
-        "supabase/migrations/20261110220000_social_oauth_vault_accounts.sql"
+        "supabase/migrations/20261110220000_social_oauth_vault_accounts.sql",
+        "supabase/migrations/20261112072300_social_oauth_expiry_actor.sql"
       ],
       "next": [
-        "Déclarations manuelles inchangées ; flux serveur et stockage Vault testés hors ligne, désactivés sans flags explicites. Reste à appliquer la migration en environnement de test, vérifier Vault natif, les quatre App Reviews/révocations et l’E2E staging à comptes jetables ; production reste bloquée."
+        "Déclarations manuelles inchangées ; flux serveur et stockage Vault testés hors ligne, désactivés sans flags explicites. Les migrations OAuth initiales sont déjà présentes sur staging : ne pas les rejouer. La migration corrective de contrôle d’acteur d’expiration reste à revoir avant toute application staging ; production reste bloquée."
       ]
     },
     {
