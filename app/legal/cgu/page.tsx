@@ -3,7 +3,6 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Conditions générales d’utilisation et de vente — MentionCheck (prépublication)',
-  alternates: { canonical: '/legal/cgu' },
   robots: { index: false, follow: false },
 };
 
