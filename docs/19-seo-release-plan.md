@@ -31,5 +31,5 @@ Statut : plan non déployé.
 
 - `docs/marketing/guide-mentions-commerciales-influence.md` reste le brouillon éditorial interne ; une version publique condensée est exposée via `/guide/checklist-influence` et `GET /api/lead-magnet` avec disclaimer explicite.
 - La publication reste informative uniquement : ni avis juridique, ni certification de conformité.
-- Les tests Playwright de landing couvrent désormais les CTA du guide, le téléchargement du lead magnet, la navigation clavier/mobile, le formulaire de feedback volontaire (consentement explicite + suppression) et l’absence de requêtes tierces au chargement.
+- Les tests Playwright de landing couvrent les CTA du guide, le téléchargement du lead magnet, la navigation clavier/mobile, la collecte de feedback bloquée (UI indisponible, API POST/DELETE 503) et l’absence de requêtes tierces au chargement.
 - Aucun formulaire de prospect, tracker, intégration SaaS Factory, attribution ou CRM n’est ajouté ; le canonical et le sitemap existants restent inchangés.
