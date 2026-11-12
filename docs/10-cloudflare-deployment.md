@@ -203,3 +203,18 @@ ou dans GitHub. La clé OpenAI exposée précédemment doit rester révoquée.
 **Validation :** vérifier après un nouveau déploiement que les deux variables
 Text restent présentes en Production et que la connexion fonctionne. Cette
 validation réelle Cloudflare est distincte du test CI.
+
+## Domaine acquis : `mentioncheck.app` — préparation contrôlée (11 novembre 2026)
+
+Domaine principal souhaité : **https://mentioncheck.app**, sur le Worker existant `mentioncheck` (pas de second Worker ni de second projet). Le `wrangler.jsonc` contient désormais le routage Cloudflare **Custom Domain** pour `mentioncheck.app` et `NEXT_PUBLIC_APP_URL=https://mentioncheck.app`. Le sous-domaine `workers.dev` reste disponible comme filet de sécurité ; **aucune modification du Worker `mentioncheck-staging`** et aucun changement de secrets.
+
+**État : PR de préparation, pas preuve d'activation distante.** Avant fusion/déploiement :
+
+1. Dans Cloudflare, vérifier que la zone `mentioncheck.app` est **Active** dans le **même compte** que Workers & Pages > `mentioncheck`. Si le registrar est externe, utiliser exactement les nameservers attribués par Cloudflare (pas des valeurs inventées). Si le domaine est acheté via Cloudflare Registrar, cette étape est normalement déjà gérée.
+2. Dans Workers & Pages > `mentioncheck` > Settings > Domains & Routes, confirmer l'absence de configuration préexistante du même hostname et le bon Worker. Laisser **Custom Domain** créer automatiquement le DNS / HTTPS ; ne pas ajouter un CNAME concurrent. Si une configuration existe déjà, vérifier et réutiliser l'existant plutôt que dupliquer.
+3. Dans Workers Builds, configurer **aussi en Build variables** `NEXT_PUBLIC_APP_URL=https://mentioncheck.app`. Le `wrangler.jsonc` définit sa valeur **runtime** ; cela ne garantit pas l'URL incluse dans le bundle Next.js généré au build. Conserver les variables Supabase publiques déjà en place, sans exposer les secrets.
+4. Dans Supabase **production** > Authentication > URL Configuration, ajouter `https://mentioncheck.app` comme Site URL / URL de redirection adéquate. Conserver temporairement l'ancien hostname en allowlist si des confirmations d'email ou sessions en dépendent. Ne pas toucher à Supabase staging. Contrôler confirmation d'email, reset, login, cookies et refus inter-origines.
+5. Quand la zone, le certificat SSL et la revue sont validés, fusionner la PR après CI verte et contrôle de sécurité, puis vérifier **les réponses HTTP réelles** de `https://mentioncheck.app/`, `/login`, `/robots.txt` et `/sitemap.xml` et le **SHA effectivement publié**. Le build vert seul n'est pas une preuve du domaine actif.
+6. Pour `www.mentioncheck.app`, définir **après activation** une règle Cloudflare Redirect 301 vers l'apex, en conservant le chemin ; ne pas créer deux origines canoniques.
+
+**Garde-fous** : le domaine ne vaut pas lancement commercial. Les flags `BILLING_ENABLED=false`, `STRIPE_WEBHOOK_ENABLED=false` et `STRIPE_LIVE_APPROVED=false` restent inchangés, et `release:evidence-required` / issue #16 restent ouverts. Le garde-fou Stripe Live dans `lib/billing/config.ts` exige encore l'ancien hostname : son changement exige une revue distincte dans la PR Stripe #131, **jamais une activation automatique des paiements**. Ne déclencher aucun appel IA payant ni réinitialisation d'utilisateurs pour la recette DNS.

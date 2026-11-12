@@ -49,13 +49,15 @@ jobs:
             const activeIssues = issues.filter(i => !i.pull_request && i.state === 'open' &&
               i.assignees?.some(isCodex));
             const activePrs = prs.filter(p => p.state === 'open' && isCodex(p.user));
-            const closesIssue = (pr, number) => new RegExp(
-              '(?:fix(?:es|ed)?|clos(?:es|ed)?|resolv(?:es|ed)?)\\s+#' + number + '\\b', 'i'
+            // "Refs #N" is the non-closing link used by the current Codex PRs.
+            // Counting only "Closes #N" double-counts an issue and its PR.
+            const referencesIssue = (pr, number) => new RegExp(
+              '(?:refs?|fix(?:es|ed)?|clos(?:es|ed)?|resolv(?:es|ed)?)\\s+#' + number + '\\b', 'i'
             ).test((pr.title || '') + ' ' + (pr.body || ''));
             // A PR and its already assigned issue represent the same mission,
             // never two slots. An orphan/stale PR still reserves a slot for review.
             let active = activeIssues.length + activePrs.filter(p =>
-              !activeIssues.some(i => closesIssue(p, i.number))
+              !activeIssues.some(i => referencesIssue(p, i.number))
             ).length;
             core.info('Codex occupied slots: ' + active + ' / ' + MAX_ACTIVE);
             if (active >= MAX_ACTIVE) {
@@ -70,7 +72,7 @@ jobs:
             ).sort((a,b) => a.number-b.number);
             for (const issue of candidateIssues) {
               const number = issue.number;
-              if (prs.some(pr => closesIssue(pr, number))) {
+              if (prs.some(pr => referencesIssue(pr, number))) {
                 core.info('Issue #'+number+' has an open linked PR; skipping.');
                 continue;
               }

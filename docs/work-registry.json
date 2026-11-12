@@ -395,7 +395,32 @@
       "migrations": [],
       "next": [
         "Identité juridique et contenu final non validés.",
-        "Accueil SEO éditorial, canonical et liaison vers tarifs indicatifs ; tests Playwright mis à jour, sans indexer les tarifs. Voir docs/19-seo-release-plan.md."
+        "Accueil SEO éditorial, canonical et liaison vers tarifs indicatifs ; tests Playwright mis à jour, sans indexer les tarifs. Voir docs/19-seo-release-plan.md.",
+        "Guide /guide/checklist-influence et lead magnet .txt prêts côté code avec avertissement non-avis juridique ; collecte de feedback désactivée en UI et API (503), sans persistance ni faux reçu."
+      ]
+    },
+    {
+      "id": "growth-feedback",
+      "name": "Lead magnet et feedback marketing autonome",
+      "status": "prepared_disabled",
+      "anchor": "components/LeadFeedbackForm.tsx",
+      "test": "tests/e2e/growth-landing-feedback.spec.ts",
+      "doc": "docs/19-seo-release-plan.md",
+      "aliases": [
+        "growth",
+        "lead magnet",
+        "feedback",
+        "utm",
+        "community"
+      ],
+      "routes": [
+        "app/api/lead-magnet/route.ts",
+        "app/api/marketing/feedback/route.ts"
+      ],
+      "migrations": [],
+      "next": [
+        "Guide et lead magnet existants opérationnels, sans CRM, scraping ni appel IA payant.",
+        "Feedback marketing désactivé dans l'interface ET sur POST/DELETE /api/marketing/feedback (503 explicite). Le stub Map mémoire a été retiré pour ne pas délivrer de faux reçu, ni prétendre à un effacement impossible. Réutiliser la même route/composant quand une persistance durable Supabase avec RLS, consentement, rétention, anti-abus et suppression vérifiable sera validée. Aucune nouvelle migration/infra créée ; issue #102 / PR #130."
       ]
     },
     {
@@ -573,7 +598,7 @@
         "supabase/migrations/20261105122000_billing_atomic_sync.sql"
       ],
       "next": [
-        "Facturation désactivée ; tests fournisseur simulés et SQL local. Aucun paiement réel."
+        "Facturation désactivée ; synchronisation webhooks idempotente (customer.subscription.*, invoice.paid, invoice.payment_failed, checkout.session.completed abonnement, payment_intent.payment_failed), tests fournisseur simulés et SQL local. Aucun paiement réel."
       ]
     },
     {

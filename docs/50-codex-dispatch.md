@@ -1,5 +1,14 @@
 # MentionCheck — Dispatch Codex séparé (10 novembre 2026)
 
+## Incident du 11 novembre 2026 — double comptage des PR existantes
+
+- Diagnostic vérifié dans le run #42949442993 : le dispatcher indiquait `4 / 3`, malgré deux missions réelles (#16 / PR #128, #102 / PR #130).
+- Cause : les PR actives utilisent `Refs #16` et `Refs #102` pour **ne pas fermer les issues de certification** ; la déduplication comptait uniquement `Closes/Fixes/Resolves #N`.
+- Correctif : reconnaître les références explicites `Ref/Refs #N` **et** les références de clôture pour la capacité et la protection contre les nouveaux doublons. Les PR orphelines continuent à occuper une place. Cas attendu : **2 / 3**, pas 4 / 3.
+- Tests : quatre scénarios exécutent le vrai script JavaScript du workflow avec GitHub simulé, sans jeton, API externe, attribution réelle ou dépense.
+- **Limite importante :** corriger la capacité ne redémarre pas une session Codex déjà terminée et ne crée pas une nouvelle mission tant que #16/#102 restent assignées ; un run `success` du dispatcher n'est pas une preuve de travail de l'agent. Toute reprise d'une PR existante doit être confirmée séparément par une session et de nouveaux commits, sans réassignation aveugle susceptible de créer un doublon.
+- Le workflow ne touche ni Supabase, ni production Cloudflare, ni Stripe, ni les PR existantes.
+
 ## Extension de capacité — 10 novembre 2026
 
 - Objectif utilisateur : ajouter **deux places Codex** au plafond initial d'une mission, soit **trois missions simultanément occupées au maximum** dans le dispatcher MentionCheck.
