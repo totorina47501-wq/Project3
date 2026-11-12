@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updated": "2026-11-11",
+  "updated": "2026-11-12",
   "scope": "Code de la branche, non preuve de déploiement ni de commercialisation.",
   "features": [
     {
@@ -613,6 +613,124 @@
         "PR #128 : bridge pré-GO activation_pending pour 2 profils historiques, Solo 30/5/20 sans lancer le compteur 30 jours ; preuve SQL PGlite, application staging nécessaire, aucune mutation production.",
         "Trois migrations quotas/promotion/bridge sont déjà installées sur staging, aucune en Production. 2 profils Solo historiques sans abonnement Stripe actif ; transition atomique et GO séparé nécessaires pour préserver leurs droits sans démarrer prématurément les 30 jours. Correctif UI pré-GO et workflow RGPD au commit 1850998, remarques Codex résolues, tests unitaires/SQL/Playwright réussis ; statut global CI encore à confirmer.",
         "PRA : restauration native PostgreSQL/Auth dans clone Supabase et 13/13 SQL concordants ; Storage 13/13 copies présentes avec métadonnées concordantes, mais SHA-256 source/PRA des 8 dérivés non attesté sur octets. Ne pas déclarer PASS binaire global ni demander de refaire les copies ; preuve canonique issue #16. Autres gates Auth, RGPD et release ouverts."
+      ]
+    }
+  ],
+  "operations": [
+    {
+      "id": "pra-prod-postgresql-auth-restore",
+      "status": "done",
+      "scope": "Restauration indépendante de PostgreSQL et Auth sur le projet PRA existant; empreintes de catalogue concordantes",
+      "environment": "prod-to-pra",
+      "verifiedAt": "2026-11-12",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/issues/16#issuecomment-6810528016"
+      ]
+    },
+    {
+      "id": "pra-prod-storage-copy",
+      "status": "done",
+      "scope": "Copie déjà exécutée des 13 objets Storage (5 originaux et 8 dérivés), 832860 octets; métadonnées identiques",
+      "environment": "prod-to-pra",
+      "verifiedAt": "2026-11-12",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/pull/128#issuecomment-6810528016"
+      ]
+    },
+    {
+      "id": "pra-prod-archive-sha256-comparison",
+      "status": "done",
+      "scope": "Comparaison 13/13 SHA-256 identiques sur archives déclarées par l'opérateur; provenance indépendante des ZIP non attestée, à conserver comme réserve documentaire, pas comme demande de recopie",
+      "environment": "prod-to-pra",
+      "verifiedAt": "2026-11-11",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/pull/128#issuecomment-6805923183",
+        "https://github.com/totorina47501-wq/Project3/pull/128#discussion_r4548293778"
+      ]
+    },
+    {
+      "id": "staging-code-rollback",
+      "status": "done",
+      "scope": "Rollback A/B staging Cloudflare avec deux SHA distincts",
+      "environment": "staging",
+      "verifiedAt": "2026-11-11",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/actions/runs/42981396379"
+      ]
+    },
+    {
+      "id": "staging-rgpd-synthetic-qa",
+      "status": "done",
+      "scope": "Recette RGPD sur fixture synthétique staging; ne pas extrapoler à l'effacement réel des clients",
+      "environment": "staging",
+      "verifiedAt": "2026-11-12",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/actions/runs/43188724278",
+        "https://github.com/totorina47501-wq/Project3/actions/runs/43188724358"
+      ]
+    },
+    {
+      "id": "growth-phase-one",
+      "status": "done",
+      "scope": "Landing et guide phase 1; feedback persistant non activé",
+      "environment": "main",
+      "verifiedAt": "2026-11-12",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/pull/130"
+      ]
+    },
+    {
+      "id": "brand-legal-code-alignment",
+      "status": "done",
+      "scope": "Branding MentionCheckCorp et documents brouillons; publication juridique définitive non incluse",
+      "environment": "main",
+      "verifiedAt": "2026-11-12",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/pull/136"
+      ]
+    },
+    {
+      "id": "stripe-entitlement-sync-code",
+      "status": "done",
+      "scope": "Code de synchronisation des droits Stripe hors encaissement Live",
+      "environment": "main",
+      "verifiedAt": "2026-11-11",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/pull/131"
+      ]
+    },
+    {
+      "id": "solo-prod-cutover",
+      "status": "pending",
+      "scope": "Bascule atomique quotas/bridge des deux Solo historiques, après certification et autorisation",
+      "environment": "production",
+      "evidence": []
+    },
+    {
+      "id": "oauth-provider-review",
+      "status": "in_progress",
+      "scope": "Recettes réelles OAuth fournisseurs sur PR existante #132; aucun nouveau chantier",
+      "environment": "staging",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/pull/132"
+      ]
+    },
+    {
+      "id": "analytics-consent-release",
+      "status": "in_progress",
+      "scope": "PR existante #138: consentement, GTM et preuve de déploiement",
+      "environment": "staging-to-production",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/pull/138"
+      ]
+    },
+    {
+      "id": "certification-six-gates",
+      "status": "in_progress",
+      "scope": "Issue #16 et PR #128 uniquement; pas de seconde mission de certification",
+      "environment": "staging-to-production",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/pull/128"
       ]
     }
   ]

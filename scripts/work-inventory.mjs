@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Registre de fonctionnalités : vérification sans réseau ni crédit API.
 import {readFile,readdir,stat} from 'node:fs/promises';
+import {readFileSync} from 'node:fs';
 import {resolve,dirname,relative,sep,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 const ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'..');
@@ -9,6 +10,50 @@ const safePath=s=>typeof s==='string'&&!!s&&!s.startsWith('/')&&!s.includes('\\'
   s.split('/').every(p=>p!=='.'&&p!=='..'&&!!p);
 const norm=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'')
   .toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+
+const OPERATION_STATES=new Set(['done','pending','in_progress']);
+const OPERATION_ID=/^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+export function inspectOperations(data){
+  const errors=[];
+  if(!Array.isArray(data?.operations)||!data.operations.length)
+    return ['Registre opérationnel manquant'];
+  const seen=new Set();
+  for(const op of data.operations){
+    if(!op||!OPERATION_ID.test(op.id??'')){errors.push('ID opération invalide');continue}
+    if(seen.has(op.id))errors.push('Opération dupliquée : '+op.id);
+    seen.add(op.id);
+    if(!OPERATION_STATES.has(op.status))errors.push('Statut opération invalide : '+op.id);
+    if(typeof op.scope!=='string'||!op.scope.trim())
+      errors.push('Périmètre opération manquant : '+op.id);
+    if(typeof op.environment!=='string'||!op.environment.trim())
+      errors.push('Environnement opération manquant : '+op.id);
+    if(!Array.isArray(op.evidence)||op.evidence.some(url=>
+      typeof url!=='string'||!/^https:\/\/github\.com\/totorina47501-wq\/Project3\//.test(url)))
+      errors.push('Preuve opération invalide : '+op.id);
+    if(op.status==='done'&&(!op.evidence?.length||
+      !/^\d{4}-\d{2}-\d{2}$/.test(op.verifiedAt??'')))
+      errors.push('Opération terminée sans preuve datée : '+op.id);
+  }
+  return errors;
+}
+export function guardOperation(data,id){
+  if(typeof id!=='string'||!OPERATION_ID.test(id))
+    return {allowed:false,reason:'Identifiant de mission invalide'};
+  const op=data?.operations?.find(x=>x.id===id);
+  if(!op)return {allowed:false,reason:'Mission non répertoriée : '+id+' ; rapprochement humain requis avant dispatch'};
+  if(op.status==='done')
+    return {allowed:false,reason:'ALREADY_DONE '+id+' ; ne pas refaire. Preuve : '+op.evidence.join(' ')};
+  if(op.status==='in_progress')
+    return {allowed:false,reason:'ALREADY_ASSIGNED '+id+' ; réutiliser la PR/issue existante'};
+  return {allowed:true,reason:'PENDING '+id+' ; effectuer encore les vérifications de PR, preuves et droits'};
+}
+export function guardIssue(data,issue){
+  const body=typeof issue?.body==='string'?issue.body:'';
+  const matches=[...body.matchAll(/<!--\s*mentioncheck-work-id:\s*([a-z0-9]+(?:-[a-z0-9]+)*)\s*-->/g)];
+  if(matches.length!==1)
+    return {allowed:false,reason:'Issue sans identifiant unique <!-- mentioncheck-work-id: ... --> ; aucune affectation'};
+  return guardOperation(data,matches[0][1]);
+}
 async function filesAt(dir,root,all=[]){
   let entries;
   try{entries=await readdir(dir,{withFileTypes:true})}
@@ -66,7 +111,7 @@ export function inspectRegistry(data,inventory){
     errors.push('Route inexistante : '+route);
   for(const migration of migrations.keys())if(!inventory.migrations.includes(migration))
     errors.push('Migration inexistante : '+migration);
-  return errors;
+  return errors.concat(inspectOperations(data));
 }
 export async function audit(root=ROOT){
   const data=JSON.parse(await readFile(join(root,'docs/work-registry.json'),'utf8'));
@@ -90,6 +135,14 @@ async function main(args){
   if(task==='check'){
     process.stdout.write('OK '+r.data.features.length+' fonctionnalités ; '+
       r.routeCount+' routes et '+r.migrationCount+' migrations référencées sans doublon.\n');
+    return;
+  }
+  if(task==='guard'||task==='guard-issue'){
+    const decision=task==='guard' ? guardOperation(r.data,args[1]) :
+      guardIssue(r.data,JSON.parse(readFileSync(0,'utf8')));
+    const stream=decision.allowed?process.stdout:process.stderr;
+    stream.write(decision.reason+'\n');
+    if(!decision.allowed)process.exitCode=3;
     return;
   }
   if(task==='find'){
