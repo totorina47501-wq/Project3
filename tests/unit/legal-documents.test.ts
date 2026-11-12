@@ -8,7 +8,7 @@ describe('Documents juridiques MentionCheck en prépublication', () => {
   it('garde les conditions d’abonnement non indexables et expose les droits consommateurs', () => {
     const html = renderToStaticMarkup(createElement(Terms));
     expect(termsMetadata.robots).toEqual({ index: false, follow: false });
-    expect(termsMetadata.alternates?.canonical).toBe('/legal/cgu');
+    expect(termsMetadata.alternates?.canonical).toBeUndefined();
     expect(html).toContain('Conditions générales d’utilisation et de vente');
     expect(html).toContain('rétractation');
     expect(html).toContain('14 jours');
@@ -22,7 +22,7 @@ describe('Documents juridiques MentionCheck en prépublication', () => {
   it('informe sur les droits RGPD et refuse toute promesse de purge complète', () => {
     const html = renderToStaticMarkup(createElement(Confidentialite));
     expect(privacyMetadata.robots).toEqual({ index: false, follow: false });
-    expect(privacyMetadata.alternates?.canonical).toBe('/legal/confidentialite');
+    expect(privacyMetadata.alternates?.canonical).toBeUndefined();
     expect(html).toContain('Politique de confidentialité et cookies');
     expect(html).toContain('opposition');
     expect(html).toContain('Consentement');
