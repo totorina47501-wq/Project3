@@ -6,6 +6,7 @@ import '@fontsource/inter/latin-700.css';
 import '@fontsource/space-grotesk/latin-500.css';
 import '@fontsource/space-grotesk/latin-600.css';
 import '@fontsource/space-grotesk/latin-700.css';
+import { AnalyticsConsent } from '@/components/AnalyticsConsent';
 import { BRAND } from '@/lib/branding';
 import { publicSiteUrl } from '@/lib/site-url';
 import './globals.css';
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="fr">
       <body className="font-sans antialiased">
         {children}
+        <AnalyticsConsent />
       </body>
     </html>
   );

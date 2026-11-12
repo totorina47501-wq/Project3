@@ -87,7 +87,7 @@ const sections = [
     "body": [
       "Les cookies de connexion et de sécurité strictement nécessaires à la fourniture du service peuvent être utilisés sans consentement préalable, sous réserve d'information transparente. Ils permettent notamment de maintenir la session et de protéger l'accès au compte.",
       "Les traceurs facultatifs de mesure d'audience non exemptée, de publicité ou de personnalisation non indispensable ne peuvent être activés qu'avec une information et un consentement conformes, ainsi qu'un moyen de refus et de retrait aussi simple que l'acceptation. La présence d'un outil de mesure d'audience ne constitue pas automatiquement une exemption de consentement.",
-      "L'inventaire technique final des cookies et de leurs durées doit être publié avant l'activation des traceurs facultatifs. Aucune bannière de cookies n'est annoncée comme opérationnelle tant que son comportement réel n'a pas été testé."
+      "Une interface de choix des cookies est préparée pour les statistiques Google Analytics (balise Google Tag Manager). La balise n'est pas chargée sans acceptation explicite ; refuser reste aussi simple qu'accepter, et la préférence peut être revue via « Gérer les cookies ». Le choix est enregistré localement dans le navigateur. Le retrait empêche les nouvelles mesures et déclenche le rechargement de la page ; il ne supprime pas les données déjà reçues par Google. L'inventaire et les durées de conservation des cookies Google ainsi que les garanties liées aux transferts doivent être vérifiés avant la mise en production."
     ]
   },
   {
