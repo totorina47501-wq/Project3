@@ -122,7 +122,7 @@ export default function Confidentialite() {
       <p><a href="https://www.cnil.fr/fr/cookies-et-autres-traceurs/regles/cookies/FAQ" className="text-indigo-700 underline">CNIL — questions-réponses sur les cookies et le consentement</a>.</p>
       <p><a href="https://support.google.com/analytics/answer/11397207?hl=fr" className="text-indigo-700 underline">Google — cookies GA4 et durées par défaut</a>.</p>
       <p><a href="https://support.google.com/analytics/answer/7667196?hl=fr" className="text-indigo-700 underline">Google — conservation des données GA4</a>.</p>
-      <p><a href="https://www.cnil.fr/fr/mesure-daudience-et-transferts-de-donnees-comment-mettre-son-outil-de-mesure-daudience-en-conformite" className="text-indigo-700 underline">CNIL — transferts internationaux et mesure d'audience</a>.</p>
+      <p><a href="https://www.cnil.fr/fr/mesure-daudience-et-transferts-de-donnees-comment-mettre-son-outil-de-mesure-daudience-en-conformite" className="text-indigo-700 underline">CNIL — transferts internationaux et mesure d&apos;audience</a>.</p>
     </section>
     <p className="border-t border-slate-200 pt-6 text-sm">
       Pour connaître l’identité déclarée et les informations d’hébergement, consulter les
