@@ -41,3 +41,13 @@ test('Google tag seulement après accord, retrait persistant', async ({ page }) 
   await expect(page.locator('script[src*="googletagmanager.com"]')).toHaveCount(0);
   expect(await page.evaluate(() => window.localStorage.getItem('mentioncheck.analytics-consent.v1'))).toBe('rejected');
 });
+
+test('un visiteur sans choix peut utiliser login sans bannière bloquante', async ({ page }) => {
+  await page.goto('/login');
+  await expect(page.getByRole('region', { name: 'Choix des cookies statistiques' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Se connecter' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Gérer les cookies' })).toBeVisible();
+  await expect(page.locator('script[src*="googletagmanager.com"]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Gérer les cookies' }).click();
+  await expect(page.getByRole('region', { name: 'Choix des cookies statistiques' })).toBeVisible();
+});

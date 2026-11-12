@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Script from 'next/script';
+import { usePathname } from 'next/navigation';
 
 const ANALYTICS_STORAGE_KEY = 'mentioncheck.analytics-consent.v1';
 const GOOGLE_TAG_URL = 'https://www.googletagmanager.com/gtm.js?id=GTM-WQKLMJPM';
@@ -32,6 +33,7 @@ function clearGoogleAnalyticsCookies() {
  * This is independent from the authenticated AI-training opt-in preference.
  */
 export function AnalyticsConsent() {
+  const pathname = usePathname();
   const [choice, setChoice] = useState<AnalyticsChoice>('loading');
   const [editing, setEditing] = useState(false);
 
@@ -65,7 +67,9 @@ export function AnalyticsConsent() {
     }
   }
 
-  const showChoices = choice === 'undecided' || editing;
+  // On functional pages, keep consent optional and non-blocking: offer a small settings control.
+  // The prominent banner appears on the home page, where it cannot obstruct auth and dashboard forms.
+  const showChoices = editing || (choice === 'undecided' && pathname === '/');
 
   return (
     <>
@@ -113,7 +117,7 @@ gtag('js', new Date());`}
         </section>
       )}
 
-      {choice !== 'loading' && choice !== 'undecided' && !editing && (
+      {choice !== 'loading' && !showChoices && (
         <button
           type="button"
           onClick={() => setEditing(true)}
