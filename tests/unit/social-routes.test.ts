@@ -35,12 +35,22 @@ describe('Routes de déclarations sociales',()=>{
     const response=await DELETE(request(),context);expect(response.status).toBe(200);
     expect(mocks.rpc).toHaveBeenCalledWith('remove_social_account',{p_id:id});
   });
-  it('borne la lecture au propriétaire et exclut systématiquement Vault',async()=>{
-    const query={select:vi.fn().mockReturnThis(),eq:vi.fn().mockReturnThis(),order:vi.fn().mockReturnThis(),range:vi.fn().mockResolvedValue({data:[],count:0,error:null})};
-    mocks.from.mockReturnValue(query);
-    expect((await GET(new Request('https://local.test/api/social-accounts?page=2'))).status).toBe(200);
-    expect(query.eq).toHaveBeenCalledWith('user_id','owner');expect(query.range).toHaveBeenCalledWith(25,49);
-    expect(query.select.mock.calls[0]?.[0]).not.toContain('vault');
+  it('compte les seuls comptes OAuth actifs, indépendamment de la pagination et sans exposer Vault',async()=>{
+    const inventory={select:vi.fn().mockReturnThis(),eq:vi.fn().mockReturnThis(),order:vi.fn().mockReturnThis(),range:vi.fn().mockResolvedValue({data:[],count:3,error:null})};
+    const connected={select:vi.fn().mockReturnThis(),eq:vi.fn().mockReturnThis()};
+    connected.eq.mockReturnValue(connected);
+    // A filter on the OAuth-only query resolves independently from the paged list.
+    connected.eq.mockImplementation(function(){return connected;});
+    connected.eq.mockImplementationOnce(()=>connected).mockResolvedValueOnce({count:1,error:null});
+    mocks.from.mockReturnValueOnce(inventory).mockReturnValueOnce(connected);
+    const response=await GET(new Request('https://local.test/api/social-accounts?page=2'));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({total:3,connectedTotal:1,page:2});
+    expect(inventory.eq).toHaveBeenCalledWith('user_id','owner');
+    expect(inventory.range).toHaveBeenCalledWith(25,49);
+    expect(connected.eq).toHaveBeenCalledWith('connection_kind','oauth');
+    expect(inventory.select.mock.calls[0]?.[0]).not.toContain('vault');
+    expect(connected.select).toHaveBeenCalledWith('id',{head:true,count:'exact'});
     expect((await GET(new Request('https://local.test/api/social-accounts?page=no'))).status).toBe(400);
   });
   it('lit et persiste un ton sans permettre de changer le plan',async()=>{

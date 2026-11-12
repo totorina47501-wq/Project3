@@ -2,10 +2,11 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { platformLabels, type SocialAccount, type SocialDraft, SOCIAL_PAGE_SIZE } from '@/lib/social/model';
 
-type Props={initialItems:SocialAccount[];initialTotal:number;initialUnavailable?:boolean;plan:string};
-export function SocialAccounts({initialItems,initialTotal,initialUnavailable=false,plan}:Props){
+type Props={initialItems:SocialAccount[];initialTotal:number;initialConnectedTotal?:number;initialUnavailable?:boolean;plan:string};
+export function SocialAccounts({initialItems,initialTotal,initialConnectedTotal=0,initialUnavailable=false,plan}:Props){
   const [items,setItems]=useState(initialItems);
   const [total,setTotal]=useState(initialTotal);
+  const [connectedTotal,setConnectedTotal]=useState(initialConnectedTotal);
   const [page,setPage]=useState(1);
   const [platform,setPlatform]=useState<SocialDraft['platform']>('instagram');
   const [handle,setHandle]=useState('');
@@ -18,9 +19,11 @@ export function SocialAccounts({initialItems,initialTotal,initialUnavailable=fal
   });
   const load=useCallback(async(nextPage:number)=>{
     const response=await fetch('/api/social-accounts?page='+nextPage,{cache:'no-store'});
-    const body=await response.json() as {items?:SocialAccount[];total?:number;error?:string};
-    if(!response.ok||!Array.isArray(body.items)||typeof body.total!=='number')throw new Error(body.error??'Liste indisponible.');
-    setItems(body.items);setTotal(body.total);setPage(nextPage);setUnavailable(false);
+    const body=await response.json() as {items?:SocialAccount[];total?:number;connectedTotal?:number;error?:string};
+    if(!response.ok||!Array.isArray(body.items)||!Number.isInteger(body.total)||
+      !Number.isInteger(body.connectedTotal)||body.connectedTotal!<0||body.connectedTotal!>body.total!)
+      throw new Error(body.error??'Liste indisponible.');
+    setItems(body.items);setTotal(body.total!);setConnectedTotal(body.connectedTotal!);setPage(nextPage);setUnavailable(false);
   },[]);
   const changePage=useCallback(async(nextPage:number)=>{
     setBusy(true);setMessage('');
@@ -119,6 +122,9 @@ export function SocialAccounts({initialItems,initialTotal,initialUnavailable=fal
     <h2 id="social-heading" className="font-heading text-xl font-bold">Mes comptes sociaux déclarés</h2>
     <p className="text-sm text-slate-600">Ajoute les noms de tes comptes pour organiser ton espace. Une déclaration manuelle ne connecte aucun réseau. OAuth reste désactivé par défaut ; aucune lecture de publication ni publication automatique n’est réalisée.</p>
     <p className="text-sm font-semibold">{unavailable?'Inventaire momentanément indisponible':`${total} compte${total>1?'s':''} enregistré${total>1?'s':''}`}{plan==='solo'?' · Plan Solo : 3 comptes maximum.':plan==='free'?' · Gratuit : 3 comptes maximum.':''}</p>
+    {!unavailable&&<p className="text-sm font-semibold text-slate-700" aria-live="polite">
+      Comptes reliés : {connectedTotal} · Autres comptes enregistrés : {total-connectedTotal}
+    </p>}
     {unavailable&&<button type="button" disabled={busy} onClick={()=>void changePage(page)} className="rounded-lg border px-3 py-2">Actualiser la liste</button>}
     {!unavailable&&!items.length&&<p className="text-sm text-slate-500">Aucun compte déclaré pour le moment.</p>}
     <ul className="divide-y divide-slate-100">

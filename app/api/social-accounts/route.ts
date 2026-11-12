@@ -14,10 +14,16 @@ export async function GET(request:Request){
     if(expiryFailed&&process.env.SOCIAL_OAUTH_ENABLED==='true')throw new Error('Comptes indisponibles.');
     let page:number;try{page=socialPage(request);}catch{throw new HttpError(400,'Page invalide.');}
     const offset=(page-1)*SOCIAL_PAGE_SIZE;
-    const {data,error,count}=await client.from('social_accounts').select(SOCIAL_COLUMNS,{count:'exact'})
-      .eq('user_id',user.id).order('connected_at',{ascending:false}).order('id',{ascending:false}).range(offset,offset+SOCIAL_PAGE_SIZE-1);
-    if(error)throw new Error('Comptes indisponibles.');
-    return Response.json({items:data??[],total:count,page,pageSize:SOCIAL_PAGE_SIZE},{headers:settingsHeaders});
+    const [inventory, connected] = await Promise.all([
+      client.from('social_accounts').select(SOCIAL_COLUMNS,{count:'exact'})
+        .eq('user_id',user.id).order('connected_at',{ascending:false}).order('id',{ascending:false}).range(offset,offset+SOCIAL_PAGE_SIZE-1),
+      // Source of truth: only persisted, active OAuth accounts count as connected.
+      // A successful Google consent alone must never increment this counter.
+      client.from('social_accounts').select('id',{count:'exact',head:true})
+        .eq('user_id',user.id).eq('connection_kind','oauth'),
+    ]);
+    if(inventory.error||connected.error||inventory.count===null||connected.count===null)throw new Error('Comptes indisponibles.');
+    return Response.json({items:inventory.data??[],total:inventory.count,connectedTotal:connected.count,page,pageSize:SOCIAL_PAGE_SIZE},{headers:settingsHeaders});
   }catch(error){return settingsError(error);}
 }
 export async function POST(request:Request){

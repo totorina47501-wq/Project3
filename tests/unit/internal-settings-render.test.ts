@@ -11,6 +11,21 @@ describe('Paramètres rendus sans fournisseur',()=>{
     expect(html).toMatch(/<button disabled=""[^>]*>Ajouter la déclaration<\/button>/);
     expect(html).toContain('Retirer la déclaration @camille');
   });
+  it('compte uniquement les connexions OAuth enregistrées, et non les déclarations manuelles ou expirées',()=>{
+    const html=renderToStaticMarkup(createElement(SocialAccounts,{
+      plan:'solo',initialTotal:3,initialConnectedTotal:1,
+      initialItems:[
+        {id:'oauth',platform:'youtube',handle:'channel',connection_kind:'oauth',connected_at:'2026-11-04'},
+        {id:'manual',platform:'instagram',handle:'creator',connection_kind:'manual',connected_at:'2026-11-04'},
+        {id:'expired',platform:'tiktok',handle:'old',connection_kind:'expired',connected_at:'2026-11-04'},
+      ],
+    }));
+    expect(html).toContain('Comptes reliés : <!-- -->1');
+    expect(html).toContain('Autres comptes enregistrés : <!-- -->2');
+    expect(html).toContain('Connexion OAuth active');
+    expect(html).toContain('Déconnecter');
+    expect(html).toMatch(/<button disabled=""[^>]*>Ajouter la déclaration<\/button>/);
+  });
   it('identifie une connexion expirée sans la présenter comme OAuth active',()=>{
     const html=renderToStaticMarkup(createElement(SocialAccounts,{plan:'pro',initialTotal:1,initialItems:[{id:'expired',platform:'youtube',handle:'channel',connection_kind:'expired',connected_at:'2026-11-04'}]}));
     expect(html).toContain('Connexion expirée ou déconnectée');

@@ -50,11 +50,13 @@ export default async function SettingsPage() {
   if(userData){
     try{await supabase.rpc('expire_social_oauth_accounts',{p_user:userData.id});}catch{}
   }
-  const [social,preferences] = userData ? await Promise.all([
+  const [social,connectedSocial,preferences] = userData ? await Promise.all([
     supabase.from('social_accounts').select(SOCIAL_COLUMNS,{count:'exact'}).eq('user_id',userData.id)
       .order('connected_at',{ascending:false}).order('id',{ascending:false}).range(0,SOCIAL_PAGE_SIZE-1),
+    supabase.from('social_accounts').select('id',{count:'exact',head:true})
+      .eq('user_id',userData.id).eq('connection_kind','oauth'),
     supabase.from('user_preferences').select('rewrite_tone').eq('user_id',userData.id).maybeSingle(),
-  ]) : [null,null];
+  ]) : [null,null,null];
   const tone = toneSchema.safeParse(preferences?.data?.rewrite_tone);
   return <div className="mx-auto max-w-3xl space-y-7">
     <header>
@@ -98,7 +100,8 @@ export default async function SettingsPage() {
         {!stripe.enabled && tier !== 'free' && !promotionalSolo && <p className="mt-3 text-sm text-slate-600">La gestion de facturation est momentanément indisponible. Les droits existants restent consultables.</p>}
       </section>
       <SocialAccounts initialItems={(social?.data??[]) as unknown as SocialAccount[]} initialTotal={social?.count??0}
-        initialUnavailable={!social||!!social.error} plan={tier ?? 'free'} />
+        initialConnectedTotal={connectedSocial?.count??0}
+        initialUnavailable={!social||!!social.error||!connectedSocial||!!connectedSocial.error} plan={tier ?? 'free'} />
       <AIPreferences initialTone={tone.success?tone.data:'naturel'} initialUnavailable={!preferences||!!preferences.error} />
       <PrivacySettings initialOptIn={userData.ai_training_opt_in ?? false} />
       <section className="rounded-2xl border border-slate-200 bg-white p-6">
