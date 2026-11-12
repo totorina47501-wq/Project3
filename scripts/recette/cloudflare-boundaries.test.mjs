@@ -86,3 +86,16 @@ test('RGPD staging preserve les comptes OAuth preexistants et efface uniquement 
   assert.match(source,/admin\.auth\.admin\.deleteUser\(id\)/);
   assert.match(source,/\.eq\('id',id\)/);
 });
+
+// Les workflows staging partagent le même Worker : ne jamais perdre une recette en attente.
+test('Auth et Studio staging sérialisent les déploiements sans annuler les runs en attente',()=>{
+  for(const path of [
+    '.github/workflows/mentioncheck-launch-staging-auth.yml',
+    '.github/workflows/mentioncheck-studio-api-staging.yml',
+  ]){
+    const workflow=readFileSync(join(root,path),'utf8');
+    assert.match(workflow,/concurrency:\\s*\\n\\s*group: mentioncheck-staging-cloudflare\\s*\\n\\s*queue: max\\s*\\n\\s*cancel-in-progress: false/);
+    assert.match(workflow,/BILLING_ENABLED: 'false'/);
+    assert.match(workflow,/OPENAI_PAUSED: 'true'/);
+  }
+});

@@ -5,8 +5,10 @@ on:
     branches: [feat/mentioncheck-studio-api-entitlements-20261110, codex/codex-certification-six-chantiers]
 permissions:
   contents: read
+# Preserve all queued staging recipes while serializing deployments.
 concurrency:
   group: mentioncheck-staging-cloudflare
+  queue: max
   cancel-in-progress: false
 jobs:
   studio-api-staging:
