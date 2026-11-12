@@ -94,7 +94,7 @@ test('Auth et Studio staging sérialisent les déploiements sans annuler les run
     '.github/workflows/mentioncheck-studio-api-staging.yml',
   ]){
     const workflow=readFileSync(join(root,path),'utf8');
-    assert.match(workflow,/concurrency:\\s*\\n\\s*group: mentioncheck-staging-cloudflare\\s*\\n\\s*queue: max\\s*\\n\\s*cancel-in-progress: false/);
+    assert.match(workflow,/concurrency:\s*\n\s*group: mentioncheck-staging-cloudflare\s*\n\s*queue: max\s*\n\s*cancel-in-progress: false/);
     assert.match(workflow,/BILLING_ENABLED: 'false'/);
     assert.match(workflow,/OPENAI_PAUSED: 'true'/);
   }
