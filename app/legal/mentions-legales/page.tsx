@@ -18,7 +18,8 @@ export default function MentionsLegales() {
     <h2 className="text-2xl font-bold">Éditeur</h2>
     <p>Nom commercial du produit : MentionCheck. Nom légal déclaré par l&apos;exploitant :
       {` ${BRAND.legalName}`} (déclaration non encore vérifiée).
-      Forme juridique, siège publiable, immatriculation (SIREN/SIRET/RCS),
+      SIRET communiqué par l&apos;exploitant : {BRAND.siret} (sans vérification de ce numéro).
+      Forme juridique exacte, siège publiable, autres mentions d&apos;immatriculation,
       contact officiel et responsable de publication : à confirmer avec justificatifs
       avant mise en production commerciale.
     </p>

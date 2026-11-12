@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { BRAND } from '@/lib/branding';
 
 export const metadata: Metadata = {
   title: 'Politique de confidentialité et cookies — MentionCheck (prépublication)',
@@ -10,7 +11,7 @@ const sections = [
   {
     "title": "Responsable du traitement et contact",
     "body": [
-      "Le service MentionCheck est exploité sous le nom déclaré MentionCheckCorp. Son identité juridique exacte, sa forme, son siège et son immatriculation devront être reportés dans les mentions légales après vérification des justificatifs. Tant que ces informations et un contact RGPD contrôlé ne sont pas publiés, cette politique demeure une version de prépublication.",
+      `Le service MentionCheck est exploité sous le nom déclaré ${BRAND.legalName}. SIRET communiqué par l’exploitant : ${BRAND.siret} (sans vérification de ce numéro). La forme juridique exacte, le siège publiable et le contact RGPD doivent encore être renseignés dans les mentions légales. Tant que ces informations ne sont pas publiées, cette politique demeure une version de prépublication.`,
       "Pour exercer vos droits ou signaler un incident, utilisez le canal officiel de contact qui devra être indiqué dans les mentions légales et accessible depuis les paramètres. N'envoyez pas de données sensibles à un canal non vérifié."
     ]
   },

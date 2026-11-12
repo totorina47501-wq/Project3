@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { BRAND } from '@/lib/branding';
 
 export const metadata: Metadata = {
   title: 'Conditions générales d’utilisation et de vente — MentionCheck (prépublication)',
@@ -10,7 +11,7 @@ const clauses = [
   {
     "title": "1. Éditeur, portée et version",
     "body": [
-      "Le service MentionCheck (https://mentioncheck.app) est proposé par l'éditeur déclaré MentionCheckCorp. La forme juridique, l'immatriculation, le siège et les coordonnées de l'éditeur doivent être confirmés sur la page Mentions légales avant la souscription à une offre payante.",
+      `Le service MentionCheck (https://mentioncheck.app) est proposé par l’éditeur déclaré ${BRAND.legalName}. SIRET communiqué par l’exploitant : ${BRAND.siret} (sans vérification de ce numéro). La forme juridique exacte, le siège, les coordonnées et les autres mentions légales doivent être finalisés sur la page Mentions légales avant la souscription à une offre payante.`,
       "Les présentes conditions couvrent la consultation du site, l'utilisation de la démonstration gratuite et, après activation commerciale et acceptation expresse, les abonnements mensuels Solo, Pro et Studio. En cas de vente à un consommateur, les règles impératives du Code de la consommation prévalent sur toute stipulation contraire."
     ]
   },

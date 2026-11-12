@@ -1,6 +1,8 @@
 // Source unique de l'identité publique MentionCheck.
 export const BRAND = {
   legalName: 'MentionCheckCorp',
+  // Identifiant fourni par l'exploitant ; aucune vérification auprès d'un registre.
+  siret: '93214476900019',
   publicName: 'MentionCheck',
   tagline: "L'IA qui check vos mentions légales avant publication.",
   domain: 'mentioncheck.app',
