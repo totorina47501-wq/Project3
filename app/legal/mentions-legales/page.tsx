@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { BRAND } from '@/lib/branding';
 export const metadata: Metadata = {
   title:'Mentions légales en préparation — MentionCheck',
+  alternates:{ canonical:'/legal/mentions-legales' },
   robots:{index:false,follow:false},
 };
 export default function MentionsLegales() {
@@ -11,12 +13,19 @@ export default function MentionsLegales() {
     <p className="rounded-xl border border-amber-300 bg-amber-50 p-4">
       <strong>Version de prépublication.</strong> Les mentions obligatoires sont
       à renseigner et à faire valider avant toute commercialisation.
-      L&apos;identité juridique de l&apos;éditeur n&apos;est pas encore fournie.
+      Cette page reste en brouillon juridique et n&apos;est pas indexable.
     </p>
     <h2 className="text-2xl font-bold">Éditeur</h2>
-    <p>Nom commercial du produit : MentionCheck. Raison sociale, forme juridique,
-      siège, immatriculation, contact officiel et responsable de publication :
-      à compléter par l&apos;exploitant avant mise en production commerciale.
+    <p>Nom commercial du produit : MentionCheck. Nom légal déclaré par l&apos;exploitant :
+      {` ${BRAND.legalName}`} (déclaration non encore vérifiée).
+      Forme juridique, siège publiable, immatriculation (SIREN/SIRET/RCS),
+      contact officiel et responsable de publication : à confirmer avec justificatifs
+      avant mise en production commerciale.
+    </p>
+    <h2 className="text-2xl font-bold">Domaine de publication</h2>
+    <p>Domaine canonique déclaré : {BRAND.domain}.
+      Le raccordement technique du domaine ne vaut pas validation des obligations
+      légales de l&apos;éditeur.
     </p>
     <h2 className="text-2xl font-bold">Hébergement technique</h2>
     <p>Application : Cloudflare Workers. Données d&apos;authentification

@@ -9,6 +9,8 @@ test('accueil public MentionCheck', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Connexion' })).toHaveAttribute('href', '/login');
   await expect(page.getByRole('link', { name: 'Check ma publication' })).toHaveAttribute('href', '/register');
   await expect(page.getByRole('heading', { name: 'Pour qui est fait MentionCheck ?' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Checklist influence commerciale' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Lire le guide complet' })).toHaveAttribute('href', '/guide/checklist-influence');
   await expect(page.getByText('Les tarifs sont indicatifs et les abonnements payants ne sont pas encore ouverts.')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Comparer les tarifs indicatifs' })).toHaveAttribute('href', '/tarifs');
   const legalNavigation = page.getByRole('navigation', { name: 'Informations publiques' });
@@ -31,7 +33,8 @@ test('accueil sans collecte ni requête tierce, utilisable sur mobile et au clav
   });
   await page.goto('/');
   await page.waitForLoadState('networkidle');
-  await expect(page.locator('form, input, textarea')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Retour communautaire volontaire' })).toBeVisible();
+  await expect(page.locator('form')).toHaveCount(0);
   expect(thirdPartyRequests).toEqual([]);
   expect(dataRequests).toEqual([]);
 
@@ -59,6 +62,10 @@ test('accueil sans collecte ni requête tierce, utilisable sur mobile et au clav
 test('canonical limité à l’accueil', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('link[rel="canonical"]')).toHaveCount(1);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /^https:\/\/[^/]+\/?$/);
+  await page.goto('/guide/checklist-influence');
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(1);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/guide\/checklist-influence$/);
   for (const route of ['/tarifs', '/login', '/legal/cgu']) {
     await page.goto(route);
     await expect(page.locator('link[rel="canonical"]')).toHaveCount(0);
@@ -78,12 +85,9 @@ test('robots et sitemap excluent les routes privées ou non commercialisées', a
   expect(sitemap.ok()).toBeTruthy();
   const xml = await sitemap.text();
   const urls = Array.from(xml.matchAll(/<loc>(.*?)<\/loc>/g), ([, url]) => url);
-  expect(urls).toHaveLength(1);
+  expect(urls).toHaveLength(2);
   expect(new Set(urls).size).toBe(urls.length);
-  const [sitemapUrl] = urls;
-  expect(sitemapUrl).toBeDefined();
-  if (!sitemapUrl) return;
-  expect(new URL(sitemapUrl).pathname).toBe('/');
+  expect(urls.filter((url): url is string => !!url).map((url) => new URL(url).pathname).sort()).toEqual(['/', '/guide/checklist-influence']);
 });
 
 test('formulaire de connexion disponible sur mobile', async ({ page }) => {

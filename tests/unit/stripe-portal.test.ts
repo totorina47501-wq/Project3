@@ -30,6 +30,21 @@ it('refuse la mauvaise origine avant tout appel Stripe',async()=>{
  expect((await POST(call('https://external.test'))).status).toBe(403);
  expect(mocks.requireUser).not.toHaveBeenCalled();expect(mocks.stripe).not.toHaveBeenCalled();
 });
+it('refuse le portail live depuis l’ancien domaine malgré une origine locale valide',async()=>{
+ for(const [key,value] of Object.entries({
+   STRIPE_MODE:'live',STRIPE_SECRET_KEY:'sk_live_fixture',
+   STRIPE_LIVE_APPROVED:'true',STRIPE_LIVE_LEGAL_REGISTRATION:'123456789',
+   STRIPE_LIVE_TAX_REVIEW:'approved',STRIPE_LIVE_TERMS_REVIEW:'approved',
+   STRIPE_LIVE_E2E_REVIEW:'passed',OPENAI_PAUSED:'false',
+   OPENAI_TEXT_ENABLED:'true',OPENAI_VISION_ENABLED:'true',OPENAI_API_KEY:'sk-proj-fixture',
+   NEXT_PUBLIC_APP_URL:'https://mentioncheck.app'
+ }))vi.stubEnv(key,value);
+ const legacyOrigin='https://mentioncheck.toto-rina47501.workers.dev';
+ const r=await POST(new Request(legacyOrigin+'/api/stripe/portal',{method:'POST',headers:{origin:legacyOrigin}}));
+ expect(r.status).toBe(403);
+ expect(mocks.requireUser).not.toHaveBeenCalled();
+ expect(mocks.stripe).not.toHaveBeenCalled();
+});
 it('refuse sans compte Stripe associé',async()=>{
  customerId=null;expect((await POST(call())).status).toBe(404);
  expect(mocks.stripe).not.toHaveBeenCalled();

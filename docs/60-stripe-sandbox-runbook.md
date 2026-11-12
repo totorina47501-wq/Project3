@@ -61,28 +61,44 @@ La page Dashboard doit conserver l'activation de paiements réels désactivée.
 Endpoint Stripe Sandbox **actif côté Stripe**. Le Worker staging accepte seulement les événements Sandbox signés lorsque `STRIPE_WEBHOOK_ENABLED=true`, même avec Checkout bloqué par `BILLING_ENABLED=false`. Son secret de signature et la clé API test sont indiqués comme configurés par l'opérateur dans Cloudflare, sans vérification indépendante de leurs valeurs. ID :
 `we_1Ua9vNCZ5rRirUf6nz3ROD10`. Vérifier la concordance de la clé secrète de signature avec le Worker staging avant tout envoi d'événements de test. Destiné **aux événements du compte test seulement** :
 `https://mentioncheck-staging.toto-rina47501.workers.dev/api/stripe/webhook`.
-La route actuelle traite les événements `customer.subscription.created`,
-`customer.subscription.updated` et `customer.subscription.deleted`.
-Elle vérifie la signature sur le corps brut, refuse `livemode=true`,
-synchronise les droits via RPC transactionnelle et utilise une inbox
-`stripe_webhook_events`. Elle ne déclenche pas l'accès depuis
-`checkout.session.completed` seul ; ne pas annoncer les webhooks `invoice.*`
-comme gérés sans implémentation complémentaire et tests.
+La route actuelle traite `customer.subscription.created`, `customer.subscription.updated`,
+`customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`,
+`checkout.session.completed` (mode `subscription` uniquement) et
+`payment_intent.payment_failed`. Tous ces événements passent par signature Stripe,
+contrôle `livemode`, inbox idempotente `stripe_webhook_events` et relecture serveur
+de la souscription courante avant synchronisation RPC transactionnelle.
+`checkout.session.completed` seul ne donne jamais de droits via metadata client :
+les droits viennent uniquement de la souscription relue côté Stripe.
 
+\nLa résolution de souscription d'une facture supporte **Stripe API Basil et ultérieure** (`invoice.parent.subscription_details.subscription`) avec repli sur `invoice.subscription` pour les anciens événements signés, et accepte une référence sous forme d'ID ou d'objet développé. Couverture locale : `tests/unit/stripe-webhook.test.ts` ; aucun événement live n'est émis par ces tests.\n
 **Ne passer `BILLING_ENABLED=true` que dans staging** après confirmation des
 deux secrets, du webhook de test, de la migration `sync_stripe_subscription`,
 de la configuration isolée Supabase et des tests hors ligne.
 L'activation sera temporaire pour la recette ; la remettre à `false`
 après essais. Ne pas modifier `wrangler.jsonc` production.
 
-## Recette sans appel IA payant
+## Recette Sandbox sans appel IA payant
 
 1. CI locale, sans réseau fournisseur : `npx vitest run tests/unit/billing-config.test.ts tests/unit/stripe-webhook.test.ts tests/unit/stripe-solo-checkout.test.ts tests/unit/stripe-staging-config.test.ts`.
 2. Avant toute session Stripe : vérifier origine, authentification, un seul abonnement par compte, prix EUR et statut test.
-3. Dans **Sandbox uniquement**, payer avec les cartes de test Stripe ; contrôler pour chaque offre le montant fixe, l'identifiant de client, la persistance du webhook et l'évolution du plan dans **Supabase staging**.
+3. Dans **Sandbox uniquement**, exécuter les scénarios carte de test côté Stripe Checkout hébergé : succès (`4242 4242 4242 4242`), 3DS/SCA (`4000 0025 0000 3155`) et refus (`4000 0000 0000 9995`) ; contrôler pour chaque offre le montant fixe, l'identifiant de client, la persistance webhook et l'évolution du plan dans **Supabase staging**.
 4. Tester le portail : changement Pro → Studio, rétrogradation, résiliation en fin de période, reprise et paiement échoué ; vérifier qu'aucun ancien événement ne rétablit des droits périmés et qu'aucun compte tiers ne reçoit l'abonnement.
 5. Rejouer le **même** webhook et un événement invalide ; vérifier idempotence, refus de signature et absence de fuites de secrets.
 6. Supprimer les clients de test et preuves nominatives jetables selon la politique de recette, restaurer `BILLING_ENABLED=false`, contrôler le coût et **zéro appel OpenAI**.
+
+Étapes opérateur Stripe Dashboard/CLI (création de clients de test, finalisation de session Checkout, rejouage webhook signé) : **BLOCKED** dans ce dépôt tant qu'aucun accès Stripe n'est fourni à l'agent.
+
+## Matrice de contrôle BILLING-FINAL-001 (hors Live)
+
+Référence CI branche : `e612c4f2f1448d801c526f7ea5844ab87719491e` (run `42907332548`, `action_required`, aucun job exécuté).
+
+| Contrôle | Statut | Preuve |
+| --- | --- | --- |
+| Garde-fous config (`sk_/rk_`, `whsec_`, test/live mismatch, verrous live) | PASS | `tests/unit/billing-config.test.ts`, `tests/unit/stripe-staging-config.test.ts` |
+| Idempotence webhook et événements hors ordre/dupliqués | PASS | `tests/unit/stripe-webhook.test.ts`, `tests/sql/billing_sync_security.sql` |
+| Cycle de droits sur `incomplete`/`past_due`/`unpaid`/annulation | PASS | `tests/unit/billing-events.test.ts`, `tests/sql/free_paid_tiers_security.sql` |
+| Recette paiement Sandbox complète (cartes, 3DS, retries fournisseur, portail réel) | PARTIAL | Procédure définie ci-dessus, exécution réelle dépend d'un accès Stripe opérateur |
+| Preuve de paiement Live / webhook Live / encaissement réel | BLOCKED | Interdit par périmètre : aucun appel Live, aucun encaissement |
 
 Les tests unitaires ne prouvent pas la réception de webhooks sur Cloudflare ni
 l'état d'une base distante. Enregistrer ces preuves séparément une fois la recette

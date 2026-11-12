@@ -79,7 +79,8 @@
     "STRIPE_PRICE_SOLO": "price_1UaKLwCdRRAa9LkpiXUiv0wc",
     "STRIPE_PRICE_PRO": "price_1UaKLyCdRRAa9Lkp5daPFLZK",
     "STRIPE_PRICE_STUDIO": "price_1UaKM0CdRRAa9Lkptx9oZCS8",
-    "STRIPE_LIVE_APPROVED": "false"
+    "STRIPE_LIVE_APPROVED": "false",
+    "NEXT_PUBLIC_APP_URL": "https://mentioncheck.app"
   },
   "dev": {
     "enable_containers": false
@@ -102,5 +103,11 @@
       "MEDIA_RETENTION_ENABLED": "false",
       "PROMO_SOLO_ENABLED": "false"
     }
-  }
+  },
+  "routes": [
+    {
+      "pattern": "mentioncheck.app",
+      "custom_domain": true
+    }
+  ]
 }

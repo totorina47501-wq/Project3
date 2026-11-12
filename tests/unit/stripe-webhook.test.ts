@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ admin: vi.fn(), stripe: vi.fn(), construct: vi.fn(), retrieve: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  admin: vi.fn(),
+  stripe: vi.fn(),
+  construct: vi.fn(),
+  retrieve: vi.fn(),
+  retrieveInvoice: vi.fn(),
+}));
 vi.mock('server-only', () => ({}));
 vi.mock('../../lib/supabase/admin', () => ({ createAdminSupabase: mocks.admin }));
 vi.mock('../../lib/billing/stripe', () => ({ getStripe: mocks.stripe }));
@@ -12,8 +18,8 @@ let currentSubscription: string | null;
 let currentReadError: boolean;
 let conditionalMiss: boolean;
 let receiptStatus: string | null;
-const source = (id = 'sub_current') => ({
-  created:1_700_000_000,id, customer: 'cus_owner', status: 'active',
+const source = (id = 'sub_current', options: { status?: string } = {}) => ({
+  created:1_700_000_000,id, customer: 'cus_owner', status: options.status ?? 'active',
   items: { data: [{ price: { id: 'price_STUDIO' }, current_period_end: 1_800_000_000 }] },
 });
 const request = () => new Request('https://local.test/api/stripe/webhook', {
@@ -53,7 +59,12 @@ beforeEach(() => {
   mocks.admin.mockImplementation(database);
   mocks.construct.mockReturnValue({ created:1_700_000_010,id: 'evt_fixture', livemode: false, type: 'customer.subscription.updated', data: { object: source() } });
   mocks.retrieve.mockResolvedValue(source());
-  mocks.stripe.mockReturnValue({ webhooks: { constructEvent: mocks.construct }, subscriptions: { retrieve: mocks.retrieve } });
+  mocks.retrieveInvoice.mockResolvedValue({ subscription: 'sub_current' });
+  mocks.stripe.mockReturnValue({
+    webhooks: { constructEvent: mocks.construct },
+    subscriptions: { retrieve: mocks.retrieve },
+    invoices: { retrieve: mocks.retrieveInvoice },
+  });
 });
 afterEach(() => vi.unstubAllEnvs());
 
@@ -80,6 +91,62 @@ describe('Webhooks Stripe isolés du fournisseur', () => {
     expect((await POST(request())).status).toBe(200);
     expect(mocks.retrieve).toHaveBeenCalledWith('sub_current');
     expect(writes.find(write => write.table === 'atomic_rpc')).toMatchObject({ values: { p_period_end: new Date(1_800_000_000_000).toISOString(), p_plan: 'studio' } });
+  });
+  it('synchronise aussi un invoice.payment_failed pour révoquer les droits dès l’échec', async () => {
+    mocks.construct.mockReturnValue({ created:1_700_000_010,id: 'evt_invoice_failed', livemode: false, type: 'invoice.payment_failed', data: { object: { subscription: 'sub_current' } } });
+    mocks.retrieve.mockResolvedValue(source('sub_current', { status: 'past_due' }));
+    expect((await POST(request())).status).toBe(200);
+    expect(mocks.retrieve).toHaveBeenCalledWith('sub_current');
+    expect(writes.find(write => write.table === 'atomic_rpc')).toMatchObject({ values: { p_subscription: 'sub_current', p_status: 'past_due' } });
+  });
+  it('synchronise un invoice.paid depuis la souscription relue et ignore une facture sans souscription', async () => {
+    mocks.construct.mockReturnValue({ created:1_700_000_010,id: 'evt_invoice_paid', livemode: false, type: 'invoice.paid', data: { object: { subscription: 'sub_current' } } });
+    expect((await POST(request())).status).toBe(200);
+    expect(mocks.retrieve).toHaveBeenCalledWith('sub_current');
+    mocks.construct.mockReturnValue({ created:1_700_000_011,id: 'evt_invoice_without_subscription', livemode: false, type: 'invoice.paid', data: { object: { subscription: null } } });
+    expect((await POST(request())).status).toBe(200);
+  });
+  it('lit la souscription au format Stripe Basil, y compris un objet expanded', async () => {
+    mocks.construct.mockReturnValue({ created:1_700_000_010,id:'evt_basil_paid', livemode:false,
+      type:'invoice.paid', data:{object:{parent:{type:'subscription_details',subscription_details:{subscription:'sub_current'}}}} });
+    expect((await POST(request())).status).toBe(200);
+    expect(mocks.retrieve).toHaveBeenCalledWith('sub_current');
+    mocks.retrieve.mockClear();
+    mocks.construct.mockReturnValue({ created:1_700_000_011,id:'evt_basil_failed', livemode:false,
+      type:'invoice.payment_failed', data:{object:{parent:{type:'subscription_details',subscription_details:{subscription:{id:'sub_current'}}}}} });
+    mocks.retrieve.mockResolvedValue(source('sub_current',{status:'past_due'}));
+    expect((await POST(request())).status).toBe(200);
+    expect(mocks.retrieve).toHaveBeenCalledWith('sub_current');
+    expect(writes.find(write => write.table==='atomic_rpc' && write.values.p_status==='past_due')).toBeDefined();
+  });
+  it('préfère la souscription sous parent pour une facture moderne à champ historique divergent', async () => {
+    mocks.construct.mockReturnValue({ created:1_700_000_010,id:'evt_basil_priority',livemode:false,
+      type:'invoice.paid',data:{object:{subscription:'sub_old',parent:{subscription_details:{subscription:'sub_current'}}}} });
+    expect((await POST(request())).status).toBe(200);
+    expect(mocks.retrieve).toHaveBeenCalledWith('sub_current');
+    expect(mocks.retrieve).not.toHaveBeenCalledWith('sub_old');
+  });
+  it('synchronise checkout.session.completed seulement en mode subscription', async () => {
+    mocks.construct.mockReturnValue({ created:1_700_000_010,id: 'evt_checkout_subscription', livemode: false, type: 'checkout.session.completed', data: { object: { mode: 'subscription', subscription: 'sub_current' } } });
+    expect((await POST(request())).status).toBe(200);
+    expect(mocks.retrieve).toHaveBeenCalledWith('sub_current');
+    mocks.retrieve.mockClear();
+    mocks.construct.mockReturnValue({ created:1_700_000_011,id: 'evt_checkout_payment', livemode: false, type: 'checkout.session.completed', data: { object: { mode: 'payment', subscription: null } } });
+    expect((await POST(request())).status).toBe(200);
+    expect(mocks.retrieve).not.toHaveBeenCalled();
+  });
+  it('synchronise payment_intent.payment_failed via invoice puis souscription, et ignore sans facture', async () => {
+    mocks.construct.mockReturnValue({ created:1_700_000_010,id: 'evt_pi_failed', livemode: false, type: 'payment_intent.payment_failed', data: { object: { invoice: 'in_failed' } } });
+    mocks.retrieveInvoice.mockResolvedValue({ parent: { type: 'subscription_details', subscription_details: { subscription: 'sub_current' } } });
+    expect((await POST(request())).status).toBe(200);
+    expect(mocks.retrieveInvoice).toHaveBeenCalledWith('in_failed');
+    expect(mocks.retrieve).toHaveBeenCalledWith('sub_current');
+    mocks.retrieveInvoice.mockClear();
+    mocks.retrieve.mockClear();
+    mocks.construct.mockReturnValue({ created:1_700_000_011,id: 'evt_pi_without_invoice', livemode: false, type: 'payment_intent.payment_failed', data: { object: { invoice: null } } });
+    expect((await POST(request())).status).toBe(200);
+    expect(mocks.retrieveInvoice).not.toHaveBeenCalled();
+    expect(mocks.retrieve).not.toHaveBeenCalled();
   });
   it('échoue sans rétrogradation si la correspondance persistante ne peut pas être lue', async () => {
     currentReadError = true;
@@ -112,7 +179,7 @@ it('refuse un événement test lorsque les prérequis live sont attestés', asyn
     STRIPE_LIVE_TAX_REVIEW:'approved',STRIPE_LIVE_TERMS_REVIEW:'approved',
     STRIPE_LIVE_E2E_REVIEW:'passed',
     OPENAI_PAUSED:'false',OPENAI_TEXT_ENABLED:'true',OPENAI_VISION_ENABLED:'true',OPENAI_API_KEY:'sk-proj-fixture',
-    NEXT_PUBLIC_APP_URL:'https://mentioncheck.toto-rina47501.workers.dev'
+    NEXT_PUBLIC_APP_URL:'https://mentioncheck.app'
   }))vi.stubEnv(name,value);
   const response=await POST(request());
   expect(response.status).toBe(400);

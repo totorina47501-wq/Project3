@@ -7,6 +7,7 @@ describe('Configuration Cloudflare sécurisée',()=>{
     expect(config.name).toBe('mentioncheck');
     expect(config.keep_vars).toBe(true);
     expect(config.vars).toEqual({
+      NEXT_PUBLIC_APP_URL:'https://mentioncheck.app',
       MEDIA_JOBS_SCHEMA_READY:'true',MEDIA_PROCESSING_ENABLED:'true',
       MEDIA_CLOUDFLARE_RUNNER_ENABLED:'true',MEDIA_AI_ENABLED:'false',
       MEDIA_AI_SCHEMA_READY:'true',OPENAI_AUDIO_ENABLED:'false',

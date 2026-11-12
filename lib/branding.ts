@@ -1,9 +1,9 @@
-// Source unique de l'identité publique MentionCheckIA.
+// Source unique de l'identité publique MentionCheck.
 export const BRAND = {
-  legalName: 'MentionCheckIA',
+  legalName: 'MentionCheckCorp',
   publicName: 'MentionCheck',
   tagline: "L'IA qui check vos mentions légales avant publication.",
-  domain: 'mentioncheck.fr',
+  domain: 'mentioncheck.app',
   handles: {
     instagram: '@mentioncheck',
     tiktok: '@mentioncheck',
