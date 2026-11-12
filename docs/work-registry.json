@@ -388,7 +388,7 @@
       "next": [
         "Identité juridique et contenu final non validés.",
         "Accueil SEO éditorial, canonical et liaison vers tarifs indicatifs ; tests Playwright mis à jour, sans indexer les tarifs. Voir docs/19-seo-release-plan.md.",
-        "Guide /guide/checklist-influence et lead magnet .txt publiés avec disclaimer non-avis juridique ; feedback volontaire local (stub) avec consentement explicite et suppression immédiate."
+        "Guide /guide/checklist-influence et lead magnet .txt prêts côté code avec avertissement non-avis juridique ; collecte de feedback désactivée en UI et API (503), sans persistance ni faux reçu."
       ]
     },
     {
