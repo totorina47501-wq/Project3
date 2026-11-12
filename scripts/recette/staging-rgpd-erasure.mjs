@@ -68,9 +68,9 @@ async function cleanup(){
  clean=true;
 }
 try{
- // Aucune purge si la base staging contient un utilisateur preexistant.
- const {count,error:countError}=await admin.from('users').select('id',{count:'exact',head:true});
- if(countError||count!==0)throw Error('QA_STAGING_NOT_EMPTY_ABORT');
+ // Staging peut contenir des utilisateurs OAuth preexistants : aucun reset global.
+ // Seul l'acteur QA cree ici (email UUID + app_metadata du run) est effacable.
+ // cleanup() exige actorCheck() avant chaque suppression ciblee sur id.
  const user=ok(await admin.auth.admin.createUser({email,password,email_confirm:true,
     app_metadata:{mentioncheck_erasure_qa:run}}),'CREATE_QA_USER').user;
  id=user.id;
