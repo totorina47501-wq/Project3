@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { BRAND } from '@/lib/branding';
 
 export const metadata: Metadata = {
   title: 'Politique de confidentialité et cookies — MentionCheck (prépublication)',
@@ -10,7 +11,7 @@ const sections = [
   {
     "title": "Responsable du traitement et contact",
     "body": [
-      "Le service MentionCheck est exploité sous le nom déclaré MentionCheckCorp. Son identité juridique exacte, sa forme, son siège et son immatriculation devront être reportés dans les mentions légales après vérification des justificatifs. Tant que ces informations et un contact RGPD contrôlé ne sont pas publiés, cette politique demeure une version de prépublication.",
+      `Le service MentionCheck est exploité sous le nom déclaré ${BRAND.legalName}. SIRET communiqué par l’exploitant : ${BRAND.siret} (sans vérification de ce numéro). La forme juridique exacte, le siège publiable et le contact RGPD doivent encore être renseignés dans les mentions légales. Tant que ces informations ne sont pas publiées, cette politique demeure une version de prépublication.`,
       "Pour exercer vos droits ou signaler un incident, utilisez le canal officiel de contact qui devra être indiqué dans les mentions légales et accessible depuis les paramètres. N'envoyez pas de données sensibles à un canal non vérifié."
     ]
   },
@@ -85,9 +86,12 @@ const sections = [
   {
     "title": "Cookies, traceurs et consentement",
     "body": [
-      "Les cookies de connexion et de sécurité strictement nécessaires à la fourniture du service peuvent être utilisés sans consentement préalable, sous réserve d'information transparente. Ils permettent notamment de maintenir la session et de protéger l'accès au compte.",
-      "Les traceurs facultatifs de mesure d'audience non exemptée, de publicité ou de personnalisation non indispensable ne peuvent être activés qu'avec une information et un consentement conformes, ainsi qu'un moyen de refus et de retrait aussi simple que l'acceptation. La présence d'un outil de mesure d'audience ne constitue pas automatiquement une exemption de consentement.",
-      "L'inventaire technique final des cookies et de leurs durées doit être publié avant l'activation des traceurs facultatifs. Aucune bannière de cookies n'est annoncée comme opérationnelle tant que son comportement réel n'a pas été testé."
+      "Les traceurs nécessaires à la connexion et à la sécurité peuvent fonctionner sans consentement lorsqu'ils sont strictement indispensables au service. Les statistiques de fréquentation Google Analytics 4 (GA4) ne sont pas considérées ici comme exemptées : elles exigent un choix préalable explicite.",
+      "En cas d'acceptation, le navigateur peut charger le conteneur Google Tag Manager GTM-P83X0PBJ contenant une seule balise Google Analytics vers la mesure G-JKXWT2NBWT. La finalité annoncée est de compter les visites et de comprendre l'utilisation du site ; elle ne consiste pas à collecter les contenus privés, les e-mails ou les informations de paiement. La fonctionnalité GTM « Autoriser l'utilisation de données fournies par les utilisateurs » a été désactivée dans la version 3 publiée le 12 novembre 2026, selon les captures de l'exploitant. La configuration reste à recontrôler en cas de nouvelle version du conteneur.",
+      "Sans acceptation, le composant MentionCheck ne charge pas la balise GTM. Accepter et refuser sont proposés au même niveau, sans limiter l'accès au service. Le choix est conservé localement dans le navigateur sous mentioncheck.analytics-consent.v2, avec une date ; il cesse d'être pris en compte après 180 jours. Les anciens choix dépourvus de date demandent une nouvelle décision. Le choix peut être modifié depuis « Gérer les cookies » sur cette page ; en cas de retrait, les cookies Analytics accessibles au site sont supprimés et la page est rechargée pour arrêter les mesures futures. Ce retrait ne supprime pas rétroactivement les données déjà reçues par Google.",
+      "Sur un site qui accepte la mesure, Google Analytics peut déposer les cookies _ga et _ga_<identifiant>, utilisés respectivement pour distinguer les visiteurs et conserver l'état de session. Selon la documentation Google, leur durée de vie par défaut est de deux ans, sauf remplacement dans les paramètres GA4. Les durées effectives de la propriété MentionCheck et la politique de renouvellement des cookies restent à vérifier et limiter au nécessaire avant activation commerciale ; la recommandation CNIL de treize mois concerne notamment les mesures d'audience exemptées et ne signifie pas que cette intégration GA4 bénéficie d'une exemption.",
+      "Les données envoyées à GA4 peuvent inclure les pages consultées, des paramètres de navigation, le navigateur et des informations techniques susceptibles de relever des données personnelles. Google permet de choisir une durée de conservation des données utilisateur et d'événements, notamment deux ou quatorze mois pour une propriété GA4 standard. Le réglage effectif de la propriété MentionCheck n'est pas encore attesté ; aucune durée Google réelle ne doit être annoncée comme vérifiée avant sa consultation.",
+      "Google peut traiter des données à l'international, notamment dans le cadre de ses services mondiaux. Les entités contractantes, accords de sous-traitance, garanties de transfert et éventuelles certifications d'adéquation applicables doivent être contrôlés et documentés avant l'ouverture commerciale. Le simple recueil du consentement aux cookies n'est pas une preuve de conformité des transferts de données."
     ]
   },
   {
@@ -114,6 +118,13 @@ export default function Confidentialite() {
       <h2 className="font-heading text-xl font-bold">{section.title}</h2>
       {section.body.map(paragraph => <p key={paragraph} className="text-sm sm:text-base">{paragraph}</p>)}
     </section>)}
+    <section className="space-y-2 text-sm" aria-label="Références cookies et statistiques">
+      <h2 className="font-heading text-xl font-bold">Références et documentation des traceurs</h2>
+      <p><a href="https://www.cnil.fr/fr/cookies-et-autres-traceurs/regles/cookies/FAQ" className="text-indigo-700 underline">CNIL — questions-réponses sur les cookies et le consentement</a>.</p>
+      <p><a href="https://support.google.com/analytics/answer/11397207?hl=fr" className="text-indigo-700 underline">Google — cookies GA4 et durées par défaut</a>.</p>
+      <p><a href="https://support.google.com/analytics/answer/7667196?hl=fr" className="text-indigo-700 underline">Google — conservation des données GA4</a>.</p>
+      <p><a href="https://www.cnil.fr/fr/mesure-daudience-et-transferts-de-donnees-comment-mettre-son-outil-de-mesure-daudience-en-conformite" className="text-indigo-700 underline">CNIL — transferts internationaux et mesure d&apos;audience</a>.</p>
+    </section>
     <p className="border-t border-slate-200 pt-6 text-sm">
       Pour connaître l’identité déclarée et les informations d’hébergement, consulter les
       {' '}<Link href="/legal/mentions-legales" className="underline text-indigo-700">mentions légales</Link>.

@@ -7,6 +7,7 @@ import { BRAND } from '../../lib/branding';
 describe('Branding légal public', () => {
   it('aligne le nom légal déclaré et le domaine canonique', () => {
     expect(BRAND.legalName).toBe('MentionCheckCorp');
+    expect(BRAND.siret).toBe('93214476900019');
     expect(BRAND.domain).toBe('mentioncheck.app');
   });
 
@@ -19,6 +20,8 @@ describe('Branding légal public', () => {
     const html = renderToStaticMarkup(createElement(MentionsLegalesPage));
     expect(html).toContain('MentionCheckCorp');
     expect(html).toContain('déclaration non encore vérifiée');
+    expect(html).toContain('93214476900019');
+    expect(html).toContain('sans vérification');
     expect(html).toContain('Domaine canonique déclaré : mentioncheck.app');
     expect(html).toContain('à confirmer avec justificatifs');
     expect(html).not.toContain('MentionCheckIA');

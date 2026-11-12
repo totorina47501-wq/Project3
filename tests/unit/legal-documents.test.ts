@@ -15,6 +15,8 @@ describe('Documents juridiques MentionCheck en prépublication', () => {
     expect(html).toContain('médiateur');
     expect(html).toContain('Solo (9 € par mois)');
     expect(html).toContain('non encore approuvé');
+    expect(html).toContain('93214476900019');
+    expect(html).toContain('sans vérification');
     expect(html).not.toContain('MentionsCheckIA');
     expect(html).not.toMatch(/\b\d{9}\b/);
   });
@@ -29,5 +31,12 @@ describe('Documents juridiques MentionCheck en prépublication', () => {
     expect(html).toContain('CNIL');
     expect(html).toContain('pas encore certifiée');
     expect(html).toContain('prépublication');
+    expect(html).toContain('93214476900019');
+    expect(html).toContain('sans vérification');
+    expect(html).toContain('180 jours');
+    expect(html).toContain('GTM-P83X0PBJ');
+    expect(html).toContain('G-JKXWT2NBWT');
+    expect(html).toContain('deux ans');
+    expect(html).toContain('transferts de données');
   });
 });
