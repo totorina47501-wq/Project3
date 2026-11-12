@@ -30,7 +30,8 @@ describe('Registre anti-doublon, sans réseau',()=>{
     assert.match(inspectRegistry(db([{...f,anchor:'../secret'}]),i).join(' '),/Chemin invalide/);
   });
 });
-\ndescribe('Verrou opérationnel anti-doublons, hors ligne',()=>{
+
+describe('Verrou opérationnel anti-doublons, hors ligne',()=>{
   it('refuse une restauration déjà prouvée',()=>{
     const result=guardOperation(db([f]),'pra-prod-storage-copy');
     assert.equal(result.allowed,false);assert.match(result.reason,/ALREADY_DONE/);
