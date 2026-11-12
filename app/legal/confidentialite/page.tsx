@@ -3,7 +3,6 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Politique de confidentialité et cookies — MentionCheck (prépublication)',
-  alternates: { canonical: '/legal/confidentialite' },
   robots: { index: false, follow: false },
 };
 
