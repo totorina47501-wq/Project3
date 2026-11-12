@@ -1,0 +1,80 @@
+import { expect, test } from '@playwright/test';
+
+test('statistiques bloquées sans accord, refus simple et conservé', async ({ page, baseURL }) => {
+  const origin = new URL(baseURL!).origin;
+  const thirdPartyRequests: string[] = [];
+
+  page.on('request', request => {
+    if (new URL(request.url()).origin !== origin) thirdPartyRequests.push(request.url());
+  });
+
+  await page.goto('/');
+  await expect(page.getByRole('region', { name: 'Choix des cookies statistiques' })).toBeVisible();
+  await expect(page.locator('script[src*="googletagmanager.com"]')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Refuser les statistiques' }).click();
+  await page.reload();
+  await expect(page.locator('script[src*="googletagmanager.com"]')).toHaveCount(0);
+  await page.goto('/legal/confidentialite');
+  await expect(page.getByRole('button', { name: 'Gérer les cookies' })).toBeVisible();
+  await expect(page.locator('script[src*="googletagmanager.com"]')).toHaveCount(0);
+  expect(thirdPartyRequests).toEqual([]);
+
+  await page.getByRole('button', { name: 'Gérer les cookies' }).click();
+  await expect(page.getByRole('button', { name: 'Refuser les statistiques' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Autoriser les statistiques' })).toBeVisible();
+});
+
+test('Google tag seulement après accord, retrait persistant', async ({ page }) => {
+  const tags: string[] = [];
+  await page.route('https://www.googletagmanager.com/**', async route => {
+    tags.push(route.request().url());
+    await route.fulfill({ status: 200, contentType: 'application/javascript', body: '' });
+  });
+
+  await page.goto('/');
+  await expect(page.locator('script[src*="googletagmanager.com"]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Autoriser les statistiques' }).click();
+  await expect(page.locator('script[src*="gtm.js?id=GTM-P83X0PBJ"]')).toHaveCount(1);
+  await expect.poll(() => tags.length).toBe(1);
+
+  await page.goto('/legal/confidentialite');
+  await page.getByRole('button', { name: 'Gérer les cookies' }).click();
+  await page.getByRole('button', { name: 'Refuser les statistiques' }).click();
+  await expect(page.locator('script[src*="googletagmanager.com"]')).toHaveCount(0);
+  const saved = await page.evaluate(() => {
+    const raw = window.localStorage.getItem('mentioncheck.analytics-consent.v2');
+    return raw ? JSON.parse(raw) as { choice: string; savedAt: number } : null;
+  });
+  expect(saved?.choice).toBe('rejected');
+  expect(saved?.savedAt).toEqual(expect.any(Number));
+});
+
+test('un visiteur sans choix peut utiliser login sans bannière bloquante', async ({ page }) => {
+  await page.goto('/login');
+  await expect(page.getByRole('region', { name: 'Choix des cookies statistiques' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Se connecter' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Gérer les cookies' })).toHaveCount(0);
+  await expect(page.locator('script[src*="googletagmanager.com"]')).toHaveCount(0);
+  await page.goto('/dashboard');
+  await expect(page.getByRole('button', { name: 'Gérer les cookies' })).toHaveCount(0);
+  await page.goto('/legal/confidentialite');
+  await expect(page.getByRole('button', { name: 'Gérer les cookies' })).toBeVisible();
+  await page.getByRole('button', { name: 'Gérer les cookies' }).click();
+  await expect(page.getByRole('region', { name: 'Choix des cookies statistiques' })).toBeVisible();
+});
+
+test('un ancien accord sans date ou expiré ne charge jamais Google avant un nouveau choix', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('mentioncheck.analytics-consent.v1', 'accepted');
+    window.localStorage.setItem(
+      'mentioncheck.analytics-consent.v2',
+      JSON.stringify({ choice: 'accepted', savedAt: Date.now() - 181 * 24 * 60 * 60 * 1000 })
+    );
+  });
+  await page.goto('/');
+  await expect(page.getByRole('region', { name: 'Choix des cookies statistiques' })).toBeVisible();
+  await expect(page.locator('script[src*="googletagmanager.com"]')).toHaveCount(0);
+  expect(await page.evaluate(() => window.localStorage.getItem('mentioncheck.analytics-consent.v1'))).toBeNull();
+  expect(await page.evaluate(() => window.localStorage.getItem('mentioncheck.analytics-consent.v2'))).toBeNull();
+});
