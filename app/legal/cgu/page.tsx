@@ -129,7 +129,7 @@ export default function Terms() {
       <p className="text-sm text-slate-600">Document de travail du 12 novembre 2026 — {BRAND.legalName} ({BRAND.tradeName})</p>
     </header>
     <p role="note" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
-      <strong>Prépublication — contrat non encore approuvé.</strong> L'immatriculation,
+      <strong>Prépublication — contrat non encore approuvé.</strong> L’immatriculation,
       les conditions fiscales, le service client, le médiateur de la consommation et les parcours de paiement, résiliation et
       rétractation doivent être validés avant l’ouverture des ventes. Aucun paiement Live n’est autorisé par cette page.
     </p>
