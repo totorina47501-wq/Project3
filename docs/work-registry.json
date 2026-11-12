@@ -142,7 +142,7 @@
       ],
       "next": [
         "Transfert privé PNG réel via client HTTP, confirmation serveur et SHA-256 persisté validés le 5 novembre 2026. Restent les limites mémoire Cloudflare à 50 MiB, l’immuabilité Storage et les parcours navigateur concurrents authentifiés ; voir docs/37-real-openai-validation.md.",
-        "PRA restauré : clone PostgreSQL/Auth indépendant et 13/13 agrégats SQL concordants ; Storage 13/13 objets copiés, 832860 octets, manifestes de métadonnées source/PRA concordants. SHA-256 distinct des 5 originaux vérifié antérieurement ; intégrité des octets des 8 dérivés PAS encore attestée. Les ZIP opérateur ne prouvent pas à eux seuls la provenance fournisseur. Aucun second clone ou transfert. Voir issue #16 et docs/64-production-private-backup.md."
+        "PRA restauré : PostgreSQL/Auth sur clone indépendant, 13/13 agrégats SQL concordants ; Storage 13/13 objets copiés et métadonnées concordantes, 832860 octets. Comparaison des archives déclarées Production/PRA 13/13 SHA-256 identiques (5 originaux + 8 dérivés) déjà effectuée ; leur provenance indépendante auprès de Supabase n'est pas attestée par ces ZIP. Ne demander ni nouvelle copie, ni nouveau clone, ni répétition du test SHA des archives. Preuve : PR #128 commentaire #6805923183, issue #16 et docs/64-production-private-backup.md."
       ]
     },
     {
@@ -639,7 +639,7 @@
         "PROMO_SOLO_ENABLED reste false tant que la nouvelle table n'est pas présente et les tests d'accès authentifiés ne sont pas passés.",
         "PR #128 : bridge pré-GO activation_pending pour 2 profils historiques, Solo 30/5/20 sans lancer le compteur 30 jours ; preuve SQL PGlite, application staging nécessaire, aucune mutation production.",
         "Trois migrations quotas/promotion/bridge sont déjà installées sur staging, aucune en Production. 2 profils Solo historiques sans abonnement Stripe actif ; transition atomique et GO séparé nécessaires pour préserver leurs droits sans démarrer prématurément les 30 jours. Correctif UI pré-GO et workflow RGPD au commit 1850998, remarques Codex résolues, tests unitaires/SQL/Playwright réussis ; statut global CI encore à confirmer.",
-        "PRA : restauration native PostgreSQL/Auth dans clone Supabase et 13/13 SQL concordants ; Storage 13/13 copies présentes avec métadonnées concordantes, mais SHA-256 source/PRA des 8 dérivés non attesté sur octets. Ne pas déclarer PASS binaire global ni demander de refaire les copies ; preuve canonique issue #16. Autres gates Auth, RGPD et release ouverts."
+        "PRA : restauration native PostgreSQL/Auth et 13/13 agrégats SQL concordants ; Storage 13/13 copies et 832860 octets vérifiés dans les métadonnées ; 13/13 SHA-256 identiques sur les archives Production/PRA fournies (5 originaux + 8 dérivés). Seule la provenance fournisseur indépendante de ces ZIP n'est pas attestée ; garder PRA global PARTIAL, ne pas refaire comparaison/transfert. Autres gates Auth, RGPD et release ouverts."
       ]
     }
   ],
