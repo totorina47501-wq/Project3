@@ -125,6 +125,13 @@ jobs:
               echo "BLOCKED issue #$number: missing/unregistered/completed/in-progress work-id; reconcile register first." >> "$GITHUB_STEP_SUMMARY"
               continue
             fi
+            if jq -e --arg id "$work_id" --argjson num "$number" '
+              any(.[]; .pull_request == null and .state == "open" and .number != $num and
+                ((.body // "") | contains("<!-- mentioncheck-work-id: " + $id + " -->")))
+            ' <<< "$issues" >/dev/null; then
+              echo "BLOCKED issue #$number: another open issue has the same work-id $work_id." >> "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
             if [ "$DRY_RUN" = "true" ]; then
               echo "Dry-run: would assign Copilot to #$number." >> "$GITHUB_STEP_SUMMARY"
               exit 0

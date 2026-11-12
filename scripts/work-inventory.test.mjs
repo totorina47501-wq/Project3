@@ -49,6 +49,9 @@ describe('Verrou opérationnel anti-doublons, hors ligne',()=>{
     assert.equal(guardIssue(db([f]),{body:'aucune référence'}).allowed,false);
     assert.equal(guardIssue(db([f]),{body:marker+' '+marker}).allowed,false);
     assert.equal(guardIssue(db([f]),{body:'<!-- mentioncheck-work-id: solo-prod-cutover -->'}).allowed,true);
+    const issue={number:201,body:'<!-- mentioncheck-work-id: solo-prod-cutover -->',state:'open'};
+    const competing={number:202,body:issue.body,state:'open'};
+    assert.match(guardIssue(db([f]),issue,[competing]).reason,/DUPLICATE_ISSUE/);
   });
   it('interdit une fausse preuve ou une opération doublée dans la CI',()=>{
     const s=inspectRegistry({...db([f]),operations:[operation,{...operation,evidence:['http://invalide']}]},i).join(' ');

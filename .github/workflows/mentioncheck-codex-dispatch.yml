@@ -85,6 +85,11 @@ jobs:
                 core.info('Blocked #'+number+': work-id absent, already done, in progress, or unregistered.');
                 continue;
               }
+              if(issues.some(i=>!i.pull_request && i.number!==number &&
+                (i.body||'').includes('<!-- mentioncheck-work-id: '+workId+' -->'))){
+                core.info('Blocked #'+number+': duplicate open issue for work-id '+workId);
+                continue;
+              }
               const dryRun = context.eventName === 'workflow_dispatch' &&
                 String(context.payload.inputs?.dry_run) === 'true';
               if (dryRun) {

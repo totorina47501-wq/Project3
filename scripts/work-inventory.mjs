@@ -47,12 +47,18 @@ export function guardOperation(data,id){
     return {allowed:false,reason:'ALREADY_ASSIGNED '+id+' ; réutiliser la PR/issue existante'};
   return {allowed:true,reason:'PENDING '+id+' ; effectuer encore les vérifications de PR, preuves et droits'};
 }
-export function guardIssue(data,issue){
+export function guardIssue(data,issue,otherOpenIssues=[]){
   const body=typeof issue?.body==='string'?issue.body:'';
   const matches=[...body.matchAll(/<!--\s*mentioncheck-work-id:\s*([a-z0-9]+(?:-[a-z0-9]+)*)\s*-->/g)];
   if(matches.length!==1)
     return {allowed:false,reason:'Issue sans identifiant unique <!-- mentioncheck-work-id: ... --> ; aucune affectation'};
-  return guardOperation(data,matches[0][1]);
+  const id=matches[0][1];
+  const duplicates=otherOpenIssues.filter(other=>
+    other?.number!==issue?.number && other?.state==='open' && !other?.pull_request &&
+    typeof other?.body==='string' &&
+    other.body.includes('<!-- mentioncheck-work-id: '+id+' -->'));
+  if(duplicates.length)return {allowed:false,reason:'DUPLICATE_ISSUE '+id+' ; rapprocher les issues ouvertes avant dispatch'};
+  return guardOperation(data,id);
 }
 async function filesAt(dir,root,all=[]){
   let entries;
