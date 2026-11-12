@@ -12,7 +12,7 @@ type AnalyticsChoice = 'loading' | 'undecided' | 'accepted' | 'rejected';
 function clearGoogleAnalyticsCookies() {
   const names = document.cookie
     .split(';')
-    .map(part => part.trim().split('=')[0])
+    .map(part => part.trim().split('=')[0] ?? '')
     .filter(name => name === '_ga' || name === '_gid' || /^_ga_|^_gat/.test(name));
 
   const hostname = window.location.hostname;
