@@ -20,7 +20,8 @@ jobs:
         (github.event.head_commit.message == 'test(oauth): verify failure stage regression (#124)' ||
         (github.event.head_commit.message == 'fix(oauth): resolve diagnostics typecheck (#124)' ||
         (github.event.head_commit.message == 'fix(oauth): count persisted connected social accounts (#124)' ||
-        github.event.head_commit.message == 'fix(oauth): classify Google token exchange errors (#124)'))))))))
+        (github.event.head_commit.message == 'fix(oauth): classify Google token exchange errors (#124)' ||
+        github.event.head_commit.message == 'fix(oauth): use Cloudflare-supported manual redirects (#124)')))))))))
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:

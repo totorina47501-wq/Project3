@@ -41,6 +41,7 @@ describe('Échange OAuth simulé hors ligne', () => {
         const url = String(input);
         expect(url).not.toContain('offline-secret');
         expect(url).not.toMatch(/[?&](?:access_token|token|client_secret)=/i);
+        expect(init?.redirect).toBe('manual');
         if (url === socialOAuthProviders[provider].tokenEndpoint) {
           expect(init?.method).toBe('POST');
           const body = new URLSearchParams(String(init?.body));
@@ -164,10 +165,53 @@ describe('Échange OAuth simulé hors ligne', () => {
     expect(fetcher).toHaveBeenCalledTimes(3);
   });
 
+  it('ne suit pas les redirections fournisseur pour le jeton ni pour la révocation', async () => {
+    const tokenFetcher = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      expect(init?.redirect).toBe('manual');
+      return new Response(null, {
+        status: 302,
+        headers: { Location: 'https://redirect.invalid/steal' },
+      });
+    });
+    await expect(exchangeSocialOAuthCode({
+      provider: 'youtube',
+      config: config('youtube'),
+      redirectUri: config('youtube').redirectUri,
+      authorizationCode: 'simulated-code',
+      codeVerifier: 'simulated-verifier',
+      fetcher: tokenFetcher as typeof fetch,
+      now,
+    })).rejects.toMatchObject({
+      stage: 'token',
+      message: 'OAuth provider request unavailable.',
+    });
+    expect(tokenFetcher).toHaveBeenCalledTimes(1);
+
+    const revokeFetcher = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      expect(init?.redirect).toBe('manual');
+      return new Response(null, {
+        status: 302,
+        headers: { Location: 'https://redirect.invalid/steal' },
+      });
+    });
+    await expect(revokeSocialOAuthToken({
+      provider: 'youtube',
+      config: config('youtube'),
+      tokenSecret: JSON.stringify({
+        accessToken: 'fake-access-token',
+        expiresAt: '2026-11-10T13:00:00.000Z',
+      }),
+      fetcher: revokeFetcher as typeof fetch,
+      now,
+    })).rejects.toThrow('OAuth provider request unavailable.');
+    expect(revokeFetcher).toHaveBeenCalledTimes(1);
+  });
+
   it('révoque avec POST et n’envoie rien si le jeton est déjà expiré ou sans API', async () => {
     const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       expect(String(input)).toBe(socialOAuthProviders.youtube.revocationEndpoint);
       expect(init?.method).toBe('POST');
+      expect(init?.redirect).toBe('manual');
       return new Response(null, { status: 200 });
     });
     const tokenSecret = JSON.stringify({

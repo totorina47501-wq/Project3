@@ -122,7 +122,9 @@ async function requestJson(
     ...init,
     cache: 'no-store',
     credentials: 'omit',
-    redirect: 'error',
+    // Cloudflare Workers does not support redirect: 'error'. A manual 3xx
+    // is rejected below by response.ok, without forwarding credentials.
+    redirect: 'manual',
     signal: AbortSignal.timeout(TOKEN_TIMEOUT_MS),
   });
   if (!response.ok) {
@@ -341,7 +343,7 @@ export async function revokeSocialOAuthToken(input: {
     body,
     cache: 'no-store',
     credentials: 'omit',
-    redirect: 'error',
+    redirect: 'manual',
     signal: AbortSignal.timeout(TOKEN_TIMEOUT_MS),
   });
   if (!response.ok) throw new Error('OAuth provider request unavailable.');
