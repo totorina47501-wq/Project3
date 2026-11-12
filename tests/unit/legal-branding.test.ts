@@ -6,26 +6,30 @@ import { BRAND } from '../../lib/branding';
 
 describe('Branding légal public', () => {
   it('aligne le nom légal déclaré et le domaine canonique', () => {
-    expect(BRAND.legalName).toBe('MentionCheckCorp');
-    expect(BRAND.siret).toBe('93214476900019');
+    expect(BRAND.legalName).toBe('Ali Rassoul');
+    expect(BRAND.tradeName).toBe('aliaicorp');
+    expect(BRAND.siret).toBe('À venir');
     expect(BRAND.domain).toBe('mentioncheck.app');
   });
 
-  it('conserve la page légale en brouillon non indexable avec canonical exact', () => {
-    expect(metadata.robots).toEqual({ index: false, follow: false });
+  it('publie les mentions légales avec le canonical exact', () => {
+    expect(metadata.robots).toBeUndefined();
     expect(metadata.alternates?.canonical).toBe('/legal/mentions-legales');
   });
 
   it('n expose pas de fausses mentions légales', () => {
     const html = renderToStaticMarkup(createElement(MentionsLegalesPage));
-    expect(html).toContain('MentionCheckCorp');
-    expect(html).toContain('déclaration non encore vérifiée');
-    expect(html).toContain('93214476900019');
-    expect(html).toContain('sans vérification');
-    expect(html).toContain('Domaine canonique déclaré : mentioncheck.app');
-    expect(html).toContain('à confirmer avec justificatifs');
+    expect(html).toContain('Ali Rassoul');
+    expect(html).toContain('aliaicorp');
+    expect(html).toContain('100 avenue Gambetta');
+    expect(html).toContain('mentioncheckcorp@gmail.com');
+    expect(html).toContain('0675814948');
+    expect(html).toContain('293 B du CGI');
+    expect(html).toContain('Cloudflare, Inc.');
+    expect(html).toContain('Supabase');
+    expect(html).not.toContain('93214476900019');
     expect(html).not.toContain('MentionCheckIA');
     expect(html).not.toContain('mentioncheck.fr');
-    expect(html).not.toMatch(/\b\d{9}\b/);
+    expect(html).not.toContain('MentionCheckCorp');
   });
 });
