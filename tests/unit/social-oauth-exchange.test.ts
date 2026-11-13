@@ -30,6 +30,44 @@ describe('Échange OAuth simulé hors ligne', () => {
   beforeEach(() => vi.restoreAllMocks());
 
   it.each([
+    ['legacy envelope', { data: { access_token: 'private-token', open_id: 'user', expires_in: 3600 } }],
+    ['provider rejection', { error: 'invalid_grant', error_description: 'private-detail' }],
+    ['expired token', { access_token: 'private-token', open_id: 'user', expires_in: 0 }],
+    ['fractional expiry', { access_token: 'private-token', open_id: 'user', expires_in: 60.5 }],
+    ['oversized response', { access_token: 'private-token', open_id: 'user', expires_in: 3600, padding: 'x'.repeat(17000) }],
+  ])('refuse TikTok %s sans retourner de compte ni de secret', async (_name, payload) => {
+    const fetcher = vi.fn(async () => response(payload));
+    await expect(exchangeSocialOAuthCode({
+      provider: 'tiktok', config: config('tiktok'),
+      redirectUri: config('tiktok').redirectUri, authorizationCode: 'offline-code',
+      codeVerifier: null, now, fetcher: fetcher as typeof fetch,
+    })).rejects.toMatchObject({ stage: 'token', message: expect.stringMatching(/^OAuth provider (request|response) unavailable\.$/) });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('masque les détails réseau TikTok et ne retourne pas de compte', async () => {
+    await expect(exchangeSocialOAuthCode({
+      provider: 'tiktok', config: config('tiktok'),
+      redirectUri: config('tiktok').redirectUri, authorizationCode: 'offline-code',
+      codeVerifier: null, now,
+      fetcher: (async () => { throw new Error('private-token private-secret'); }) as typeof fetch,
+    })).rejects.toMatchObject({ stage: 'token', message: 'OAuth provider response unavailable.' });
+  });
+
+  it.each([
+    ['HTTP rejection', 401, '{"error":"invalid_token"}'],
+    ['logical rejection', 200, '{"error":"invalid_token","error_description":"private-token"}'],
+    ['malformed response', 200, '<html>private-token</html>'],
+    ['redirect', 302, ''],
+  ])('ne confirme pas la révocation TikTok après %s', async (_name, status, body) => {
+    await expect(revokeSocialOAuthToken({
+      provider: 'tiktok', config: config('tiktok'), now,
+      tokenSecret: JSON.stringify({ accessToken: 'private-token', expiresAt: '2026-11-10T13:00:00.000Z' }),
+      fetcher: (async () => new Response(body, { status })) as typeof fetch,
+    })).rejects.toThrow(/^OAuth provider (request|response) unavailable\.$/);
+  });
+
+  it.each([
     ['instagram', { access_token: 'ig-access', user_id: 12345 }],
     ['tiktok', { access_token: 'tt-access', expires_in: 3600, open_id: 'tt-user' }],
     ['youtube', { access_token: 'yt-access', expires_in: 3600 }],
