@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { Buffer } from 'node:buffer';
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 
@@ -52,6 +53,7 @@ type MissionIssue = {
   state: 'open';
   assignees: { login: string }[];
   labels: { name: string }[];
+  body?: string;
 };
 type MissionPr = {
   state: 'open';
@@ -64,6 +66,7 @@ const codexIssue = (number: number, assigned = true): MissionIssue => ({
   state: 'open',
   assignees: assigned ? [{ login: 'Codex' }] : [],
   labels: [{ name: 'agent:codex' }],
+  body: assigned ? '' : '<!-- mentioncheck-work-id: solo-prod-cutover -->',
 });
 const codexPr = (issue: number, user = 'Codex'): MissionPr => ({
   state: 'open',
@@ -72,7 +75,7 @@ const codexPr = (issue: number, user = 'Codex'): MissionPr => ({
   body: '- Refs #' + issue + ' (keep the issue open)',
 });
 
-async function simulateDryRun(issues: MissionIssue[], prs: MissionPr[]) {
+async function simulateDryRun(issues: MissionIssue[], prs: MissionPr[], operationStatus = 'pending') {
   const section = codex.split('          script: |\n')[1];
   if (!section) throw new Error('Missing Codex inline workflow script');
   const script = section.split('\n')
@@ -86,6 +89,14 @@ async function simulateDryRun(issues: MissionIssue[], prs: MissionPr[]) {
         ({ data: issues.find(issue => issue.number === issue_number) }),
     },
     pulls: { list: () => undefined },
+    repos: {
+      getContent: async () => ({data:{
+        type:'file',encoding:'base64',
+        content:Buffer.from(JSON.stringify({operations:[
+          {id:'solo-prod-cutover',status:operationStatus},
+        ]})).toString('base64'),
+      }}),
+    },
   };
   const github = {
     rest,
@@ -101,6 +112,7 @@ async function simulateDryRun(issues: MissionIssue[], prs: MissionPr[]) {
         payload: { inputs: { dry_run: 'true' } },
       },
       github,
+      Buffer,
       core: { info: (message: string) => output.push(message) },
       process: { env: { CODEX_DISPATCH_TOKEN: '' } },
     },
@@ -142,5 +154,25 @@ describe('Codex dispatch capacity regression — 11 November 2026', () => {
     );
     expect(output).toContain('Codex occupied slots: 2 / 3');
     expect(output).toContain('Dry-run: would assign Codex to #150');
+  });
+});
+
+describe('Codex operational anti-duplication preflight', () => {
+  it('refuses an already completed operation, without assigning', async () => {
+    const output=await simulateDryRun(
+      [codexIssue(16),codexIssue(102),codexIssue(150,false)],
+      [codexPr(16),codexPr(102)],'done');
+    expect(output.some(x=>x.includes('Blocked #150'))).toBe(true);
+    expect(output).not.toContain('Dry-run: would assign Codex to #150');
+  });
+  it('refuses an unregistered issue missing the explicit work marker', async () => {
+    const issue={...codexIssue(150,false),body:''};
+    const output=await simulateDryRun([issue],[]);
+    expect(output.some(x=>x.includes('Blocked #150'))).toBe(true);
+  });
+  it('refuses two concurrent issues for the same operational work-id', async () => {
+    const output=await simulateDryRun([codexIssue(150,false),codexIssue(151,false)],[]);
+    expect(output.some(x=>x.includes('duplicate open issue for work-id'))).toBe(true);
+    expect(output.some(x=>x.includes('would assign Codex'))).toBe(false);
   });
 });

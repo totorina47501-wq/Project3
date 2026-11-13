@@ -38,11 +38,12 @@ export default async function SettingsPage() {
   const promotionEnabled=process.env.PROMO_SOLO_ENABLED==='true';
   const { data:promotion,error:promotionError } = promotionEnabled && userData
     ? await createAdminSupabase().from('promotional_solo_access')
-      .select('starts_at,expires_at').eq('user_id',userData.id).maybeSingle()
+      .select('starts_at,expires_at,activation_pending,reason').eq('user_id',userData.id).maybeSingle()
     : {data:null,error:null};
   const tier = subscriptionError || promotionError ? null
     : accessTierWithPromotion(subscription,promotion);
   const promotionalSolo = tier === 'solo' && subscriptionAccessTier(subscription)==='free';
+  const pendingPromotionalSolo = promotionalSolo && promotion?.activation_pending === true;
   const rights = tier ? planEntitlements(tier) : null;
   const { data: usage, error: usageError } = await supabase.from('usage_monthly')
     .select('checks_used,rewrites_used,mia_messages_used,period_start')
@@ -72,14 +73,16 @@ export default async function SettingsPage() {
     </p> : <>
       <section className="rounded-2xl border border-slate-200 bg-white p-6">
         <h2 className="font-heading text-xl font-bold">Mon abonnement actuel</h2>
-        <p className="mt-3 text-lg font-semibold">{tier === null ? 'Statut indisponible' : tier === 'free' ? 'Gratuit' : tier === 'solo' ? promotionalSolo ? 'Solo offert (promotion temporaire)' : 'Solo (abonnement test)' : tier === 'pro' ? 'Pro (abonnement test)' : 'Studio (abonnement test)'}</p>
+        <p className="mt-3 text-lg font-semibold">{tier === null ? 'Statut indisponible' : tier === 'free' ? 'Gratuit' : tier === 'solo' ? promotionalSolo ? pendingPromotionalSolo ? 'Solo offert (avant lancement)' : 'Solo offert (promotion temporaire)' : 'Solo (abonnement test)' : tier === 'pro' ? 'Pro (abonnement test)' : 'Studio (abonnement test)'}</p>
         <p className="mt-1 text-sm text-slate-500">
           {tier === 'free' ? 'Aucun abonnement payant actif : quotas gratuits appliqués.' :
            tier === null ? 'Le statut de facturation ne peut pas être vérifié actuellement.' :
-           promotionalSolo ? 'Accès Solo promotionnel gratuit, sans abonnement ni prélèvement Stripe.' :
+           promotionalSolo ? pendingPromotionalSolo
+             ? 'Accès Solo pré-lancement sans paiement. La période de 30 jours ne commence qu’au lancement officiel.'
+             : 'Accès Solo promotionnel gratuit, sans abonnement ni prélèvement Stripe.' :
            'Abonnement Stripe Sandbox : aucun encaissement réel.'}
         </p>
-        {promotionalSolo && promotion && <p className="mt-1 text-sm text-slate-500">
+        {promotionalSolo && promotion?.expires_at && !pendingPromotionalSolo && <p className="mt-1 text-sm text-slate-500">
           Offre de bienvenue valable jusqu’au {new Date(promotion.expires_at).toLocaleDateString('fr-FR')}.
         </p>}
         {usageError ? <p role="alert" className="mt-5 text-sm text-red-800">Quotas momentanément indisponibles.{' '}

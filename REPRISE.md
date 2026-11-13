@@ -1,5 +1,39 @@
 # Reprise MentionCheck — 6 novembre 2026
 
+## Reprise 13 novembre — lancement encore bloqué
+
+Voir l'addendum courant du [PV existant](docs/receipts/2026-11-10-final-internal-certification.md). Studio/RGPD #43331051325 SUCCESS confirmé, queue staging conservée. Production 19 migrations contre staging 25, deux Solo protégés sans mutation. Correction configuration IA fermée préparée dans #128 ; YouTube seul et tous flags OAuth production fermés dans #132. HTTP accueil 200, mais sonde IA runtime `configured` : fermeture non déployée/attestée. Accès Cloudflare authentifié absent, compte test avec chaîne absent. Aucun nouveau ticket ni migration ni sauvegarde.
+
+
+## État consolidé — 12 novembre 2026 (anti-doublons, remplace les snapshots historiques)
+
+**Références canoniques : [issue #16](https://github.com/totorina47501-wq/Project3/issues/16), [PR #128](https://github.com/totorina47501-wq/Project3/pull/128), [13/13 SHA-256 des archives](https://github.com/totorina47501-wq/Project3/pull/128#issuecomment-6805923183).** Branche de travail `codex/codex-certification-six-chantiers`, dernière CI intégrale contrôlée sur `d1da139b` avant cet addendum documentaire.
+
+- **P0-A — rollback interversions Cloudflare : PASS sur STAGING.** [Run #42981396379](https://github.com/totorina47501-wq/Project3/actions/runs/42981396379) : deux SHA applicatifs différents, retour B→A, puis retour au déploiement initial, contrôles HTTP et secrets. Ne pas rejouer le test déjà certifié.
+- **P0-B — PRA :** PostgreSQL/Auth restaurés sur clone Supabase isolé `sbquwigqlzfglukxdgau`, 13/13 agrégats SQL concordants. **Storage 13/13 objets copiés, 832 860 octets, manifestes concordants et archives Production/PRA déjà comparées SHA-256 : 13/13 identiques (5 originaux + 8 dérivés)**. Ne pas refaire de copie ni de test SHA sur les ZIP. **Seule la provenance fournisseur indépendante des octets réels Storage n'est pas attestée par ces archives** ; PRA global PARTIAL, sans GO commercial. Voir [PRA](docs/64-production-private-backup.md).
+- **P0-C — quotas : migrations Gratuit/Solo, promotion et bridge pré-GO déjà installées en STAGING, pas en Production.** Production : 2 profils historiques Solo, 0 abonnement Stripe actif, table promotion absente. La fenêtre gratuite de 30 jours **n'a pas commencé**. Le correctif UI pré-GO et le garde de branche RGPD sont au commit `1850998` ; les deux fils Codex sont résolus. Ne créer ni migration ni moteur de quotas supplémentaire ; aucune bascule Production avant GO séparé et vérifié.
+- **P1-D/E/F — preuves staging ciblées existantes** : Auth/RLS/RPC et cycle d'effacement de **fixture synthétique** [#42982377973](https://github.com/totorina47501-wq/Project3/actions/runs/42982377973), API Studio [#42982215401](https://github.com/totorina47501-wq/Project3/actions/runs/42982215401). Ne pas les confondre avec certification d'un effacement utilisateur réel, protection native Auth des mots de passe compromis, ni runtime Production.
+- **CI réconciliée sur `d1da139b` :** [#43273242174](https://github.com/totorina47501-wq/Project3/actions/runs/43273242174) **completed/success** avec jobs qualité + image média, [Auth staging #43273230718](https://github.com/totorina47501-wq/Project3/actions/runs/43273230718) et [Studio + RGPD staging #43273230690](https://github.com/totorina47501-wq/Project3/actions/runs/43273230690) **completed/success**. Ces tests ne certifient pas le runtime Production, le juridique ni la sécurité chez les prestataires. Recontrôler la CI du SHA final après cet addendum.
+
+**Reste NO GO commercial** : Auth HIBP/configuration fournisseur et vérifications, cycle RGPD pour vrais clients/sous-traitants, migration Solo atomique en Production seulement après autorisation, sécurité/rétention du clone PRA, identité légale/CGV, Stripe Live, SHA du runtime Production et statut final CI. **PR #128 DRAFT, #16 OPEN ; aucune modification Production, aucun Stripe Live ni coût IA payé déclenché.** Les passages datés ci-dessous sont des archives et ne remplacent pas cette synthèse.
+
+## Historique — état antérieur au test binaire Storage (non courant)
+
+**Source de vérité : issue #16 et PR #128 existantes (HEAD de base de preuve : `24aa6f7151571cab13489ac26cc258fcf8a3c241`).** Le clone PRA `sbquwigqlzfglukxdgau` est `ACTIVE_HEALTHY` ; **restauration PostgreSQL/Auth PASS** (13/13 sections de données/cataloque SQL concordantes), mais **aucune restauration des 13 octets-objets Storage** (**832 860 octets de métadonnées**, non des octets restaurés). **P0-B PARTIAL / Storage BLOCKED.** Ne pas relancer de clone payant ou de prototypes Docker/Cloudflare, ne pas confondre Storage SQL avec fichiers. Pour l'exercice Storage, utiliser **S3 privé Supabase sur un hôte de confiance** avec SHA-256 du contenu et contrôle de suppression. Ce mécanisme nécessite des secrets/runtime non fournis au connecteur. Voir [docs/64](docs/64-production-private-backup.md).
+
+CI/recettes SHA avant cette actualisation documentaire : [CI #43050141101](https://github.com/totorina47501-wq/Project3/actions/runs/43050141101), [Auth #43050125348](https://github.com/totorina47501-wq/Project3/actions/runs/43050125348), [Studio #43050125205](https://github.com/totorina47501-wq/Project3/actions/runs/43050125205) = **SUCCESS**. Préserver les 2 promotions Solo historiques, facturation Stripe Live OFF, Production sans mutation, PR draft, #16 ouverte. Les passages ci-dessous représentent **des snapshots antérieurs** et ne doivent pas contredire cette entrée.
+
+
+## Point de reprise vérifié — 11 novembre 2026 (audit Task Force, sans changement applicatif)
+
+- GitHub `main` : `527e45aa98a9267afb4ea78896dbd51495411e6d`, jobs CI `quality` et média SUCCESS ; PR #128 maintenue **draft**, SHA d'audit `b10999e4af8d776e44f8af89cade105a91f69ddf`, [CI #43009448934](https://github.com/totorina47501-wq/Project3/actions/runs/43009448934) SUCCESS et [Auth staging #43009439812](https://github.com/totorina47501-wq/Project3/actions/runs/43009439812) SUCCESS. Preview Cloudflare SUCCESS uniquement ; SHA servi par Worker Production non attesté.
+- Production SQL (lecture seule) : 2 utilisateurs Auth, 2 profils, 2 lignes de quotas, 0 abonnement Stripe actif, 13 objets Storage / 3 buckets, table promotion Solo absente ; Staging : 0 utilisateur/profil/objet et table promotion présente. Migrations quotas/promotion/bridge uniquement en staging. Aucun déploiement/migration de production.
+- Supabase Pro : snapshots physiques attestés par capture opérateur du 11/11 à 05:19:11 UTC et du 10/11 à 05:19:32 UTC ; connecteur sans liste des snapshots, aucune restauration isolée effectuée. Devis indicatif du connecteur pour **un projet supplémentaire : 10 USD/mois**, frais réels de clonage à confirmer dans le Dashboard ; **aucun projet créé**. Storage nécessite son export/retest distinct et chiffré. Voir `docs/64-production-private-backup.md`.
+- Supabase Security Advisor Production : protection contre les mots de passe compromis **DÉSACTIVÉE**, 5 avertissements RPC `SECURITY DEFINER` accessibles aux comptes authentifiés et 6 tables RLS sans policy (tables fermées à contrôler). Activer/configurer Auth uniquement après vérification opérateur, puis tester inscription/login/reset sur Staging et contrôler Production. Aucun changement de configuration Auth effectué ici.
+- Stripe Live lecture seule : **3 produits / 3 prix mensuels existants** (Solo 9 EUR, Pro 19 EUR, Studio 49 EUR), **1 webhook** existant à `https://mentioncheck.app/api/stripe/webhook` (enabled, 7 types d'événements), portail actif mais liens CGV/confidentialité absents. Ne pas créer de doublons ; aucune vente, facturation ou activation Live effectuée ; flags Worker de production à vérifier séparément.
+- **NO GO commercial** jusqu'aux restaurations réelles PostgreSQL + Storage, protection Auth, migration atomique des quotas pré-GO, dossiers juridiques/Stripe et attestation du runtime. Preuves centralisées dans [issue #16](https://github.com/totorina47501-wq/Project3/issues/16). Aucun appel IA API payant.
+
+
 ## Auto-intégration des PR Copilot à faible risque — 9 novembre 2026
 
 - **Motif** : les PR #106 et #109 ont nécessité un passage manuel de brouillon à prêt/fusion malgré Copilot terminé et CI verte. Le workflow existant limitait volontairement l'auto-merge aux seuls tests/docs ; son réveil dépendait surtout de la CI, alors que le run cloud agent peut finir *après* elle.
@@ -267,3 +301,9 @@ Le dernier `lastError` de l’objet est historique ; ne pas conclure à une pann
 si phase=idle et les jobs sont completed. Deux incompatibilités fetch natives
 ont été reproduites et corrigées. Ne pas retester en consommant des médias
 réels ou des appels OpenAI sans nécessité.
+
+## PRA Production — décision de simplification (11/11/2026)
+
+Les six fichiers expérimentaux de restauration Docker locale, de récupération Storage via ordinateur et de lecture Storage dans Cloudflare MediaRunner ont été **retirés de la PR #128**, n'ayant jamais servi à une restauration réelle. Le code du runner média et les workflows existants de **rollback/staging** restent inchangés. Le chemin désormais unique pour PostgreSQL/Auth est la **restauration PHYSICAL Supabase Pro vers un nouveau projet isolé** (nouveau coût à valider), complétée séparément par une restauration effective des 13 objets Storage dans une destination isolée. Le forfait Pro et les backups fournisseur ne sont pas la preuve d'un restore réussi.
+
+Voir [docs/64-production-private-backup.md](docs/64-production-private-backup.md). Maintenir PR #128 en **draft**, issue #16 **ouverte**, migrations/promotions Solo Production et Stripe Live désactivés jusqu'aux preuves.

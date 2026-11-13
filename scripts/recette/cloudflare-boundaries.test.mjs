@@ -72,3 +72,30 @@ for(const [name,script,mutate] of refused){
     assert.notEqual(result.status,0,'Une configuration non sûre ne doit pas passer : '+name);
   });
 }
+
+// Recette RGPD sur staging partage : verification hors reseau du garde-fou de fixture.
+test('RGPD staging preserve les comptes OAuth preexistants et efface uniquement sa fixture marquee',()=>{
+  const source=readFileSync(join(root,'scripts/recette/staging-rgpd-erasure.mjs'),'utf8');
+  assert.doesNotMatch(source,/QA_STAGING_NOT_EMPTY_ABORT/);
+  assert.match(source,/const run=randomUUID\(\)/);
+  assert.match(source,/app_metadata:\{mentioncheck_erasure_qa:run\}/);
+  assert.match(source,/assert\.equal\(u\.id,id\)/);
+  assert.match(source,/assert\.equal\(u\.email,email\)/);
+  assert.match(source,/assert\.equal\(u\.app_metadata\?\.mentioncheck_erasure_qa,run/);
+  assert.match(source,/async function cleanup\(\)\{\s*await actorCheck\(\)/);
+  assert.match(source,/admin\.auth\.admin\.deleteUser\(id\)/);
+  assert.match(source,/\.eq\('id',id\)/);
+});
+
+// Les workflows staging partagent le même Worker : ne jamais perdre une recette en attente.
+test('Auth et Studio staging sérialisent les déploiements sans annuler les runs en attente',()=>{
+  for(const path of [
+    '.github/workflows/mentioncheck-launch-staging-auth.yml',
+    '.github/workflows/mentioncheck-studio-api-staging.yml',
+  ]){
+    const workflow=readFileSync(join(root,path),'utf8');
+    assert.match(workflow,/concurrency:\s*\n\s*group: mentioncheck-staging-cloudflare\s*\n\s*queue: max\s*\n\s*cancel-in-progress: false/);
+    assert.match(workflow,/BILLING_ENABLED: 'false'/);
+    assert.match(workflow,/OPENAI_PAUSED: 'true'/);
+  }
+});

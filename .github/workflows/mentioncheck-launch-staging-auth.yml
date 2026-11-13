@@ -2,9 +2,10 @@
 name: MentionCheck Launch Auth Staging
 on:
   push:
-    branches: [feat/mentioncheck-launch-decisions-20261110, copilot/social-oauth-001-completion-phase-2]
+    branches: [feat/mentioncheck-launch-decisions-20261110, codex/codex-certification-six-chantiers, copilot/social-oauth-001-completion-phase-2]
 permissions:
   contents: read
+# Preserve all queued staging recipes while serializing deployments.
 concurrency:
   group: mentioncheck-staging-cloudflare
   queue: max
@@ -14,6 +15,7 @@ jobs:
     if: >-
       github.repository == 'totorina47501-wq/Project3' &&
       (github.ref == 'refs/heads/feat/mentioncheck-launch-decisions-20261110' ||
+      github.ref == 'refs/heads/codex/codex-certification-six-chantiers' ||
       (github.ref == 'refs/heads/copilot/social-oauth-001-completion-phase-2' &&
        (github.event.head_commit.message == 'chore(oauth): sync staging vars once (#124)' ||
         (github.event.head_commit.message == 'fix(oauth): accept Google callback metadata (#124)' ||
@@ -81,3 +83,13 @@ jobs:
         run: npx @opennextjs/cloudflare deploy --config wrangler.staging.jsonc -- --keep-vars
       - name: Recette HTTP Auth + fermeture Stripe + utilisateur synthétique jetable
         run: node scripts/recette/auth-staging-smoke.mjs
+      - name: Recette existante RLS/RPC A-B, Storage prive et nettoyage strict
+        env:
+          MENTIONCHECK_STAGING_SUPABASE_ANON_KEY: ${{ secrets.MENTIONCHECK_STAGING_SUPABASE_ANON_KEY }}
+          MENTIONCHECK_STAGING_SUPABASE_SERVICE_KEY: ${{ secrets.MENTIONCHECK_STAGING_SUPABASE_SERVICE_KEY }}
+        run: node scripts/recette/staging-auth-ab.mjs
+      - name: RGPD sur fixture creee dans ce run staging (export, demande, apercu, effacement)
+        if: github.ref == 'refs/heads/codex/codex-certification-six-chantiers'
+        run: |
+          node --check scripts/recette/staging-rgpd-erasure.mjs
+          node scripts/recette/staging-rgpd-erasure.mjs

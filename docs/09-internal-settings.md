@@ -210,3 +210,7 @@ La configuration serveur refuse Instagram, TikTok et LinkedIn même si leurs var
 Limites observées : l'échange conserve un access token temporaire, sans renouvellement automatique ; une reconnexion est nécessaire après expiration. La récupération retient la première chaîne renvoyée, sans inventaire multi-chaînes. E2E fournisseur et activation production BLOCKED sans compte autorisé avec chaîne.
 
 Validation locale du correctif : 493 tests unitaires, 15 suites SQL, TypeScript, lint et registre anti-doublons réussis. Playwright tenté : 34 échecs liés au lancement Chromium (`socket() failed: Operation not permitted`), 6 réussites, 5 ignorés ; aucun PASS navigateur local revendiqué. Les quatre tests Analytics production échouent au même lancement, sans atteindre les assertions. La CI distante doit être contrôlée au nouveau SHA.
+
+### Réconciliation avec la certification #128 — 13 novembre
+
+Les branches aux SHAs `b8bf010` (#128) et `6915314` (#132) ont chacune une CI complète SUCCESS (runs 43334929844 et 43335085078), y compris Playwright/SQL/RLS/Next/OpenNext. Les échecs Chromium locaux ne bloquent donc plus ces preuves CI. Cette branche intègre ensuite #128 en conservant le bridge Solo, les preuves PRA/RGPD, le groupe staging `queue: max`, la fermeture IA et les déclarations manuelles. La CI du nouveau commit combiné reste à vérifier séparément. Aucune migration production ni activation OAuth/paiement n'est incluse.

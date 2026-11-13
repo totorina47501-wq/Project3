@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     await requireAuthAttemptLimit(request);
     const body = credentials.safeParse(await request.json());
     if (!body.success) return Response.json({
-      error: 'Email invalide ou mot de passe faible (12 caractères, 3 familles : minuscules, majuscules, chiffres ou symboles).',
+      error: 'Email invalide ou mot de passe non conforme (12 caractères minimum, minuscules, majuscules, chiffres et symbole).',
     }, { status: 400 });
     const client = await createServerSupabase();
     const { error } = await client.auth.signUp(body.data);

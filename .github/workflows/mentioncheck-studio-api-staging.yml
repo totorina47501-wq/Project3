@@ -2,15 +2,17 @@
 name: MentionCheck Studio API Staging
 on:
   push:
-    branches: [feat/mentioncheck-studio-api-entitlements-20261110]
+    branches: [feat/mentioncheck-studio-api-entitlements-20261110, codex/codex-certification-six-chantiers]
 permissions:
   contents: read
+# Preserve all queued staging recipes while serializing deployments.
 concurrency:
   group: mentioncheck-staging-cloudflare
+  queue: max
   cancel-in-progress: false
 jobs:
   studio-api-staging:
-    if: github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/feat/mentioncheck-studio-api-entitlements-20261110'
+    if: github.repository == 'totorina47501-wq/Project3' && (github.ref == 'refs/heads/feat/mentioncheck-studio-api-entitlements-20261110' || github.ref == 'refs/heads/codex/codex-certification-six-chantiers')
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
@@ -70,3 +72,8 @@ jobs:
         run: npx @opennextjs/cloudflare deploy --config wrangler.staging.jsonc -- --keep-vars
       - name: Recette HTTP de deux équipes, scopes, quotas et expiration
         run: node scripts/recette/studio-api-staging-smoke.mjs
+      - name: RGPD certification staging sur compte synthetique, nettoyage verifie
+        if: github.ref == 'refs/heads/codex/codex-certification-six-chantiers'
+        run: |
+          node --check scripts/recette/staging-rgpd-erasure.mjs
+          node scripts/recette/staging-rgpd-erasure.mjs
