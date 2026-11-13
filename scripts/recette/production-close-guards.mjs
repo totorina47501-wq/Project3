@@ -20,6 +20,15 @@ export function closureBindings(bindings) {
     ...Object.entries(closedFlags).map(([name,text])=>({name,type:'plain_text',text})),
   ];
 }
+export function closureSettings(before) {
+  const runner=before.bindings?.find(b=>b.name==='MEDIA_RUNNER');
+  assert.ok(runner?.type==='durable_object_namespace' && runner.class_name==='MediaRunner' && runner.namespace_id, 'Existing MediaRunner namespace required');
+  // Repeat the existing lifecycle declaration: never delete, rename or migrate a namespace.
+  const exports = {MediaRunner:{type:'durable-object',storage:'sqlite'}};
+  if (before.exports) assert.deepEqual(before.exports,exports,'Unexpected existing exports');
+  return {...before,bindings:closureBindings(before.bindings),exports,
+    annotations:{'workers/message':'Close paid AI, billing and uncertified OAuth guards; application code unchanged'}};
+}
 async function main() {
   assert.equal(process.env.CLOUDFLARE_ACCOUNT_ID,'f9b14d5d93b1fe8ef3982d3ddb87131d');
   assert.equal(process.env.CLOSE_PRODUCTION_GUARDS,'close-only');
@@ -46,12 +55,12 @@ async function main() {
   }
   await checkVersion();
   const before=await api('/settings');
-  const bindings=closureBindings(before.bindings);
+  const settings=closureSettings(before);
   await checkVersion();
   const latest=await api('/settings');
   assert.deepEqual(latest.bindings,before.bindings,'Concurrent settings change: stop');
   const form=new FormData();
-  form.set('settings',JSON.stringify({...before,bindings,annotations:{'workers/message':'Close paid AI, billing and uncertified OAuth guards; application code unchanged'}}));
+  form.set('settings',JSON.stringify(settings));
   await api('/settings','PATCH',form);
   const after=await api('/settings');
   for(const [name,value] of Object.entries(closedFlags)) {
@@ -64,5 +73,5 @@ async function main() {
   console.log('PROD_GUARDS_CLOSED_AND_UNRELATED_BINDINGS_PRESERVED');
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch(e=>{console.error(e instanceof assert.AssertionError ? e.message.split('\n')[0] : 'Production guard closure failed');process.exitCode=1;});
+  main().catch(e=>{console.error(e instanceof assert.AssertionError ? (e.message.startsWith('Cloudflare ') ? e.message.replaceAll('\n',' ') : e.message.split('\n')[0]) : 'Production guard closure failed');process.exitCode=1;});
 }

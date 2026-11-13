@@ -16,7 +16,7 @@ test('diagnostic strictement lecture seule sans appel OpenAI ni écriture Cloudf
   assert.doesNotMatch(workflow,/secrets\\.MENTIONCHECK_STAGING_CLOUDFLARE_API_TOKEN/);
 });
 
-import { closureBindings, closedFlags } from './production-close-guards.mjs';
+import { closureBindings, closureSettings, closedFlags } from './production-close-guards.mjs';
 test('closure inherits every unrelated binding and never exposes secret values',()=>{
   const bindings=[{name:'OPENAI_API_KEY',type:'secret_text'},{name:'DB',type:'hyperdrive',id:'private-id'},{name:'OPENAI_PAUSED',type:'plain_text',text:'false'}];
   const result=closureBindings(bindings);
@@ -27,4 +27,15 @@ test('closure inherits every unrelated binding and never exposes secret values',
   assert.throws(()=>closureBindings([]));
   assert.throws(()=>closureBindings([{name:'OPENAI_PAUSED',type:'secret_text'}]));
   assert.throws(()=>closureBindings([bindings[0],bindings[0]]));
+});
+
+test('closure preserves the provisioned MediaRunner and its existing sqlite lifecycle',()=>{
+  const runner={name:'MEDIA_RUNNER',type:'durable_object_namespace',class_name:'MediaRunner',namespace_id:'existing-namespace'};
+  const before={bindings:[runner,{name:'KEY',type:'secret_text'}],compatibility_date:'2026-01-01'};
+  const after=closureSettings(before);
+  assert.deepEqual(after.bindings.find(b=>b.name==='MEDIA_RUNNER'),runner);
+  assert.deepEqual(after.exports,{MediaRunner:{type:'durable-object',storage:'sqlite'}});
+  assert.equal(after.compatibility_date,before.compatibility_date);
+  assert.throws(()=>closureSettings({bindings:[{...runner,namespace_id:undefined}]}));
+  assert.throws(()=>closureSettings({...before,exports:{Other:{type:'durable-object',storage:'sqlite'}}}));
 });
