@@ -2,7 +2,7 @@
 name: MentionCheck Cloudflare read-only diagnostic
 on:
   push:
-    branches: [test/mentioncheck-staging-auth-20261108]
+    branches: [test/mentioncheck-staging-auth-20261108, copilot/social-oauth-001-completion-phase-2]
     paths:
       - '.github/workflows/mentioncheck-cloudflare-readonly-diagnostic.yml'
       - 'scripts/recette/staging-cloudflare-readonly.mjs'
@@ -13,7 +13,7 @@ permissions:
   contents: read
 jobs:
   diagnostic:
-    if: github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/test/mentioncheck-staging-auth-20261108'
+    if: github.repository == 'totorina47501-wq/Project3' && (github.ref == 'refs/heads/test/mentioncheck-staging-auth-20261108' || github.ref == 'refs/heads/copilot/social-oauth-001-completion-phase-2')
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     env:

@@ -262,3 +262,14 @@ Validation locale du correctif : 493 tests unitaires, 15 suites SQL, TypeScript,
 ### Réconciliation avec la certification #128 — 13 novembre
 
 Les branches aux SHAs `b8bf010` (#128) et `6915314` (#132) ont chacune une CI complète SUCCESS (runs 43334929844 et 43335085078), y compris Playwright/SQL/RLS/Next/OpenNext. Les échecs Chromium locaux ne bloquent donc plus ces preuves CI. Cette branche intègre ensuite #128 en conservant le bridge Solo, les preuves PRA/RGPD, le groupe staging `queue: max`, la fermeture IA et les déclarations manuelles. La CI du nouveau commit combiné reste à vérifier séparément. Aucune migration production ni activation OAuth/paiement n'est incluse.
+
+## Reprise sans navigateur — 14 novembre 2026
+
+Réutiliser le workflow `mentioncheck-cloudflare-readonly-diagnostic.yml` et son
+script existant sur la branche de #141. Il inspecte uniquement les noms de
+secrets OAuth staging, les flags booléens autorisés et la concordance stricte
+des origines. Aucun déploiement ni valeur secrète dans les sorties. Les secrets
+Cloudflare restent dans GitHub Actions. Une présence ne prouve ni validité ni
+rotation d'un secret TikTok. Production : job `inspect` existant relançable seul.
+Copilot a indiqué un échec de signature GPG pour publier Facebook : aucun code
+Facebook au HEAD 6ff0889 malgré la fin de session. Ne pas contourner la signature.

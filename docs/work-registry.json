@@ -744,7 +744,7 @@
     {
       "id": "oauth-provider-review",
       "status": "in_progress",
-      "scope": "YouTube staging : connexion/persistance, reconnexions sans doublon, révocation et refus réels attestés. Expiration réelle et configuration Google publique restent à valider ; production fermée, PR #132 existante",
+      "scope": "YouTube staging : connexion/persistance, reconnexions sans doublon, révocation et refus réels attestés. Expiration réelle et configuration Google publique restent à valider ; production fermée, PR #132 existante Diagnostic Cloudflare OAuth staging étendu dans le workflow existant, sans navigateur et sans valeurs secrètes ; présence/rotation fournisseur distinctes.",
       "environment": "staging",
       "evidence": [
         "https://github.com/totorina47501-wq/Project3/pull/132",
