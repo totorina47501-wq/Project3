@@ -1,7 +1,7 @@
 name: MentionCheck AI Production Read-Only
 on:
   push:
-    branches: [main]
+    branches: [main, codex/codex-certification-six-chantiers]
     paths:
       - '.github/workflows/mentioncheck-ai-production-readonly.yml'
       - 'scripts/recette/production-ai-readonly.mjs'
@@ -13,13 +13,13 @@ concurrency:
   cancel-in-progress: true
 jobs:
   inspect:
-    if: github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/main'
+    if: github.repository == 'totorina47501-wq/Project3' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/codex/codex-certification-six-chantiers')
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
       CLOUDFLARE_ACCOUNT_ID: f9b14d5d93b1fe8ef3982d3ddb87131d
-      # Dedicated per-Worker Metadata Read-Only token; never reuse staging deploy credentials.
-      CLOUDFLARE_API_TOKEN: ${{ secrets.MENTIONCHECK_PROD_CLOUDFLARE_READ_TOKEN }}
+      # Production credential preflight; the script remains GET-only. Never use staging credentials.
+      CLOUDFLARE_API_TOKEN: ${{ secrets.MENTIONCHECK_PROD_CLOUDFLARE_API_TOKEN || secrets.MENTIONCHECK_PROD_CLOUDFLARE_READ_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
