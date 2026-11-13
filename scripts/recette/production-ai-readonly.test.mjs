@@ -20,7 +20,7 @@ import { closureBindings, closedFlags } from './production-close-guards.mjs';
 test('closure inherits every unrelated binding and never exposes secret values',()=>{
   const bindings=[{name:'OPENAI_API_KEY',type:'secret_text'},{name:'DB',type:'hyperdrive',id:'private-id'},{name:'OPENAI_PAUSED',type:'plain_text',text:'false'}];
   const result=closureBindings(bindings);
-  assert.deepEqual(result.slice(0,2),[{name:'OPENAI_API_KEY',type:'inherit'},{name:'DB',type:'inherit'}]);
+  assert.deepEqual(result.slice(0,2),[{name:'OPENAI_API_KEY',type:'inherit'},{name:'DB',type:'hyperdrive',id:'private-id'}]);
   assert.equal(result.length,2+Object.keys(closedFlags).length);
   assert.equal(result.find(b=>b.name==='OPENAI_PAUSED').text,'true');
   assert.ok(result.filter(b=>b.type==='plain_text' && b.name!=='OPENAI_PAUSED').every(b=>b.text==='false'));

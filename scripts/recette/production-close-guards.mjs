@@ -16,7 +16,7 @@ export function closureBindings(bindings) {
     if (Object.hasOwn(closedFlags,b.name)) assert.equal(b.type,'plain_text','Flag must be plain text');
   }
   return [
-    ...bindings.filter(b=>!Object.hasOwn(closedFlags,b.name)).map(b=>({name:b.name,type:'inherit'})),
+    ...bindings.filter(b=>!Object.hasOwn(closedFlags,b.name)).map(b=>b.type.startsWith('secret_') ? {name:b.name,type:'inherit'} : {...b}),
     ...Object.entries(closedFlags).map(([name,text])=>({name,type:'plain_text',text})),
   ];
 }
@@ -30,7 +30,7 @@ async function main() {
     const r=await fetch(root+path,{method,body,headers:{Authorization:'Bearer '+token},signal:AbortSignal.timeout(20000)});
     const data=await r.json();
     const codes=(data.errors??[]).map(e=>Number(e.code)).filter(Number.isFinite).join(',');
-    assert.ok(r.ok,'Cloudflare '+method+' '+path+' HTTP '+r.status+' codes='+codes);
+    assert.ok(r.ok,'Cloudflare '+method+' '+path+' HTTP '+r.status+' codes='+codes+' '+(method==='PATCH' ? (data.errors??[]).map(e=>String(e.message??'').replaceAll(token,'[redacted]')).join('; ') : ''));
     assert.equal(data.success,true,'Cloudflare request failed');
     return data.result;
   }
@@ -51,7 +51,7 @@ async function main() {
   const latest=await api('/settings');
   assert.deepEqual(latest.bindings,before.bindings,'Concurrent settings change: stop');
   const form=new FormData();
-  form.set('settings',JSON.stringify({bindings,annotations:{'workers/message':'Close paid AI, billing and uncertified OAuth guards; application code unchanged'}}));
+  form.set('settings',JSON.stringify({...before,bindings,annotations:{'workers/message':'Close paid AI, billing and uncertified OAuth guards; application code unchanged'}}));
   await api('/settings','PATCH',form);
   const after=await api('/settings');
   for(const [name,value] of Object.entries(closedFlags)) {
