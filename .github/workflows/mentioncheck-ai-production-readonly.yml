@@ -34,7 +34,8 @@ jobs:
 
   close-guards:
     needs: inspect
-    if: github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/codex/codex-certification-six-chantiers' && github.event_name == 'push' && github.event.head_commit.message == 'ops: close production guards after credential preflight (#16)'
+    if: >-
+      github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/codex/codex-certification-six-chantiers' && github.event_name == 'push' && github.event.head_commit.message == 'ops: close production guards after credential preflight (#16)'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
