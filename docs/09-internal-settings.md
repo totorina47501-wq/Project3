@@ -202,3 +202,11 @@ Restent externes : autorisations et validation OAuth pour chaque réseau,
 configuration de domaine/expéditeur Resend, choix des déclencheurs et obligations
 d’information applicables avant tout envoi. Aucun de ces points n’empêche le
 rendu local ni la gestion interne après application séparée de la migration.
+
+## Livraison YouTube seule — 13 novembre 2026
+
+La configuration serveur refuse Instagram, TikTok et LinkedIn même si leurs variables sont activées. Les déclarations manuelles restent disponibles. Les flags OAuth production sont explicitement fermés dans Wrangler ; YouTube ne doit être ouvert qu'après preuve fournisseur avec une chaîne et persistance Vault vérifiée. Le cas sans chaîne reste géré par le code existant.
+
+Limites observées : l'échange conserve un access token temporaire, sans renouvellement automatique ; une reconnexion est nécessaire après expiration. La récupération retient la première chaîne renvoyée, sans inventaire multi-chaînes. E2E fournisseur et activation production BLOCKED sans compte autorisé avec chaîne.
+
+Validation locale du correctif : 493 tests unitaires, 15 suites SQL, TypeScript, lint et registre anti-doublons réussis. Playwright tenté : 34 échecs liés au lancement Chromium (`socket() failed: Operation not permitted`), 6 réussites, 5 ignorés ; aucun PASS navigateur local revendiqué. Les quatre tests Analytics production échouent au même lancement, sans atteindre les assertions. La CI distante doit être contrôlée au nouveau SHA.

@@ -68,6 +68,9 @@ export function socialOAuthConfig(
   provider: SocialOAuthProvider,
   env: Record<string, string | undefined> = process.env,
 ): SocialOAuthRuntimeConfig | null {
+  // Only YouTube is eligible for this release, regardless of stale runtime flags.
+  if (provider !== 'youtube') return null;
+
   if (
     env.SOCIAL_OAUTH_ENABLED !== 'true' ||
     env[socialOAuthProviders[provider].enabledEnv] !== 'true'

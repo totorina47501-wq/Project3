@@ -348,7 +348,7 @@
     },
     {
       "id": "oauth-social",
-      "name": "Comptes sociaux manuels et connexions OAuth protégées",
+      "name": "Comptes sociaux manuels et OAuth YouTube seul, production fermée",
       "status": "partial",
       "anchor": "lib/social/oauth/exchange.ts",
       "test": "tests/unit/social-oauth-routes.test.ts",
@@ -375,7 +375,9 @@
         "supabase/migrations/20261112072300_social_oauth_expiry_actor.sql"
       ],
       "next": [
-        "Déclarations manuelles inchangées ; flux serveur et stockage Vault testés hors ligne, désactivés sans flags explicites. Les migrations OAuth initiales sont déjà présentes sur staging : ne pas les rejouer. La migration corrective de contrôle d’acteur d’expiration reste à revoir avant toute application staging ; production reste bloquée."
+        "Déclarations manuelles préservées. Activation serveur limitée à YouTube même si les flags des autres réseaux sont activés ; flags production explicitement false.",
+        "Trois migrations OAuth déjà appliquées au staging, absentes en production au 13 novembre. E2E fournisseur avec chaîne et persistance Vault non attestés ; conserver production fermée.",
+        "Jeton temporaire sans renouvellement automatique et première chaîne seulement : reconnexion requise après expiration."
       ]
     },
     {

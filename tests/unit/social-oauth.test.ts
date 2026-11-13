@@ -61,35 +61,47 @@ beforeEach(() => {
 
 describe('Socle OAuth social désactivé', () => {
   it('reste non configuré sans activation et sans tous les secrets serveur', () => {
-    expect(socialOAuthConfig('instagram', {})).toBeNull();
+    expect(socialOAuthConfig('youtube', {})).toBeNull();
     expect(
-      socialOAuthConfig('instagram', {
+      socialOAuthConfig('youtube', {
         SOCIAL_OAUTH_ENABLED: 'true',
-        SOCIAL_OAUTH_INSTAGRAM_ENABLED: 'true',
-        SOCIAL_OAUTH_INSTAGRAM_CLIENT_ID: 'client',
+        SOCIAL_OAUTH_YOUTUBE_ENABLED: 'true',
+        SOCIAL_OAUTH_YOUTUBE_CLIENT_ID: 'client',
         SOCIAL_OAUTH_PUBLIC_ORIGIN: 'https://local.test',
         SOCIAL_OAUTH_ALLOWED_ORIGINS: 'https://local.test',
       }),
     ).toBeNull();
     expect(
-      socialOAuthConfig('instagram', {
+      socialOAuthConfig('youtube', {
         SOCIAL_OAUTH_ENABLED: 'true',
-        SOCIAL_OAUTH_INSTAGRAM_ENABLED: 'true',
-        SOCIAL_OAUTH_INSTAGRAM_CLIENT_ID: 'client',
-        SOCIAL_OAUTH_INSTAGRAM_CLIENT_SECRET: 'server-secret',
+        SOCIAL_OAUTH_YOUTUBE_ENABLED: 'true',
+        SOCIAL_OAUTH_YOUTUBE_CLIENT_ID: 'client',
+        SOCIAL_OAUTH_YOUTUBE_CLIENT_SECRET: 'server-secret',
         SOCIAL_OAUTH_PUBLIC_ORIGIN: 'https://local.test',
         SOCIAL_OAUTH_ALLOWED_ORIGINS: 'https://local.test',
       }),
     ).toMatchObject({
       clientSecret: 'server-secret',
-      redirectUri: 'https://local.test/api/social-accounts/oauth/callback/instagram',
+      redirectUri: 'https://local.test/api/social-accounts/oauth/callback/youtube',
     });
-    expect(socialOAuthConfig('instagram', {
+    expect(socialOAuthConfig('youtube', {
       SOCIAL_OAUTH_ENABLED: 'true',
-      SOCIAL_OAUTH_INSTAGRAM_CLIENT_ID: 'client',
-      SOCIAL_OAUTH_INSTAGRAM_CLIENT_SECRET: 'server-secret',
+      SOCIAL_OAUTH_YOUTUBE_CLIENT_ID: 'client',
+      SOCIAL_OAUTH_YOUTUBE_CLIENT_SECRET: 'server-secret',
       SOCIAL_OAUTH_PUBLIC_ORIGIN: 'https://local.test',
       SOCIAL_OAUTH_ALLOWED_ORIGINS: 'https://local.test',
+    })).toBeNull();
+  });
+
+  it.each(['instagram', 'tiktok', 'linkedin'] as const)('refuse %s même avec tous les flags et secrets', (provider) => {
+    const definition = socialOAuthProviders[provider];
+    expect(socialOAuthConfig(provider, {
+      SOCIAL_OAUTH_ENABLED: 'true',
+      [definition.enabledEnv]: 'true',
+      [definition.clientIdEnv]: 'client',
+      [definition.clientSecretEnv]: 'secret',
+      SOCIAL_OAUTH_PUBLIC_ORIGIN: 'https://mentioncheck.app',
+      SOCIAL_OAUTH_ALLOWED_ORIGINS: 'https://mentioncheck.app',
     })).toBeNull();
   });
 
