@@ -207,12 +207,7 @@ async function tokenResponse(
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: formBody(body),
   });
-  if (provider === 'tiktok') {
-    const data = object(response.data);
-    if (!data) throw new Error('OAuth provider response unavailable.');
-    if (response.error) throw new Error('OAuth provider request unavailable.');
-    return data;
-  }
+  // TikTok OAuth v2 returns token fields at the root (not the legacy data envelope).
   if (response.error || response.error_description) {
     if (provider === 'youtube') {
       throw new GoogleTokenResponseError(safeGoogleTokenReason(response.error));

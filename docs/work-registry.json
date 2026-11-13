@@ -352,7 +352,7 @@
     },
     {
       "id": "oauth-social",
-      "name": "Comptes sociaux manuels et OAuth YouTube seul, production fermée",
+      "name": "Comptes manuels, OAuth YouTube et préparation TikTok staging, production fermée",
       "status": "partial",
       "anchor": "lib/social/oauth/exchange.ts",
       "test": "tests/unit/social-oauth-routes.test.ts",
@@ -379,7 +379,7 @@
         "supabase/migrations/20261112072300_social_oauth_expiry_actor.sql"
       ],
       "next": [
-        "Déclarations manuelles préservées. Activation serveur limitée à YouTube même si les flags des autres réseaux sont activés ; flags production explicitement false.",
+        "Déclarations manuelles préservées. YouTube éligible ; TikTok autorisable uniquement sur origine staging exacte après demande opérateur du 13 novembre. Instagram/LinkedIn refusés ; tous flags production false. TikTok bloqué par rotation du secret exposé, configuration Sandbox et recette fournisseur ; aucun secret dans Git.",
         "Trois migrations OAuth appliquées au staging, absentes en production au 13 novembre. Recette Google réelle : connexion avec chaîne, persistance Vault, reconnexions sans doublon, révocation confirmée par le handler et refus de consentement PASS. Preuves dans #16, commentaire 6839768857 ; production fermée.",
         "Jeton temporaire sans renouvellement automatique et première chaîne seulement : reconnexion requise après expiration."
       ]

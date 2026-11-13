@@ -68,8 +68,10 @@ export function socialOAuthConfig(
   provider: SocialOAuthProvider,
   env: Record<string, string | undefined> = process.env,
 ): SocialOAuthRuntimeConfig | null {
-  // Only YouTube is eligible for this release, regardless of stale runtime flags.
-  if (provider !== 'youtube') return null;
+  // TikTok is eligible only on the isolated staging origin until provider certification.
+  const tiktokStaging = provider === 'tiktok' &&
+    env.SOCIAL_OAUTH_PUBLIC_ORIGIN === 'https://mentioncheck-staging.toto-rina47501.workers.dev';
+  if (provider !== 'youtube' && !tiktokStaging) return null;
 
   if (
     env.SOCIAL_OAUTH_ENABLED !== 'true' ||

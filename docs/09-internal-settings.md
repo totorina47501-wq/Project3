@@ -1,5 +1,32 @@
 # Paramètres internes et modèles d’emails
 
+## TikTok — préparation staging demandée le 13 novembre
+
+La demande explicite de l'exploitant étend le périmètre YouTube. Réutiliser le
+ticket #124 et la branche sociale existante ; #132 étant déjà fusionnée, la
+suite TikTok nécessite sa propre PR de revue, sans recréer routes ou migrations.
+Le code accepte TikTok uniquement sur l'origine staging exacte, avec les deux
+flags actifs et les secrets serveur présents. Le fichier Wrangler et la
+production restent fermés. Le parseur utilise la réponse OAuth v2 à la racine.
+
+Configuration opérateur nécessaire :
+- Régénérer le secret exposé dans la capture ; ne pas le réutiliser ni le publier.
+- Dans TikTok **Sandbox**, ajouter Login Kit / Web, permission `user.info.basic`
+  et un compte de test autorisé ; aucun scope de publication ou import vidéo.
+- Redirect URI exacte :
+  `https://mentioncheck-staging.toto-rina47501.workers.dev/api/social-accounts/oauth/callback/tiktok`.
+- Dans les secrets du Worker **mentioncheck-staging** uniquement, renseigner les
+  identifiants de cette Sandbox : `SOCIAL_OAUTH_TIKTOK_CLIENT_KEY` et
+  `SOCIAL_OAUTH_TIKTOK_CLIENT_SECRET`. Ne pas copier un secret production dans staging.
+- N'activer `SOCIAL_OAUTH_TIKTOK_ENABLED` qu'après déploiement du candidat et
+  confirmation de la configuration fournisseur. `SOCIAL_OAUTH_ENABLED` existe déjà.
+
+Les tests hors ligne ne prouvent pas le consentement TikTok, la persistance
+réelle ni sa révocation. Renouvellement automatique non implémenté : reconnexion
+à expiration. Aucun TikTok opérationnel ou validé en production n'est revendiqué.
+Références : [Login Kit Web](https://developers.tiktok.com/docs/en/login-kit-web),
+[échange OAuth v2](https://developers.tiktok.com/docs/en/oauth-get-a-user-access-token).
+
 ## État vérifié le 13 novembre 2026
 
 Sur le staging du candidat `f507054987dc7ba0bb990e5d839040810392d426`

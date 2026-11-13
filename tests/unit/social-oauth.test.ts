@@ -105,6 +105,21 @@ describe('Socle OAuth social désactivé', () => {
     })).toBeNull();
   });
 
+  it('autorise TikTok seulement sur staging avec flags, secrets et origine concordants', () => {
+    const origin = 'https://mentioncheck-staging.toto-rina47501.workers.dev';
+    const env = {
+      SOCIAL_OAUTH_ENABLED: 'true', SOCIAL_OAUTH_TIKTOK_ENABLED: 'true',
+      SOCIAL_OAUTH_TIKTOK_CLIENT_KEY: 'offline-client',
+      SOCIAL_OAUTH_TIKTOK_CLIENT_SECRET: 'offline-secret',
+      SOCIAL_OAUTH_PUBLIC_ORIGIN: origin, SOCIAL_OAUTH_ALLOWED_ORIGINS: origin,
+    };
+    expect(socialOAuthConfig('tiktok', env)?.redirectUri).toBe(`${origin}/api/social-accounts/oauth/callback/tiktok`);
+    expect(socialOAuthConfig('tiktok', {...env, SOCIAL_OAUTH_TIKTOK_ENABLED:'false'})).toBeNull();
+    expect(socialOAuthConfig('tiktok', {...env, SOCIAL_OAUTH_TIKTOK_CLIENT_SECRET:''})).toBeNull();
+    expect(socialOAuthConfig('tiktok', {...env, SOCIAL_OAUTH_ALLOWED_ORIGINS:'https://mentioncheck.app'})).toBeNull();
+    expect(socialOAuthConfig('tiktok', {...env, SOCIAL_OAUTH_PUBLIC_ORIGIN:'https://other.test', SOCIAL_OAUTH_ALLOWED_ORIGINS:'https://other.test'})).toBeNull();
+  });
+
   it('déclare quatre adaptateurs distincts avec des scopes sans publication', () => {
     expect(socialOAuthProviders.instagram.authorizationEndpoint).toContain('instagram.com');
     expect(socialOAuthProviders.tiktok.clientIdParameter).toBe('client_key');
