@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/mentioncheck-ai-production-readonly.yml'
       - 'scripts/recette/production-ai-readonly.mjs'
+      - 'scripts/recette/production-close-guards.mjs'
   workflow_dispatch:
 permissions:
   contents: read

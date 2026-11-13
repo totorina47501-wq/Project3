@@ -28,8 +28,9 @@ async function main() {
   const root='https://api.cloudflare.com/client/v4/accounts/f9b14d5d93b1fe8ef3982d3ddb87131d/workers/scripts/mentioncheck';
   async function api(path,method='GET',body) {
     const r=await fetch(root+path,{method,body,headers:{Authorization:'Bearer '+token},signal:AbortSignal.timeout(20000)});
-    assert.ok(r.ok,'Cloudflare HTTP '+r.status);
     const data=await r.json();
+    const codes=(data.errors??[]).map(e=>Number(e.code)).filter(Number.isFinite).join(',');
+    assert.ok(r.ok,'Cloudflare '+method+' '+path+' HTTP '+r.status+' codes='+codes);
     assert.equal(data.success,true,'Cloudflare request failed');
     return data.result;
   }
