@@ -17,6 +17,13 @@ test('la migration pgvector reste explicitement non testée',()=>{
   assert.equal(result.sql,null);
   assert.equal(result.omissions.length,1);
 });
+test('la migration OAuth garde son SQL et remplace uniquement Vault par le stub local',()=>{
+  const sql='begin; create extension if not exists supabase_vault with schema vault; select 1; commit;';
+  const result=migrationForOffline('20261110220000_social_oauth_vault_accounts.sql',sql);
+  assert.equal(result.sql,'begin;  select 1; commit;');
+  assert.match(result.omissions[0],/Vault/);
+  assert.throws(()=>migrationForOffline('20261110220000_social_oauth_vault_accounts.sql','begin; select 1; commit;'),/Déclaration Vault/);
+});
 test('les autres migrations restent identiques octet pour octet',()=>{
   const sql='begin; create table public.example(id uuid); commit;';
   assert.deepEqual(migrationForOffline('future_migration.sql',sql),{sql,omissions:[]});

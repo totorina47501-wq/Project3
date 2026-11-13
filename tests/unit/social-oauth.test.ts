@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+vi.mock('server-only', () => ({}));
 import {
   beginSocialOAuth,
   completeSocialOAuthCallback,
@@ -22,6 +23,7 @@ const now = new Date('2026-11-10T12:00:00.000Z');
 const config = (provider: SocialOAuthProvider) => ({
   provider,
   clientId: 'offline-client',
+  clientSecret: 'offline-secret',
   redirectUri: `https://local.test/api/social-accounts/oauth/callback/${provider}`,
   allowedOrigins: ['https://local.test'],
 });
@@ -59,26 +61,48 @@ beforeEach(() => {
 
 describe('Socle OAuth social désactivé', () => {
   it('reste non configuré sans activation et sans tous les secrets serveur', () => {
-    expect(socialOAuthConfig('instagram', {})).toBeNull();
+    expect(socialOAuthConfig('youtube', {})).toBeNull();
     expect(
-      socialOAuthConfig('instagram', {
+      socialOAuthConfig('youtube', {
         SOCIAL_OAUTH_ENABLED: 'true',
-        SOCIAL_OAUTH_INSTAGRAM_CLIENT_ID: 'client',
+        SOCIAL_OAUTH_YOUTUBE_ENABLED: 'true',
+        SOCIAL_OAUTH_YOUTUBE_CLIENT_ID: 'client',
         SOCIAL_OAUTH_PUBLIC_ORIGIN: 'https://local.test',
         SOCIAL_OAUTH_ALLOWED_ORIGINS: 'https://local.test',
       }),
     ).toBeNull();
     expect(
-      socialOAuthConfig('instagram', {
+      socialOAuthConfig('youtube', {
         SOCIAL_OAUTH_ENABLED: 'true',
-        SOCIAL_OAUTH_INSTAGRAM_CLIENT_ID: 'client',
-        SOCIAL_OAUTH_INSTAGRAM_CLIENT_SECRET: 'server-secret',
+        SOCIAL_OAUTH_YOUTUBE_ENABLED: 'true',
+        SOCIAL_OAUTH_YOUTUBE_CLIENT_ID: 'client',
+        SOCIAL_OAUTH_YOUTUBE_CLIENT_SECRET: 'server-secret',
         SOCIAL_OAUTH_PUBLIC_ORIGIN: 'https://local.test',
         SOCIAL_OAUTH_ALLOWED_ORIGINS: 'https://local.test',
       }),
     ).toMatchObject({
-      redirectUri: 'https://local.test/api/social-accounts/oauth/callback/instagram',
+      clientSecret: 'server-secret',
+      redirectUri: 'https://local.test/api/social-accounts/oauth/callback/youtube',
     });
+    expect(socialOAuthConfig('youtube', {
+      SOCIAL_OAUTH_ENABLED: 'true',
+      SOCIAL_OAUTH_YOUTUBE_CLIENT_ID: 'client',
+      SOCIAL_OAUTH_YOUTUBE_CLIENT_SECRET: 'server-secret',
+      SOCIAL_OAUTH_PUBLIC_ORIGIN: 'https://local.test',
+      SOCIAL_OAUTH_ALLOWED_ORIGINS: 'https://local.test',
+    })).toBeNull();
+  });
+
+  it.each(['instagram', 'tiktok', 'linkedin'] as const)('refuse %s même avec tous les flags et secrets', (provider) => {
+    const definition = socialOAuthProviders[provider];
+    expect(socialOAuthConfig(provider, {
+      SOCIAL_OAUTH_ENABLED: 'true',
+      [definition.enabledEnv]: 'true',
+      [definition.clientIdEnv]: 'client',
+      [definition.clientSecretEnv]: 'secret',
+      SOCIAL_OAUTH_PUBLIC_ORIGIN: 'https://mentioncheck.app',
+      SOCIAL_OAUTH_ALLOWED_ORIGINS: 'https://mentioncheck.app',
+    })).toBeNull();
   });
 
   it('déclare quatre adaptateurs distincts avec des scopes sans publication', () => {
@@ -94,6 +118,7 @@ describe('Socle OAuth social désactivé', () => {
   it('refuse une origine non HTTPS ou non allowlistée avant de créer un état', async () => {
     const env = {
       SOCIAL_OAUTH_ENABLED: 'true',
+      SOCIAL_OAUTH_INSTAGRAM_ENABLED: 'true',
       SOCIAL_OAUTH_INSTAGRAM_CLIENT_ID: 'client',
       SOCIAL_OAUTH_INSTAGRAM_CLIENT_SECRET: 'server-secret',
       SOCIAL_OAUTH_PUBLIC_ORIGIN: 'https://other.test',
@@ -143,8 +168,11 @@ describe('Socle OAuth social désactivé', () => {
       SOCIAL_OAUTH_STATE_TTL_SECONDS * 1000,
     );
     expect(transaction.pkceVerifier).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(authorizationUrl.searchParams.get('scope')).toBe(
+      'https://www.googleapis.com/auth/youtube.readonly',
+    );
 
-    const callbackUrl = `${config('youtube').redirectUri}?code=simulated-code&state=${state}`;
+    const callbackUrl = `${config('youtube').redirectUri}?code=simulated-code&state=${state}&scope=${encodeURIComponent('https://www.googleapis.com/auth/youtube.readonly')}`;
     await expect(
       completeSocialOAuthCallback({
         provider: 'youtube',
@@ -276,5 +304,73 @@ describe('Socle OAuth social désactivé', () => {
         now,
       }),
     ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('accepts Google callback metadata while rejecting duplicates and preserving state/PKCE', async () => {
+    const authorizationUrl = await beginSocialOAuth({
+      provider: 'youtube',
+      userId: owner,
+      sessionId: session,
+      store,
+      config: config('youtube'),
+      now,
+    });
+    const state = authorizationUrl.searchParams.get('state')!;
+    const callback = new URL(config('youtube').redirectUri);
+    callback.searchParams.set('code', 'simulated-google-code');
+    callback.searchParams.set('state', state);
+    callback.searchParams.set('scope', 'https://www.googleapis.com/auth/youtube.readonly');
+    callback.searchParams.set('authuser', '0');
+    callback.searchParams.set('prompt', 'consent');
+    callback.searchParams.set('hd', 'example.test');
+    callback.searchParams.set('iss', 'https://accounts.google.com');
+
+    const duplicate = new URL(callback);
+    duplicate.searchParams.append('authuser', '1');
+    await expect(completeSocialOAuthCallback({
+      provider: 'youtube',
+      userId: owner,
+      sessionId: session,
+      callbackUrl: duplicate.toString(),
+      store,
+      config: config('youtube'),
+      now,
+    })).rejects.toMatchObject({ status: 400 });
+
+    const result = await completeSocialOAuthCallback({
+      provider: 'youtube',
+      userId: owner,
+      sessionId: session,
+      callbackUrl: callback.toString(),
+      store,
+      config: config('youtube'),
+      now,
+    });
+    expect(result.authorizationCode).toBe('simulated-google-code');
+    expect(result.codeVerifier).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(store.transactions).toHaveLength(0);
+  });
+
+  it('accepts TikTok’s documented granted-scopes callback parameter without trusting it', async () => {
+    const authorizationUrl = await beginSocialOAuth({
+      provider: 'tiktok',
+      userId: owner,
+      sessionId: session,
+      store,
+      config: config('tiktok'),
+      now,
+    });
+    const state = authorizationUrl.searchParams.get('state')!;
+    const result = await completeSocialOAuthCallback({
+      provider: 'tiktok',
+      userId: owner,
+      sessionId: session,
+      callbackUrl: `${config('tiktok').redirectUri}?code=simulated-code&state=${state}&scopes=user.info.basic`,
+      store,
+      config: config('tiktok'),
+      now,
+    });
+    expect(result.authorizationCode).toBe('simulated-code');
+    expect(result.codeVerifier).toBeNull();
   });
 });

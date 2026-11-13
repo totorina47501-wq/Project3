@@ -118,7 +118,10 @@ export async function beginSocialOAuth(input: {
   authorizationUrl.searchParams.set(definition.clientIdParameter, config.clientId);
   authorizationUrl.searchParams.set('redirect_uri', redirect.toString());
   authorizationUrl.searchParams.set('response_type', 'code');
-  authorizationUrl.searchParams.set('scope', definition.scopes.join(' '));
+  authorizationUrl.searchParams.set(
+    'scope',
+    definition.scopes.join(definition.scopeSeparator),
+  );
   authorizationUrl.searchParams.set('state', state);
   if (verifier) {
     authorizationUrl.searchParams.set('code_challenge', await pkceChallenge(verifier));
@@ -177,21 +180,37 @@ export async function completeSocialOAuthCallback(input: {
     'error_description',
     'error_uri',
   ]);
+  if (input.provider === 'tiktok') allowedParameters.add('scopes');
+  if (input.provider === 'youtube') {
+    // Google documents these optional redirect parameters; none are trusted for
+    // identity or authorization. State, session binding and PKCE remain mandatory.
+    for (const parameter of ['scope', 'authuser', 'prompt', 'hd', 'iss']) {
+      allowedParameters.add(parameter);
+    }
+  }
   if ([...callback.searchParams.keys()].some((key) => !allowedParameters.has(key))) {
     throw new SocialOAuthError(400, 'Réponse fournisseur invalide.');
   }
-  for (const parameter of allowedParameters) callbackParameter(callback, parameter);
+  const parameters = Object.fromEntries(
+    [...allowedParameters].map((parameter) => [parameter, callbackParameter(callback, parameter)]),
+  ) as Record<string, string | null>;
 
-  const state = callbackParameter(callback, 'state');
-  const code = callbackParameter(callback, 'code');
-  const providerError = callbackParameter(callback, 'error');
+  const state = parameters.state;
+  const code = parameters.code;
+  const providerError = parameters.error;
   if (
     !state ||
     !/^[A-Za-z0-9_-]{43}$/.test(state) ||
     (code === null) === (providerError === null) ||
-    ((callback.searchParams.has('error_description') || callback.searchParams.has('error_uri')) &&
+    ((parameters.error_description !== null || parameters.error_uri !== null) &&
       providerError === null) ||
-    (code !== null && (!code || code.length > 4096 || /[\u0000-\u001f\u007f]/.test(code)))
+    [...allowedParameters].some((parameter) => {
+      const value = parameters[parameter];
+      return value !== undefined && value !== null &&
+        (value.length > (parameter === 'code' ? 4096 : 2048) ||
+          /[\u0000-\u001f\u007f]/.test(value));
+    }) ||
+    (code !== null && !code)
   ) {
     throw new SocialOAuthError(400, 'Réponse fournisseur invalide.');
   }

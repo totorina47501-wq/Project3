@@ -13,14 +13,14 @@ export function createSocialOAuthTransactionStore(
 ): OAuthTransactionStore {
   return {
     async create(transaction: OAuthTransaction) {
-      const { error } = await admin.from('social_oauth_transactions').insert({
-        user_id: transaction.userId,
-        session_id: transaction.sessionId,
-        provider: transaction.provider,
-        state_hash: transaction.stateHash,
-        pkce_verifier: transaction.pkceVerifier,
-        redirect_uri: transaction.redirectUri,
-        expires_at: transaction.expiresAt,
+      const { error } = await admin.rpc('create_social_oauth_transaction', {
+        p_user: transaction.userId,
+        p_session: transaction.sessionId,
+        p_provider: transaction.provider,
+        p_state_hash: transaction.stateHash,
+        p_pkce_verifier: transaction.pkceVerifier,
+        p_redirect_uri: transaction.redirectUri,
+        p_expires_at: transaction.expiresAt,
       });
       if (error) throw new Error('OAuth transaction unavailable.');
     },

@@ -2,7 +2,7 @@
 name: MentionCheck Launch Auth Staging
 on:
   push:
-    branches: [feat/mentioncheck-launch-decisions-20261110, codex/codex-certification-six-chantiers]
+    branches: [feat/mentioncheck-launch-decisions-20261110, codex/codex-certification-six-chantiers, copilot/social-oauth-001-completion-phase-2]
 permissions:
   contents: read
 # Preserve all queued staging recipes while serializing deployments.
@@ -12,7 +12,21 @@ concurrency:
   cancel-in-progress: false
 jobs:
   auth-staging:
-    if: github.repository == 'totorina47501-wq/Project3' && (github.ref == 'refs/heads/feat/mentioncheck-launch-decisions-20261110' || github.ref == 'refs/heads/codex/codex-certification-six-chantiers')
+    if: >-
+      github.repository == 'totorina47501-wq/Project3' &&
+      (github.ref == 'refs/heads/feat/mentioncheck-launch-decisions-20261110' ||
+      github.ref == 'refs/heads/codex/codex-certification-six-chantiers' ||
+      (github.ref == 'refs/heads/copilot/social-oauth-001-completion-phase-2' &&
+       (github.event.head_commit.message == 'ops(oauth): restore YouTube staging candidate (#124)' ||
+        github.event.head_commit.message == 'chore(oauth): sync staging vars once (#124)' ||
+        (github.event.head_commit.message == 'fix(oauth): accept Google callback metadata (#124)' ||
+        (github.event.head_commit.message == 'fix(oauth): surface safe provider failure stage (#124)' ||
+        (github.event.head_commit.message == 'test(oauth): verify failure stage regression (#124)' ||
+        (github.event.head_commit.message == 'fix(oauth): resolve diagnostics typecheck (#124)' ||
+        (github.event.head_commit.message == 'fix(oauth): count persisted connected social accounts (#124)' ||
+        (github.event.head_commit.message == 'fix(oauth): classify Google token exchange errors (#124)' ||
+        (github.event.head_commit.message == 'fix(oauth): use Cloudflare-supported manual redirects (#124)' ||
+        github.event.head_commit.message == 'fix(oauth): clarify missing social profiles (#124)'))))))))))
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
@@ -62,6 +76,7 @@ jobs:
       - name: TypeScript et build staging OpenNext
         run: |
           npm run typecheck
+          npx vitest run tests/unit/social-oauth.test.ts tests/unit/social-oauth-routes.test.ts tests/unit/social-oauth-exchange.test.ts
           npm run build
           npx @opennextjs/cloudflare build --skipNextBuild --config wrangler.staging.jsonc
           npx wrangler deploy --config wrangler.staging.jsonc --dry-run
