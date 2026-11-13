@@ -1,29 +1,30 @@
 'use client';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { platformLabels, type SocialAccount, type SocialDraft, SOCIAL_PAGE_SIZE } from '@/lib/social/model';
-
-type SocialPlatform = SocialDraft['platform'];
+import { manualSocialPlatformLabels, platformLabels, type SocialAccount, type SocialDraft, type SocialPlatform, SOCIAL_PAGE_SIZE } from '@/lib/social/model';
 
 const socialOAuthTokenMessages: Record<SocialPlatform, string> = {
   instagram: 'Instagram n’a pas finalisé la connexion. Vérifie les autorisations et la configuration de l’application Instagram, puis réessaie.',
   tiktok: 'TikTok n’a pas finalisé la connexion. Vérifie les autorisations et la configuration de l’application TikTok, puis réessaie.',
   youtube: 'L’échange du code de connexion avec Google a échoué. Vérifie la configuration OAuth Google de cet environnement.',
   linkedin: 'LinkedIn n’a pas finalisé la connexion. Vérifie les autorisations et la configuration de l’application LinkedIn, puis réessaie.',
+  facebook: 'Facebook n’a pas finalisé la connexion. Vérifie les autorisations Pages et la configuration de l’application Meta.',
 };
 const socialOAuthProfileMessages: Record<SocialPlatform, string> = {
   instagram: 'Instagram a autorisé la connexion, mais le compte ou son identifiant n’est pas accessible. Vérifie que ton compte et les autorisations sont compatibles avec l’intégration Instagram.',
   tiktok: 'TikTok a autorisé la connexion, mais le compte ou son identifiant n’est pas accessible. Vérifie les autorisations du profil TikTok et réessaie.',
   youtube: 'Google a autorisé la connexion, mais la chaîne YouTube n’a pas pu être récupérée. Vérifie que YouTube Data API v3 est activée et que ta chaîne est accessible avec ce compte.',
   linkedin: 'LinkedIn a autorisé la connexion, mais le profil n’a pas pu être récupéré. Vérifie les autorisations de ton profil LinkedIn et réessaie.',
+  facebook: 'Facebook n’a autorisé aucune Page gérée accessible. Vérifie pages_show_list et les accès de ton compte aux Pages.',
 };
 
 export function socialOAuthFeedback(query: URLSearchParams): string {
   const outcome = query.get('social_oauth');
-  if (outcome !== 'connected' && outcome !== 'unavailable') return '';
+  if (outcome !== 'connected' && outcome !== 'unavailable' && outcome !== 'pages') return '';
   const rawProvider = query.get('provider');
   const provider = rawProvider && Object.prototype.hasOwnProperty.call(platformLabels, rawProvider)
     ? rawProvider as SocialPlatform
     : null;
+  if (outcome === 'pages') return 'Choisis les Pages Facebook que tu veux relier.';
   if (outcome === 'connected') {
     return provider ? `Compte ${platformLabels[provider]} relié avec succès.` : 'Compte connecté via OAuth.';
   }
@@ -51,6 +52,7 @@ export function socialOAuthFeedback(query: URLSearchParams): string {
 }
 
 type Props={initialItems:SocialAccount[];initialTotal:number;initialConnectedTotal?:number;initialUnavailable?:boolean;plan:string};
+type FacebookPage={id:string;name:string};
 export function SocialAccounts({initialItems,initialTotal,initialConnectedTotal=0,initialUnavailable=false,plan}:Props){
   const [items,setItems]=useState(initialItems);
   const [total,setTotal]=useState(initialTotal);
@@ -62,9 +64,11 @@ export function SocialAccounts({initialItems,initialTotal,initialConnectedTotal=
   const [busy,setBusy]=useState(false);
   const [unavailable,setUnavailable]=useState(initialUnavailable);
   const [message,setMessage]=useState('');
-  const [oauthProviders,setOAuthProviders]=useState<Record<SocialDraft['platform'],boolean>>({
-    instagram:false,tiktok:false,youtube:false,linkedin:false,
+  const [oauthProviders,setOAuthProviders]=useState<Record<SocialPlatform,boolean>>({
+    instagram:false,tiktok:false,youtube:false,linkedin:false,facebook:false,
   });
+  const [facebookPages,setFacebookPages]=useState<FacebookPage[]>([]);
+  const [selectedFacebookPages,setSelectedFacebookPages]=useState<string[]>([]);
   const load=useCallback(async(nextPage:number)=>{
     const response=await fetch('/api/social-accounts?page='+nextPage,{cache:'no-store'});
     const body=await response.json() as {items?:SocialAccount[];total?:number;connectedTotal?:number;error?:string};
@@ -78,6 +82,12 @@ export function SocialAccounts({initialItems,initialTotal,initialConnectedTotal=
     try{await load(nextPage);}catch(error){setMessage(error instanceof Error?error.message:'Liste indisponible.');}
     finally{setBusy(false);}
   },[load]);
+  const loadFacebookPages=useCallback(async()=>{
+    const response=await fetch('/api/social-accounts/oauth/facebook/pages',{cache:'no-store'});
+    const body=await response.json() as {pages?:FacebookPage[];error?:string};
+    if(!response.ok||!Array.isArray(body.pages))throw new Error(body.error??'Liste des Pages indisponible.');
+    setFacebookPages(body.pages);setSelectedFacebookPages([]);
+  },[]);
   useEffect(()=>{
     let active=true;
     void fetch('/api/social-accounts/oauth/providers',{cache:'no-store'})
@@ -89,17 +99,24 @@ export function SocialAccounts({initialItems,initialTotal,initialConnectedTotal=
           tiktok:body.providers.tiktok===true,
           youtube:body.providers.youtube===true,
           linkedin:body.providers.linkedin===true,
+          facebook:body.providers.facebook===true,
         });
       })
       .catch(()=>{});
     const query=new URLSearchParams(window.location.search);
     const outcome=query.get('social_oauth');
     const oauthMessage=socialOAuthFeedback(query);
-    if(outcome==='connected'||outcome==='unavailable')window.history.replaceState(null,'','/dashboard/settings');
+    const provider=query.get('provider');
+    if(outcome==='connected'||outcome==='unavailable'||outcome==='pages')window.history.replaceState(null,'','/dashboard/settings');
     // changePage clears normal notifications; restore OAuth outcome after it completes.
-    void changePage(1).then(()=>{if(active&&oauthMessage)setMessage(oauthMessage);});
+    void changePage(1).then(async()=>{
+      if(active&&outcome==='pages'&&provider==='facebook'){
+        try{await loadFacebookPages();}catch(error){if(active)setMessage(error instanceof Error?error.message:'Liste des Pages indisponible.');}
+      }
+      if(active&&oauthMessage)setMessage(oauthMessage);
+    });
     return ()=>{active=false;};
-  },[changePage]);
+  },[changePage,loadFacebookPages]);
   async function save(event:FormEvent){
     event.preventDefault();setBusy(true);setMessage('');
     try{
@@ -126,7 +143,7 @@ export function SocialAccounts({initialItems,initialTotal,initialConnectedTotal=
     }catch(error){setMessage(error instanceof Error?error.message:'Suppression de la déclaration indisponible.');}
     finally{setBusy(false);}
   }
-  async function connect(provider:SocialDraft['platform']){
+  async function connect(provider:SocialPlatform){
     setBusy(true);setMessage('');
     try{
       const response=await fetch('/api/social-accounts/oauth/start',{
@@ -140,21 +157,53 @@ export function SocialAccounts({initialItems,initialTotal,initialConnectedTotal=
         tiktok:'https://www.tiktok.com',
         youtube:'https://accounts.google.com',
         linkedin:'https://www.linkedin.com',
+        facebook:'https://www.facebook.com',
       }[provider];
       if(destination.protocol!=='https:'||destination.origin!==expected)throw new Error('Connexion indisponible.');
       window.location.assign(destination.toString());
     }catch(error){setMessage(error instanceof Error?error.message:'Connexion indisponible.');setBusy(false);}
   }
+  async function refreshFacebookPages(){
+    setBusy(true);setMessage('');
+    try{
+      const response=await fetch('/api/social-accounts/oauth/facebook/pages',{
+        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refresh:true}),
+      });
+      const body=await response.json() as {pages?:FacebookPage[];error?:string};
+      if(!response.ok||!Array.isArray(body.pages))throw new Error(body.error??'Actualisation des Pages indisponible.');
+      setFacebookPages(body.pages);setSelectedFacebookPages([]);
+    }catch(error){setMessage(error instanceof Error?error.message:'Actualisation des Pages indisponible.');}
+    finally{setBusy(false);}
+  }
+  async function saveFacebookPages(){
+    setBusy(true);setMessage('');
+    try{
+      const response=await fetch('/api/social-accounts/oauth/facebook/pages',{
+        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pageIds:selectedFacebookPages}),
+      });
+      const body=await response.json() as {selected?:number;error?:string};
+      if(!response.ok||!Number.isInteger(body.selected))throw new Error(body.error??'Enregistrement des Pages indisponible.');
+      setFacebookPages([]);setSelectedFacebookPages([]);
+      await load(1);
+      setMessage(`${body.selected} Page${body.selected===1?'':'s'} Facebook reliée${body.selected===1?'':'s'}.`);
+    }catch(error){setMessage(error instanceof Error?error.message:'Enregistrement des Pages indisponible.');}
+    finally{setBusy(false);}
+  }
   async function disconnect(account:SocialAccount){
+    if(account.platform==='facebook'&&!window.confirm('La révocation Meta peut déconnecter toutes les Pages reliées à cette application. Continuer ?'))return;
     setBusy(true);setMessage('');
     try{
       const response=await fetch('/api/social-accounts/oauth/disconnect/'+account.id,{method:'POST'});
-      const body=await response.json() as {error?:string;revocation?:string};
+      const body=await response.json() as {error?:string;revocation?:string;disconnectedPages?:number};
       if(!response.ok)throw new Error(body.error??'Déconnexion indisponible.');
       await load(page);
-      setMessage(body.revocation==='confirmed'
-        ?'Connexion retirée et révocation fournisseur confirmée.'
-        :'Connexion retirée de MentionCheck. La révocation fournisseur reste à vérifier.');
+      setMessage(account.platform==='facebook'
+        ?body.revocation==='confirmed'
+          ?`Révocation Meta confirmée ; ${body.disconnectedPages??'les'} Pages reliées à cette application sont déconnectées.`
+          :'Pages déconnectées localement ; la révocation Meta n’a pas été confirmée et reste à vérifier.'
+        :body.revocation==='confirmed'
+          ?'Connexion retirée et révocation fournisseur confirmée.'
+          :'Connexion retirée de MentionCheck. La révocation fournisseur reste à vérifier.');
     }catch(error){setMessage(error instanceof Error?error.message:'Déconnexion indisponible.');}
     finally{setBusy(false);}
   }
@@ -169,26 +218,41 @@ export function SocialAccounts({initialItems,initialTotal,initialConnectedTotal=
     {!unavailable&&!items.length&&<p className="text-sm text-slate-500">Aucun compte déclaré pour le moment.</p>}
     <ul className="divide-y divide-slate-100">
       {items.map(account=><li key={account.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-        <div className="min-w-0"><p className="break-all font-semibold">{platformLabels[account.platform]} · @{account.handle}</p>
+        <div className="min-w-0"><p className="break-all font-semibold">{platformLabels[account.platform]} · {account.platform==='facebook'&&account.display_name?account.display_name:'@'+account.handle}</p>
           <p className="text-xs text-slate-500">{account.connection_kind==='manual'?'Déclaration manuelle · aucune connexion OAuth':account.connection_kind==='oauth'?'Connexion OAuth active':account.connection_kind==='expired'?'Connexion expirée ou déconnectée · reconnecte le compte pour le réactiver':'Compte historique · connexion non vérifiée'}</p></div>
         {account.connection_kind==='manual'&&<div className="flex gap-2 text-sm">
-          <button type="button" disabled={busy} onClick={()=>{setEditing(account.id);setPlatform(account.platform);setHandle(account.handle);setMessage('');}} aria-label={'Modifier @'+account.handle} className="rounded-lg border px-3 py-2">Modifier</button>
+          <button type="button" disabled={busy} onClick={()=>{setEditing(account.id);if(account.platform!=='facebook')setPlatform(account.platform);setHandle(account.handle);setMessage('');}} aria-label={'Modifier @'+account.handle} className="rounded-lg border px-3 py-2">Modifier</button>
           <button type="button" disabled={busy} onClick={()=>void remove(account)} aria-label={'Retirer la déclaration @'+account.handle} className="rounded-lg border px-3 py-2 text-red-700">Retirer</button>
         </div>}
         {account.connection_kind==='expired'&&<button type="button" disabled={busy} onClick={()=>void remove(account)} aria-label={'Retirer la déclaration @'+account.handle} className="rounded-lg border px-3 py-2 text-sm text-red-700">Retirer</button>}
-        {account.connection_kind==='oauth'&&<button type="button" disabled={busy} onClick={()=>void disconnect(account)} className="rounded-lg border px-3 py-2 text-sm">Déconnecter</button>}
+        {account.connection_kind==='oauth'&&<button type="button" disabled={busy} onClick={()=>void disconnect(account)} className="rounded-lg border px-3 py-2 text-sm">{account.platform==='facebook'?'Déconnecter les Pages':'Déconnecter'}</button>}
       </li>)}
     </ul>
     {!editing&&<div className="space-y-2 border-t pt-4">
       <h3 className="font-semibold">Connexion aux réseaux sociaux</h3>
       <div className="flex flex-wrap gap-2">
         {Object.entries(platformLabels).map(([value,label])=>{
-          const provider=value as SocialDraft['platform'];
+          const provider=value as SocialPlatform;
           return oauthProviders[provider]
-            ? <button key={provider} type="button" disabled={busy} onClick={()=>void connect(provider)} className="rounded-lg border px-3 py-2 text-sm">Connecter {label}</button>
+            ? <button key={provider} type="button" disabled={busy} onClick={()=>void connect(provider)} className="rounded-lg border px-3 py-2 text-sm">{provider==='facebook'?'Connecter des Pages Facebook':`Connecter ${label}`}</button>
             : <span key={provider} className="rounded-lg border border-dashed px-3 py-2 text-sm text-slate-500">{label} · Connexion indisponible</span>;
         })}
       </div>
+      {facebookPages.length>0&&<fieldset className="space-y-3 rounded-lg border p-3">
+        <legend className="px-1 font-semibold">Choisir les Pages Facebook à relier</legend>
+        <p className="text-sm text-slate-600">La liste est plafonnée aux 20 premières Pages renvoyées par Meta. Les jetons restent côté serveur.</p>
+        <div className="space-y-2">{facebookPages.map(page=><label key={page.id} className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={selectedFacebookPages.includes(page.id)} disabled={busy}
+            onChange={event=>setSelectedFacebookPages(current=>event.target.checked
+              ?[...current,page.id]:current.filter(id=>id!==page.id))}/>
+          <span>{page.name}</span>
+        </label>)}</div>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" disabled={busy||!selectedFacebookPages.length} onClick={()=>void saveFacebookPages()} className="rounded-lg border px-3 py-2 text-sm">Relier les Pages sélectionnées</button>
+          <button type="button" disabled={busy} onClick={()=>void refreshFacebookPages()} className="rounded-lg border px-3 py-2 text-sm">Actualiser la liste</button>
+          <button type="button" disabled={busy} onClick={()=>{setFacebookPages([]);setSelectedFacebookPages([]);}} className="rounded-lg border px-3 py-2 text-sm">Annuler</button>
+        </div>
+      </fieldset>}
     </div>}
     {total>SOCIAL_PAGE_SIZE&&<nav aria-label="Pages des comptes déclarés" className="flex items-center gap-3 text-sm">
       <button type="button" disabled={busy||page===1} onClick={()=>void changePage(page-1)} className="rounded-lg border px-3 py-2 disabled:opacity-50">Précédent</button>
@@ -199,7 +263,7 @@ export function SocialAccounts({initialItems,initialTotal,initialConnectedTotal=
       <h3 className="font-semibold">{editing?'Modifier la déclaration':'Déclarer un compte'}</h3>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="space-y-1 text-sm"><span>Réseau social</span><select value={platform} onChange={event=>setPlatform(event.target.value as SocialDraft['platform'])} disabled={busy} className="block w-full rounded-lg border p-2">
-          {Object.entries(platformLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}
+          {Object.entries(manualSocialPlatformLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}
         </select></label>
         <label className="space-y-1 text-sm"><span>Nom du compte (sans lien)</span><input value={handle} onChange={event=>setHandle(event.target.value)} required maxLength={200} autoComplete="off" disabled={busy} className="block w-full rounded-lg border p-2" placeholder="@moncompte"/></label>
       </div>

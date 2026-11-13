@@ -1,5 +1,6 @@
 import 'server-only';
 import { createAdminSupabase } from '@/lib/supabase/admin';
+import type { FacebookPageCandidate } from './exchange';
 import type { SocialOAuthProvider } from './providers';
 
 type OAuthAdminClient = ReturnType<typeof createAdminSupabase>;
@@ -9,6 +10,7 @@ const providers = new Set<SocialOAuthProvider>([
   'tiktok',
   'youtube',
   'linkedin',
+  'facebook',
 ]);
 
 export function createSocialOAuthAccountStore(
@@ -63,6 +65,70 @@ export function createSocialOAuthAccountStore(
         p_account: input.accountId,
       });
       if (error) throw new Error('Social OAuth account unavailable.');
+    },
+    async stageFacebookPageSelection(input: {
+      userId: string;
+      sessionId: string;
+      tokenSecret: string;
+      pages: FacebookPageCandidate[];
+    }): Promise<void> {
+      const { error } = await admin.rpc('stage_facebook_page_selection', {
+        p_user: input.userId,
+        p_session: input.sessionId,
+        p_token_secret: input.tokenSecret,
+        p_pages: input.pages,
+      });
+      if (error) throw new Error('Facebook Page selection unavailable.');
+    },
+    async readFacebookPageSelection(input: {
+      userId: string;
+      sessionId: string;
+    }): Promise<{ tokenSecret: string; pages: FacebookPageCandidate[] } | null> {
+      const { data, error } = await admin.rpc('read_facebook_page_selection', {
+        p_user: input.userId,
+        p_session: input.sessionId,
+      });
+      if (error) throw new Error('Facebook Page selection unavailable.');
+      if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+      const selection = data as { token_secret?: unknown; pages?: unknown };
+      if (
+        typeof selection.token_secret !== 'string' ||
+        !Array.isArray(selection.pages) ||
+        selection.pages.some((page) =>
+          !page || typeof page !== 'object' ||
+          typeof page.id !== 'string' || typeof page.name !== 'string'
+        )
+      ) {
+        return null;
+      }
+      return {
+        tokenSecret: selection.token_secret,
+        pages: selection.pages as FacebookPageCandidate[],
+      };
+    },
+    async saveFacebookPageSelection(input: {
+      userId: string;
+      sessionId: string;
+      pageIds: string[];
+    }): Promise<number> {
+      const { data, error } = await admin.rpc('save_facebook_page_selection', {
+        p_user: input.userId,
+        p_session: input.sessionId,
+        p_page_ids: input.pageIds,
+      });
+      if (error || !Number.isInteger(data)) {
+        throw new Error('Facebook Page selection unavailable.');
+      }
+      return data as number;
+    },
+    async disconnectFacebookPages(input: { userId: string }): Promise<number> {
+      const { data, error } = await admin.rpc('disconnect_facebook_oauth_accounts', {
+        p_user: input.userId,
+      });
+      if (error || !Number.isInteger(data)) {
+        throw new Error('Social OAuth account unavailable.');
+      }
+      return data as number;
     },
   };
 }

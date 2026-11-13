@@ -73,6 +73,15 @@ describe('Paramètres rendus sans fournisseur',()=>{
     const html=renderToStaticMarkup(createElement(SocialAccounts,{plan:'pro',initialTotal:1,initialItems:[{id:'legacy',platform:'youtube',handle:'archive',connection_kind:'unknown',connected_at:'2026-11-04'}]}));
     expect(html).toContain('connexion non vérifiée');expect(html).not.toContain('Retirer la déclaration @archive');
   });
+  it('affiche une Page Facebook par son nom et expose le consentement global de déconnexion',()=>{
+    const html=renderToStaticMarkup(createElement(SocialAccounts,{
+      plan:'pro',initialTotal:1,initialConnectedTotal:1,
+      initialItems:[{id:'facebook-page',platform:'facebook',handle:'123456789',display_name:'Page de test',connection_kind:'oauth',connected_at:'2026-11-14'}],
+    }));
+    expect(html).toContain('Facebook · Page de test');
+    expect(html).toContain('Déconnecter les Pages');
+    expect(html).toContain('Connexion indisponible');
+  });
   it('montre la préférence persistée sans lancer une réécriture',()=>{
     const html=renderToStaticMarkup(createElement(AIPreferences,{initialTone:'institutionnel'}));
     expect(html).toContain('<option value="institutionnel" selected="">');

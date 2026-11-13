@@ -30,6 +30,25 @@ export async function POST(request: Request, context: Context) {
 
     let revocation: 'confirmed' | 'unavailable' | 'unconfirmed' = 'unavailable';
     const config = socialOAuthConfig(credential.provider);
+    if (credential.provider === 'facebook') {
+      const disconnectedPages = await store.disconnectFacebookPages({ userId: user.id });
+      if (config) {
+        try {
+          await revokeSocialOAuthToken({
+            provider: credential.provider,
+            config,
+            tokenSecret: credential.tokenSecret,
+          });
+          revocation = 'confirmed';
+        } catch {
+          revocation = 'unconfirmed';
+        }
+      }
+      return Response.json(
+        { disconnected: true, revocation, disconnectedPages },
+        { headers: settingsHeaders },
+      );
+    }
     if (config) {
       try {
         await revokeSocialOAuthToken({

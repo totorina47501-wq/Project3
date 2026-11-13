@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 import {
+  exchangeFacebookOAuthCode,
   exchangeSocialOAuthCode,
   revokeSocialOAuthToken,
 } from '@/lib/social/oauth/exchange';
@@ -28,6 +29,137 @@ function response(data: unknown, status = 200) {
 
 describe('Échange OAuth simulé hors ligne', () => {
   beforeEach(() => vi.restoreAllMocks());
+
+  it('liste les Pages Facebook autorisées sans exposer leurs jetons au navigateur', async () => {
+    const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      expect(init?.redirect).toBe('manual');
+      expect(url).not.toMatch(/[?&](?:access_token|token|client_secret)=/i);
+      if (url === socialOAuthProviders.facebook.tokenEndpoint) {
+        expect(init?.method).toBe('POST');
+        expect(String(init?.body)).toContain('offline-secret');
+        return response({ access_token: 'offline-user-token', expires_in: 3600 });
+      }
+      if (url.endsWith('/me/permissions')) {
+        expect(new Headers(init?.headers).get('authorization')).toContain('offline-user-token');
+        return response({ data: [{ permission: 'pages_show_list', status: 'granted' }] });
+      }
+      if (url.includes('/me/accounts?')) {
+        expect(url).toContain('limit=20');
+        expect(new Headers(init?.headers).get('authorization')).toContain('offline-user-token');
+        return response({ data: [{
+          id: '123456789',
+          name: 'Page de test',
+          access_token: 'offline-page-token',
+        }] });
+      }
+      throw new Error('Unexpected provider request');
+    });
+    const exchanged = await exchangeFacebookOAuthCode({
+      config: config('facebook'),
+      redirectUri: config('facebook').redirectUri,
+      authorizationCode: 'simulated-facebook-code',
+      fetcher: fetcher as typeof fetch,
+      now,
+    });
+    expect(exchanged.pages).toEqual([{ id: '123456789', name: 'Page de test' }]);
+    expect(exchanged.tokenSecret).toContain('offline-page-token');
+    expect(exchanged.tokenSecret).toContain('offline-user-token');
+    expect(JSON.stringify(exchanged.pages)).not.toContain('offline-');
+    expect(fetcher).toHaveBeenCalledTimes(3);
+  });
+
+  it('refuse une autorisation Facebook sans pages_show_list et tente la révocation globale', async () => {
+    const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      expect(url).not.toMatch(/[?&](?:access_token|token|client_secret)=/i);
+      if (url === socialOAuthProviders.facebook.tokenEndpoint) {
+        return response({ access_token: 'offline-user-token', expires_in: 3600 });
+      }
+      if (url.endsWith('/me/permissions')) return response({ data: [] });
+      if (url === socialOAuthProviders.facebook.revocationEndpoint) {
+        expect(init?.method).toBe('DELETE');
+        expect(new Headers(init?.headers).get('authorization')).toContain('offline-user-token');
+        return response(true);
+      }
+      throw new Error('Unexpected provider request');
+    });
+    await expect(exchangeFacebookOAuthCode({
+      config: config('facebook'),
+      redirectUri: config('facebook').redirectUri,
+      authorizationCode: 'simulated-facebook-code',
+      fetcher: fetcher as typeof fetch,
+      now,
+    })).rejects.toMatchObject({
+      stage: 'channel',
+      reason: 'permission_denied',
+      message: 'OAuth provider response unavailable.',
+    });
+    expect(fetcher).toHaveBeenCalledTimes(3);
+  });
+
+  it('refuse plus de vingt Pages et ne persiste aucun token en cas de dépassement', async () => {
+    const fetcher = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url === socialOAuthProviders.facebook.tokenEndpoint) {
+        return response({ access_token: 'offline-user-token', expires_in: 3600 });
+      }
+      if (url.endsWith('/me/permissions')) {
+        return response({ data: [{ permission: 'pages_show_list', status: 'granted' }] });
+      }
+      if (url.includes('/me/accounts?')) {
+        return response({ data: Array.from({ length: 21 }, (_, index) => ({
+          id: String(index + 1), name: `Page ${index + 1}`, access_token: 'offline-page-token',
+        })) });
+      }
+      if (url === socialOAuthProviders.facebook.revocationEndpoint) return response(true);
+      throw new Error('Unexpected provider request');
+    });
+    await expect(exchangeFacebookOAuthCode({
+      config: config('facebook'),
+      redirectUri: config('facebook').redirectUri,
+      authorizationCode: 'simulated-facebook-code',
+      fetcher: fetcher as typeof fetch,
+      now,
+    })).rejects.toMatchObject({ stage: 'channel', message: 'OAuth provider response unavailable.' });
+    expect(fetcher).toHaveBeenCalledTimes(4);
+  });
+
+  it('révoque le consentement Meta côté serveur sans jeton dans l’URL', async () => {
+    const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      expect(String(input)).toBe(socialOAuthProviders.facebook.revocationEndpoint);
+      expect(String(input)).not.toMatch(/[?&](?:access_token|token)=/i);
+      expect(init?.method).toBe('DELETE');
+      expect(new Headers(init?.headers).get('authorization')).toContain('offline-user-token');
+      return response(true);
+    });
+    await expect(revokeSocialOAuthToken({
+      provider: 'facebook',
+      config: config('facebook'),
+      tokenSecret: JSON.stringify({
+        accessToken: 'offline-page-token',
+        userAccessToken: 'offline-user-token',
+        expiresAt: '2026-11-10T13:00:00.000Z',
+      }),
+      fetcher: fetcher as typeof fetch,
+      now,
+    })).resolves.toBeUndefined();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('ne confirme pas une révocation Meta si le fournisseur répond false', async () => {
+    await expect(revokeSocialOAuthToken({
+      provider: 'facebook',
+      config: config('facebook'),
+      tokenSecret: JSON.stringify({
+        accessToken: 'offline-page-token',
+        userAccessToken: 'offline-user-token',
+        expiresAt: '2026-11-10T13:00:00.000Z',
+      }),
+      fetcher: (async () => response(false)) as typeof fetch,
+      now,
+    })).rejects.toThrow('OAuth provider response unavailable.');
+  });
 
   it.each([
     ['legacy envelope', { data: { access_token: 'private-token', open_id: 'user', expires_in: 3600 } }],
