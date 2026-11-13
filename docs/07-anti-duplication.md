@@ -8,6 +8,30 @@ Source de vérité : docs/work-registry.json (à maintenir dans la même PR que 
 - partial : périmètre partiellement terminé, écart concret indiqué dans next.
 - planned : prestation non implémentée, ne pas déduire son existence d'une dépendance package.json.
 
+## Verrou opérationnel (preuves, pas seulement code)
+
+Le tableau `operations` du même `docs/work-registry.json` recense les opérations datées et leurs preuves.
+Un statut `done` verrouille **uniquement le périmètre précis indiqué** ; une réserve de provenance
+ne remet pas à zéro une comparaison déjà réalisée. `in_progress` empêche un second dispatch ;
+`pending` autorise seulement le démarrage d'une mission nouvelle sous les autres protections.
+
+**Avant une nouvelle mission**, rechercher dans GitHub les issues/PR fusionnées ou ouvertes et
+le registre, puis porter **exactement un** marqueur dans le corps de l'issue approuvée :
+
+`<!-- mentioncheck-work-id: solo-prod-cutover -->`
+
+Exécuter `node scripts/work-inventory.mjs guard solo-prod-cutover`. L'absence de marqueur, un ID
+inconnu, une opération déjà effectuée ou en cours bloquent l'affectation Codex/Copilot.
+Mettre à jour une entrée opérationnelle et ses preuves dans la PR du travail concerné ;
+ne jamais effacer un historique `done` pour relancer une recette sans preuve de régression.
+Le registre est lu depuis `main` par les dispatchers ; la CI existante contrôle IDs,
+statuts et liens documentaires. Ne pas attribuer de `work-id` à deux issues concurrentes.
+
+**PRA** : restauration PostgreSQL/Auth et copie Storage effectuées, comparaison SHA-256
+des archives 13/13 effectuée. La provenance fournisseur indépendante des ZIP reste
+une réserve distincte, **pas** une demande de nouveau clone, transfert ou SHA.
+La preuve d'un acte opérateur n'est jamais déduite d'un simple succès CI.
+
 ## Avant chaque nouveau développement
 1. Récupérer la branche actuelle, la dernière CI, la PR #1 et les MD existants.
 2. Exécuter npm run work:find -- openai (ou video, stripe, rgpd, 429...). Ouvrir anchor et test indiqués.

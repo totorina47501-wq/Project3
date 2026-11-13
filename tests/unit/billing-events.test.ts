@@ -56,3 +56,15 @@ it('accorde Solo gratuitement uniquement pendant la fenêtre promotionnelle, san
  const pro={stripe_subscription_id:'sub_pro',plan:'pro' as const,status:'active',current_period_end:'2027-01-01T00:00:00Z'};
  expect(accessTierWithPromotion(pro,promo,now)).toBe('pro');
 });
+
+it('reconnaît le droit Solo pré-GO sans lancer les 30 jours, mais refuse les données incomplètes',()=>{
+ const now=Date.parse('2026-11-11T20:00:00Z');
+ const pending={starts_at:null,expires_at:null,activation_pending:true,reason:'legacy_launch_solo_30d'};
+ expect(accessTierWithPromotion(null,pending,now)).toBe('solo');
+ expect(accessTierWithPromotion(null,{...pending,reason:'other'},now)).toBe('free');
+ expect(accessTierWithPromotion(null,{...pending,starts_at:'2026-11-11T00:00:00Z'},now)).toBe('free');
+ expect(accessTierWithPromotion(null,{...pending,activation_pending:false},now)).toBe('free');
+ expect(accessTierWithPromotion(null,{starts_at:null,expires_at:null},now)).toBe('free');
+ const pro={stripe_subscription_id:'sub_pro',plan:'pro' as const,status:'active',current_period_end:'2026-12-01T00:00:00Z'};
+ expect(accessTierWithPromotion(pro,pending,now)).toBe('pro');
+});

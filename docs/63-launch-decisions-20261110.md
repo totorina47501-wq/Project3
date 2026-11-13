@@ -2,11 +2,13 @@
 **Choix approuvés par l'exploitant ; statut : PRÉPARATION TECHNIQUE, AUCUNE OUVERTURE COMMERCIALE.**
 Ces choix n'établissent aucune immatriculation, certification, souscription, dépense API ni paramétrage fournisseur.
 
+**Mise à jour factuelle anti-doublons (11/11/2026) :** rollback de deux versions STAGING [PASS](https://github.com/totorina47501-wq/Project3/actions/runs/42981396379) ; clone PRA PostgreSQL/Auth restauré PASS ; fichiers Storage 13/13 SHA-256 égaux via archives déclarées Production/PRA, 832860 octets, mais **provenance ZIP non signée par Supabase** ([preuve #16](https://github.com/totorina47501-wq/Project3/issues/16#issuecomment-6794494490)). Ces exercices ne sont **pas à refaire**. Migrations Solo uniquement staging, protection Auth, RGPD utilisateurs réels, légal/Stripe et SHA runtime Production encore ouverts. CI du commit `1850998` : les étapes qualité/média sont toutes SUCCESS, mais conclusion globale encore `in_progress` au contrôle. Les paragraphes datés antérieurs ci-dessous sont historiques.
+
 ## Décisions fermes et effets
 | Sujet | Décision | Effet en code / exploitation |
 | --- | --- | --- |
 | Exploitant | Entrepreneur individuel au régime micro-entreprise en France | Dossier EI / micro ; attendre immatriculation réelle, RNE, SIREN/SIRET, identité/adresse, activité déclarée, revue fiscalité et vente B2B/B2C. Ne pas afficher comme déjà créé |
-| Supabase Auth | Conserver Free, accepter le risque résiduel lié à la détection native des mots de passe compromis | Refus de mots de passe faibles à l'inscription applicative, limitation anti-rafales par IP Cloudflare, politique Auth fournisseur minimale et décision de risque documentée ; ne pas annoncer la protection native active |
+| Supabase Auth (mise à jour 11/11) | Organisation passée à **Pro** (vérifiée directement par connecteur) | Vérifier et activer dans Auth la détection des mots de passe compromis maintenant éligible ; tests reset + Auth avant GO ; ne pas prétendre que l'option est déjà activée |
 | Utilisateurs historiques | Deux comptes bénéficiaires de Solo promotionnel | 30 jours gratuits depuis activation effective post-certification ; droits indépendants de Stripe et limités en base par fenêtre, pas de carte ni de renouvellement ; sélection des bénéficiaires par préflight |
 | OpenAI | Enveloppe pilote **25 USD par mois maximum visé** | Configurer projet OpenAI dédié avec Monthly spend limit 25 USD et **Enforce a hard limit**, alerte à 20 USD (80%). Le plafond est un contrôle fournisseur à vérifier, et peut être légèrement dépassé ; **aucune dépense autorisée par cette documentation seule** |
 | Commercialisation | Publique après certification complète | Pas de bêta commerciale ni de facturation live avant preuves Auth/RGPD, RGPD/CGV, tests paiement, migration cohérente, rollback et identité Stripe validée |
@@ -17,44 +19,120 @@ Ces choix n'établissent aucune immatriculation, certification, souscription, d�
 - Sans application de cette migration **et** validation métier, le flag `PROMO_SOLO_ENABLED` reste `false` : l'interface n'interroge pas la nouvelle table sur production. Activer `true` seulement après migration et contrôles DB/Worker.
 - Une activation doit être décidée au moment de la certification publique pour ne pas consommer la période gratuite avant l'ouverture. Le quota consommé pendant le même mois n'est pas remis à zéro. Aucune carte, abonnement Stripe fictif ou paiement créé.
 
-### Recette de bascule (script SQL d'opérateur, NON exécuté)
-Sauvegarde et test de restauration **avant** la migration, validation du SHA applicatif, absence de transactions Stripe live, vérification explicite des deux bénéficiaires préexistants. Ne pas publier leurs ID dans Git/logs.
+### Transition pré-GO : zéro perte de droits, zéro jour promotionnel consommé
+
+Le correctif ADDITIF `supabase/migrations/20261111103000_legacy_solo_prelaunch_bridge.sql` étend **la table existante**
+`promotional_solo_access`, sans créer de second système d'abonnement ni
+changer `users.plan`. `activation_pending=true` (deux comptes historiques
+uniquement, identifiés en privé par l'opérateur) préserve le plafond Solo
+30/5/20 sans `starts_at` ni `expires_at`. Un abonnement Stripe authentique
+reste prioritaire. Les nouveaux comptes sans abonnement ni attribution explicite
+restent Gratuit 3/1/3. La table est toujours RLS server-only.
+
+**Verrou absolu :** ne pas effectuer la migration `free_vs_paid_solo_quotas`
+ou `legacy_solo_promotion` *séparément* en PROD avant le peuplement du
+bridge. Pour les deux comptes actuels, cela provoquerait une rétrogradation
+immédiate. Une procédure opérateur doit regrouper les migrations de quotas,
+promotion et bridge **et les deux attributions pré-GO dans une même transaction
+PostgreSQL**, avec verrouillage des comptes, validation d'identités en privé,
+zéro abonnement réel, rollback intégral en cas d'écart et rapprochement de
+l'historique des migrations Supabase. **Aucun `supabase db push` séquentiel
+en PROD** pour ce chantier. Pas de GO sans sauvegarde logique PRODUCTION
+hors site et preuve de restauration isolée. Aucun UUID réel dans Git, logs
+ou artifacts. Un script de recette staging ou une sauvegarde schema-only ne
+constitue pas cette preuve.
+
+La requête suivante décrit uniquement l'attribution à intégrer **dans la
+transaction atomique de première installation en PROD**, après création de
+la table et du bridge. **Ne pas l'exécuter séparément.** Refuser
+tout état inattendu :
+
+```sql
+do $$
+declare beneficiary_count integer;
+begin
+  select count(*) into beneficiary_count
+    from public.users
+    where created_at < timestamptz '2026-11-11 00:00:00+00';
+  if beneficiary_count <> 2 then
+    raise exception 'Nombre de beneficiaires historiques inattendu';
+  end if;
+  if exists (
+    select 1 from public.subscriptions s
+    join public.users u on u.id=s.user_id
+    where u.created_at < timestamptz '2026-11-11 00:00:00+00'
+      and s.status in ('active','trialing')
+      and s.stripe_subscription_id is not null
+  ) then raise exception 'Abonnement Stripe historique : revue requise'; end if;
+  insert into public.promotional_solo_access
+    (user_id,starts_at,expires_at,reason,activation_pending)
+  select id,null,null,'legacy_launch_solo_30d',true
+    from public.users
+    where created_at < timestamptz '2026-11-11 00:00:00+00'
+  on conflict(user_id) do nothing;
+  if (select count(*) from public.promotional_solo_access
+      where reason='legacy_launch_solo_30d' and activation_pending
+        and starts_at is null and expires_at is null) <> 2
+  then raise exception 'Pre-GO incomplet : rollback'; end if;
+end $$;
+```
+
+### GO commercial séparé (script d'opérateur, NON exécuté)
+
+Seulement après toutes les certifications et une décision explicite de GO,
+transformer les deux attributions existantes **atomiquement** : les 30 jours
+démarrent à ce moment-là, pas au moment de l'installation du bridge.
 
 ```sql
 begin;
 do $$
-declare beneficiary_count integer;
 begin
-  select count(*) into beneficiary_count from public.users
-    where created_at < timestamptz '2026-11-11 00:00:00+00';
-  if beneficiary_count <> 2 then
-    raise exception 'Nombre de bénéficiaires historiques inattendu : opération annulée';
-  end if;
-  if exists(select 1 from public.subscriptions s join public.users u on u.id=s.user_id
-    where u.created_at < timestamptz '2026-11-11 00:00:00+00'
-      and s.status in ('active','trialing') and s.stripe_subscription_id is not null)
-    then raise exception 'Abonnement réel déjà présent : revoir la promotion';
-  end if;
-  insert into public.promotional_solo_access(user_id,starts_at,expires_at,reason)
-  select id,now(),now()+interval '30 days','legacy_launch_solo_30d'
-    from public.users where created_at < timestamptz '2026-11-11 00:00:00+00'
-  on conflict(user_id) do nothing;
+  perform 1 from public.users where id in (
+    select user_id from public.promotional_solo_access
+    where reason='legacy_launch_solo_30d' and activation_pending
+  ) for update;
   if (select count(*) from public.promotional_solo_access
-      where reason='legacy_launch_solo_30d')<>2
-    then raise exception 'Promotion partielle : transaction annulée';
-  end if;
+    where reason='legacy_launch_solo_30d' and activation_pending
+      and starts_at is null and expires_at is null) <> 2
+  then raise exception 'Deux concessions pre-GO requises'; end if;
+  if exists(
+    select 1 from public.subscriptions s
+    join public.promotional_solo_access p on p.user_id=s.user_id
+    where p.reason='legacy_launch_solo_30d'
+      and s.stripe_subscription_id is not null and s.status in ('active','trialing')
+      and s.current_period_end>now()
+  ) then raise exception 'Revoir attribution: paiement actif'; end if;
+end $$;
+update public.promotional_solo_access
+ set activation_pending=false,starts_at=now(),expires_at=now()+interval '30 days'
+ where reason='legacy_launch_solo_30d' and activation_pending;
+do $$
+begin
+  if (select count(*) from public.promotional_solo_access
+    where reason='legacy_launch_solo_30d' and not activation_pending
+      and starts_at=now() and expires_at=now()+interval '30 days') <> 2
+  then raise exception 'GO incomplet : rollback'; end if;
 end $$;
 commit;
 ```
 
-**Gates avant exécution** : exécution uniquement sur la base de production identifiée explicitement, compte opérateur habilité, backup/restore testé, deux comptes historiques identifiés au moyen d'une preuve privée, migrations staging testées, contrôles de quota 30/5/20 puis expiration, interface et RPC coordonnées. On ne déclenche ce script ni en CI ni lors du merge. Si un compte existant ne doit pas bénéficier de la promotion, remplacer la condition globale par la liste approuvée d'IDs côté opérateur **sans les commiter**.
+**Vérifications post-opération :** deux bénéficiaires et pas davantage,
+les droits restent 30/5/20 avant et après le GO ; après `expires_at`, le
+compte sans Stripe revient à 3/1/3, sans remise à zéro automatique du mois.
+Ne pas activer `PROMO_SOLO_ENABLED` ni `BILLING_ENABLED` sur la seule
+base d'un test local ; exiger DB/Worker réels et preuves signées.
 
-## Supabase Free : acceptation de risque sous conditions
-La fonction de protection native `Leaked Password Protection` de Supabase est **Pro+** ; elle reste absente sur Free. Le choix Free n'est **pas** une certification de sécurité ni une acceptation de toutes les attaques par mots de passe compromis.
+## Supabase Pro — changement vérifié le 11 novembre 2026
 
-Compensations préparées : nouvelle inscription application au moins 12 caractères et trois familles sur quatre, confirmation email conservée dans Supabase, limitation Cloudflare par IP hachée avant les appels Auth (30 requêtes/minute/IP partagé login+register), contrôle d'origine et réponses publiques sans secret. Les mots de passe existants restent connectables ; le reset/les méthodes directes Supabase Auth peuvent contourner la validation applicative : configurer **aussi** la politique minimale dans Supabase Auth et tester les réinitialisations. Les limitations Cloudflare ne constituent pas un détecteur de mots de passe divulgués ni une protection totale contre les proxys multiples.
+L'organisation `Mentioncheck` (`pbltrqddhyvjpneeddre`) a bien le forfait **Pro** (`tier_pro`), vérifié par le connecteur Supabase. Cette évolution remplace la décision historique d'exploitation sur Free, sans modifier les comptes ni le schéma. L'option de protection des mots de passe compromis est éligible sur Pro, mais son **activation effective et les tests de reset/connexion restent à vérifier** dans les paramètres Auth ; ne pas annoncer une protection native active sans preuve.
 
-**Décision de risque résiduel** : exploitation temporaire sur Free **acceptée par le propriétaire** ; registre des risques à revoir avant chaque lancement, avec MFA et surveillance des événements de connexion lorsque disponibles. Le lancement public reste bloqué tant que les tests de brute-force, les réglages Auth fournisseur, la limitation et la revue sécurité finale n'ont pas été attestés. En cas d'incident, suspendre les inscriptions et réévaluer l'upgrade.
+Les compensations applicatives déjà préparées sont conservées : mot de passe à l'inscription d'au moins 12 caractères et trois familles sur quatre, confirmation email, limitation des rafales à l'entrée, contrôle d'origine, réponses sans secret. Les réglages Supabase Auth du fournisseur restent nécessaires et la prévention par IP ne remplace pas la détection des secrets divulgués.
+
+**Sauvegardes :** Pro prévoit les sauvegardes PostgreSQL quotidiennes et 7 jours de rétention. **Le forfait Pro et la présence de sauvegardes physiques dans l'interface sont confirmés par la capture du 11/11/2026.** Le snapshot le plus récent visible est daté du **11/11/2026 à 05:19:11 UTC** et porte un bouton `Restore`. Cette preuve ne démontre pas une restauration isolée effectivement réussie. Un backup du fournisseur ne démontre pas à lui seul une restauration dans une base isolée ; la procédure de [copie privée hors site](64-production-private-backup.md) reste disponible. Les binaires Supabase Storage ne sont pas inclus dans les sauvegardes de la base. **Aucune restauration sur Production pour faire un test.**
+
+**Preuve visuelle fournie par l'exploitant le 11/11/2026 à 12:05 (Europe/Paris) :** l'onglet Supabase Production `Database Backups > Scheduled backups` liste des snapshots **PHYSICAL** datés du **11/11/2026 à 05:19:11 UTC** et du **10/11/2026 à 05:19:32 UTC**, ainsi que plusieurs jours antérieurs ; un bouton `Restore` apparaît sur les entrées. Cette preuve confirme la **présence dans le Dashboard** de sauvegardes physiques accessibles à la restauration. Elle ne prouve ni une restauration réussie, ni l'intégrité complète du contenu, ni une protection des octets Storage. Aucune restauration production n'a été lancée.
+
+Le GO reste suspendu aux preuves Auth, RLS, restauration isolée de données PostgreSQL, sauvegarde des objets Storage, RGPD, quotas et décision commerciale.
 
 ## Budget IA piloté sans promesse de plafond absolu
 - Projet API OpenAI dédié à MentionCheck : limite mensuelle **25 USD**, alerte **20 USD**, **Enforce a hard limit** activé par le propriétaire du projet (preuve de capture non sensible). Surveiller le montant réel de facturation, pas seulement l'estimation `cost_usd` de MentionCheck.
@@ -63,7 +141,7 @@ Compensations préparées : nouvelle inscription application au moins 12 caract�
 
 ## Gate public : liste minimale à cocher
 - [ ] Formalités EI micro faites via le guichet unique ; SIREN/SIRET reçu ; revue B2C/B2B, TVA, facturation et mentions légales/CGV/RGPD publiées.
-- [ ] Auth Supabase Free : paramètres du fournisseur vérifiés, test de reset, MFA/support, preuve d'anti-rafale et acceptation du risque résiduel signée par l'opérateur.
+- [ ] Auth Supabase Pro : vérifier et activer la protection des mots de passe compromis ; tests login/reset, MFA/support et anti-rafale, avec preuve des réglages réels.
 - [ ] Preuves E2E authentifiées staging et cible finale, RLS, contrôle des RPC/permissions, RGPD export et suppression, capacité et quotas.
 - [ ] Backup/restauration PostgreSQL adapté, rollback de **deux versions différentes**, SHA Cloudflare + CI `main` verts.
 - [ ] Migration promotion et quotas appliquée de manière coordonnée, exactement deux bénéficiaires activés pour 30 jours **au lancement**, affichage/quotas revérifiés.
@@ -115,3 +193,15 @@ avec un filtre strict sur `userData.id`, sans transmettre l'ID Stripe.
 **Aucun GRANT, RLS ni policy n'est élargi.** Ce correctif traite une
 régression de la page Paramètres déjà présente dans la version
 Stripe Sandbox et demande une recette Auth staging répétée.
+
+Voir [plan PRA Supabase natif Production](64-production-private-backup.md) : restauration PostgreSQL/Auth sur clone réel et comparaison ciblée des 13 octets-objets Storage par archives Production/PRA déclarées déjà attestées, provenance ZIP non signée. Ne pas reproduire ces preuves.
+
+## Recontrôle fournisseur — 11 novembre 2026 (lecture seule)
+
+Sur `main` `527e45aa` et PR #128 `b10999e4`, la CI est SUCCESS ; recette Auth/RLS/RGPD Staging SUCCESS au run #43009439812. **La présence d'un build Preview ne prouve pas le runtime du Worker Production.**
+
+L'advisor sécurité Supabase Production confirme explicitement `auth_leaked_password_protection` **WARN / Disabled** malgré le passage Pro. Cinq RPC `SECURITY DEFINER` accessibles à `authenticated` restent signalées (tests A/B existants, ne pas retirer les permissions sans analyse produit), et six tables RLS sans policy restent fermées par conception. Le connecteur disponible ne permet pas de changer les options de GoTrue ; activation via [Auth settings](https://supabase.com/dashboard/project/zcztvberuihphqklhjsr/auth/providers) et contrôle du Security Advisor requis. Tester inscription, connexion et reset avant GO. Les mots de passe historiques peuvent faire l'objet d'exigences nouvelles : ne pas dégrader la connexion sans recette.
+
+Lecture Stripe **Live sans mutation** : 3 produits et 3 prix existants (Solo **9 EUR**, Pro **19 EUR**, Studio **49 EUR** / mois), un seul endpoint webhook existant `https://mentioncheck.app/api/stripe/webhook` avec 7 types d'événements, portail actif ; **liens CGV et confidentialité du portail vides**. Ne pas dupliquer, ni interpréter le statut `enabled` de l'endpoint comme autorisation d'encaissement. Les flags Cloudflare `BILLING_ENABLED=false` et `STRIPE_LIVE_APPROVED=false` doivent être revérifiés dans les secrets/variables effectifs avant GO. Aucune opération de paiement effectuée.
+
+**Verrou maintenu, état actualisé :** PRA PostgreSQL/Auth déjà restauré sur clone isolé et 13/13 SHA-256 ZIP Storage concordants sous réserve de provenance ; quota Production non migré, deux comptes Solo historiques sans déclenchement des 30 jours, Auth et RGPD réels incomplets, identité légale/CGV non finalisées, runtime Production non attesté. Issue #16 ouverte, PR #128 draft ; aucun nouveau clone ni migration Production.

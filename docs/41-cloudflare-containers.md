@@ -151,3 +151,8 @@ tailles, modèles de statut et liens des checks sans clé, cookie ou identité d
 Le runner est opérationnel dans Cloudflare : ne pas demander un nouvel hôte
 ou recopier des secrets pour refaire ce raccordement. Il prépare les médias ;
 l’analyse IA vidéo et la transcription restent des développements distincts.
+
+## Limite opérationnelle : restauration PRA hors MediaRunner
+
+Le runner média Cloudflare **reste inchangé** et réservé aux traitements médias. Les essais PRA basés sur les commandes internes du conteneur ont été retirés de la PR #128 : un MediaRunner n'est ni une instance PostgreSQL indépendante, ni un endroit sûr pour copier des données clients en production. La restauration réelle se prépare via la fonctionnalité native Supabase **Restore to a New Project** et une procédure Storage séparée. Voir [docs/64-production-private-backup.md](64-production-private-backup.md).
+

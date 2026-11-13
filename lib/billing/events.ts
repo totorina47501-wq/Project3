@@ -32,12 +32,20 @@ export function subscriptionAccessTier(subscription: {
 // Une promotion Solo est indépendante du fournisseur ; aucun identifiant Stripe fictif.
 export function accessTierWithPromotion(
   subscription: Parameters<typeof subscriptionAccessTier>[0],
-  promotion: {starts_at:string;expires_at:string}|null,
+  promotion: {starts_at:string|null;expires_at:string|null;activation_pending?:boolean;reason?:string}|null,
   now = Date.now(),
 ): AccessTier {
   const subscribed = subscriptionAccessTier(subscription,now);
   if (subscribed !== 'free') return subscribed;
   if (!promotion) return 'free';
+  // SQL reconnaît exclusivement le pont Solo pré-GO sur les comptes historiques.
+  // Aucun compteur de 30 jours ne commence tant que les dates sont nulles.
+  if (promotion.activation_pending === true) {
+    return promotion.reason === 'legacy_launch_solo_30d'
+      && promotion.starts_at === null && promotion.expires_at === null
+      ? 'solo' : 'free';
+  }
+  if (!promotion.starts_at || !promotion.expires_at) return 'free';
   const start=Date.parse(promotion.starts_at),end=Date.parse(promotion.expires_at);
   return Number.isFinite(start)&&Number.isFinite(end)&&end>start&&start<=now&&now<end
     ? 'solo' : 'free';

@@ -7,7 +7,11 @@ import { createServerClient } from '@supabase/ssr';
 const BASE='https://mentioncheck-staging.toto-rina47501.workers.dev';
 const DB='https://ukvgnkxgzyhswgpnvyzz.supabase.co';
 const env=process.env;
-if(env.GITHUB_REF!=='refs/heads/feat/mentioncheck-studio-api-entitlements-20261110' ||
+const allowedRefs=new Set([
+ 'refs/heads/feat/mentioncheck-studio-api-entitlements-20261110',
+ 'refs/heads/codex/codex-certification-six-chantiers',
+]);
+if(!allowedRefs.has(env.GITHUB_REF||'') ||
  env.NEXT_PUBLIC_APP_URL!==BASE||env.NEXT_PUBLIC_SUPABASE_URL!==DB||
  env.BILLING_ENABLED!=='false'||env.OPENAI_PAUSED!=='true'||
  env.PROMO_SOLO_ENABLED!=='false'||!env.NEXT_PUBLIC_SUPABASE_ANON_KEY||

@@ -1,25 +1,26 @@
-name: MentionCheck AI Production Read-Only
+name: MentionCheck Production Diagnostic and Guard Closure
 on:
   push:
-    branches: [main]
+    branches: [main, codex/codex-certification-six-chantiers]
     paths:
       - '.github/workflows/mentioncheck-ai-production-readonly.yml'
       - 'scripts/recette/production-ai-readonly.mjs'
+      - 'scripts/recette/production-close-guards.mjs'
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
   group: mentioncheck-ai-production-readonly
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   inspect:
-    if: github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/main'
+    if: github.repository == 'totorina47501-wq/Project3' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/codex/codex-certification-six-chantiers')
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
       CLOUDFLARE_ACCOUNT_ID: f9b14d5d93b1fe8ef3982d3ddb87131d
-      # Dedicated per-Worker Metadata Read-Only token; never reuse staging deploy credentials.
-      CLOUDFLARE_API_TOKEN: ${{ secrets.MENTIONCHECK_PROD_CLOUDFLARE_READ_TOKEN }}
+      # Production credential preflight; the script remains GET-only. Never use staging credentials.
+      CLOUDFLARE_API_TOKEN: ${{ secrets.MENTIONCHECK_PROD_CLOUDFLARE_API_TOKEN || secrets.MENTIONCHECK_PROD_CLOUDFLARE_READ_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,4 +31,31 @@ jobs:
       - name: Vérifier localement que le diagnostic ne peut pas modifier Cloudflare
         run: node --test scripts/recette/production-ai-readonly.test.mjs
       - name: Lecture seule Cloudflare — jamais déployer ni exposer de secret
+        run: node scripts/recette/production-ai-readonly.mjs
+
+  close-guards:
+    needs: inspect
+    if: >-
+      github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/codex/codex-certification-six-chantiers' && github.event_name == 'push' && github.event.head_commit.message == 'ops: close production guards after credential preflight (#16)'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: node --test scripts/recette/production-ai-readonly.test.mjs
+      - name: Fermer uniquement les indicateurs autorisés et préserver les bindings
+        env:
+          CLOUDFLARE_ACCOUNT_ID: f9b14d5d93b1fe8ef3982d3ddb87131d
+          CLOUDFLARE_API_TOKEN: ${{ secrets.MENTIONCHECK_PROD_CLOUDFLARE_API_TOKEN }}
+          CLOSE_PRODUCTION_GUARDS: close-only
+        run: node scripts/recette/production-close-guards.mjs
+      - name: Relire les indicateurs et versions
+        if: always()
+        env:
+          CLOUDFLARE_ACCOUNT_ID: f9b14d5d93b1fe8ef3982d3ddb87131d
+          CLOUDFLARE_API_TOKEN: ${{ secrets.MENTIONCHECK_PROD_CLOUDFLARE_API_TOKEN }}
         run: node scripts/recette/production-ai-readonly.mjs

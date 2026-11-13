@@ -50,6 +50,68 @@ async function ownership(table,id) {
  assert.equal(ra.length,0,'Fuite de lecture: '+table);
  assert.equal(rb.length,1,'Propriétaire bloqué: '+table);
 }
+
+async function testPromotionQuotaMatrix(userId) {
+ // Test reel uniquement sur le compte Auth jetable cree par cette recette.
+ // PROMO_SOLO_ENABLED=false pour les clients ; l'attribution DB est pure fixture.
+ const period=new Date().toISOString().slice(0,7)+'-01';
+ const profile=must(await admin.from('users').select('plan').eq('id',userId).single(),'QA_PLAN');
+ assert.equal(profile.plan,'solo','Compte synthetic Solo attendu');
+ const setUsage=async(checks,rewrites,mia)=>must(await admin.from('usage_monthly').upsert({
+   user_id:userId,period_start:period,checks_used:checks,
+   rewrites_used:rewrites,mia_messages_used:mia,
+ },{onConflict:'user_id,period_start'}),'QA_USAGE');
+ const reserve=async action=>must(await admin.rpc('reserve_usage_quota',{
+   p_user_id:userId,p_action:action,
+ }),'QA_RESERVE_'+action);
+ const deny=async action=>assert.equal(await reserve(action),null,
+   'Quota should refuse '+action);
+ const allow=async action=>assert.equal(await reserve(action),period,
+   'Quota should allow '+action);
+ // Sans souscription ni promotion, users.plan=solo n'accorde pas Solo.
+ await setUsage(3,1,3);
+ for(const action of ['check','rewrite','mia'])await deny(action);
+ console.log('STAGING_FREE_NOT_LEGACY_SOLO_PASS');
+ const start=new Date(Date.now()-60_000).toISOString();
+ const end=new Date(Date.now()+30*24*60*60*1000-60_000).toISOString();
+ must(await admin.from('promotional_solo_access').insert({
+   user_id:userId,starts_at:start,expires_at:end,reason:'qa_staging_only',
+ }),'QA_PROMOTION');
+ await setUsage(29,4,19);
+ const concurrent=await Promise.all(Array.from({length:4},()=>reserve('check')));
+ assert.equal(concurrent.filter(x=>x===period).length,1,'Concurrent Solo limit bypass');
+ assert.equal(concurrent.filter(x=>x===null).length,3,'Concurrent Solo excess');
+ const final=must(await admin.from('usage_monthly').select('checks_used')
+   .eq('user_id',userId).eq('period_start',period).single(),'QA_FINAL_USAGE');
+ assert.equal(final.checks_used,30);
+ await deny('check');await allow('rewrite');await deny('rewrite');
+ await allow('mia');await deny('mia');
+ console.log('STAGING_SOLO_PROMO_QUOTA_MATRIX_PASS');
+ // Abonnement fictif en base staging, sans aucune creation Stripe.
+ must(await admin.from('subscriptions').insert({
+   user_id:userId,plan:'pro',status:'active',
+   stripe_subscription_id:'sub_staging_qa_'+randomUUID().replaceAll('-',''),
+   current_period_end:new Date(Date.now()+24*60*60*1000).toISOString(),
+ }),'QA_SUBSCRIPTION');
+ for(const action of ['check','rewrite','mia'])await allow(action);
+ console.log('STAGING_ACTIVE_SUBSCRIPTION_OVER_PROMO_PASS');
+ must(await admin.from('subscriptions').update({
+   current_period_end:new Date(Date.now()-60_000).toISOString(),
+ }).eq('user_id',userId),'QA_EXPIRE_SUBSCRIPTION');
+ for(const action of ['check','rewrite','mia'])await deny(action);
+ console.log('STAGING_EXPIRED_SUBSCRIPTION_PROMO_FALLBACK_PASS');
+ must(await admin.from('subscriptions').delete().eq('user_id',userId),'QA_CLEAR_SUBSCRIPTION');
+ must(await admin.from('promotional_solo_access').update({
+   expires_at:new Date(Date.now()-1000).toISOString(),
+ }).eq('user_id',userId),'QA_EXPIRE_PROMOTION');
+ await setUsage(3,1,3);
+ for(const action of ['check','rewrite','mia'])await deny(action);
+ console.log('STAGING_EXPIRED_PROMO_FREE_FALLBACK_PASS');
+ must(await admin.from('promotional_solo_access').delete().eq('user_id',userId),'QA_CLEAR_PROMO');
+ must(await admin.from('usage_monthly').delete()
+   .eq('user_id',userId).eq('period_start',period),'QA_CLEAR_USAGE');
+}
+
 async function cleanup() {
  const errs=[];
  if(objectPath) {
@@ -64,6 +126,13 @@ async function cleanup() {
  if(users.length) {
    const rows=must(await admin.from('users').select('id').in('id',users),'POST_CLEANUP');
    assert.equal(rows.length,0,'Profils de test restants');
+   for(const [table,column] of [
+     ['subscriptions','user_id'],['promotional_solo_access','user_id'],
+     ['usage_monthly','user_id']]){
+     const residual=must(await admin.from(table).select('user_id').in(column,users),
+       'POST_CLEANUP_'+table);
+     assert.equal(residual.length,0,'Fixture de quota restante '+table);
+   }
  }
  console.log('RECETTE_NETTOYAGE_OK');
 }
@@ -87,6 +156,7 @@ try{
  for(const [table,id] of Object.entries(f))await ownership(table,id);
  assert.equal(must(await b.from('users').select('id').eq('id',aid),'RLS_INVERSE').length,0);
  console.log('RLS_6_TABLES_AB_OK');
+ await testPromotionQuotaMatrix(bid);
  const rpc=[
   ['archive_brand_deal',{p_id:f.brand_deals}],
   ['delete_brand_deal_draft',{p_id:f.brand_deals}],
