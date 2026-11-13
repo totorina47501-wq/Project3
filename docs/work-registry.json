@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updated": "2026-11-12",
+  "updated": "2026-11-13",
   "scope": "Code de la branche, non preuve de déploiement ni de commercialisation.",
   "features": [
     {
@@ -767,6 +767,15 @@
       "environment": "staging-to-production",
       "evidence": [
         "https://github.com/totorina47501-wq/Project3/pull/128"
+      ]
+    },
+    {
+      "id": "mobile-001",
+      "status": "pending",
+      "scope": "Issue #140 : application Android/iOS, démarrage Codex autorisé le 13/11/2026. Inventaire puis MVP réutilisant le backend, sans bloquer la release web, sans dépense API IA, service payant ni publication stores.",
+      "environment": "development",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/issues/140"
       ]
     }
   ]
