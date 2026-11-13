@@ -8,6 +8,80 @@ import { fileURLToPath } from 'node:url';
 const migrationDir=new URL('../supabase/migrations/',import.meta.url);
 const regressionDir=new URL('../tests/sql/',import.meta.url);
 
+const soloCutoverMigrations = [
+  '20261110093000_free_vs_paid_solo_quotas.sql',
+  '20261110170000_legacy_solo_promotion.sql',
+  '20261111103000_legacy_solo_prelaunch_bridge.sql',
+];
+
+// Strictement limité aux trois migrations existantes : jamais un parseur SQL général.
+export function soloCutoverBody(name, sql) {
+  if (!soloCutoverMigrations.includes(name)) throw new Error('Migration hors lot Solo');
+  const statements = sql.match(/^\s*(?:begin|commit|rollback)\s*;\s*$/gmi) ?? [];
+  if (statements.length !== 2 || !/^\s*begin/i.test(statements[0]) || !/^\s*commit/i.test(statements[1])) {
+    throw new Error('Enveloppe transactionnelle Solo inattendue');
+  }
+  const match = /^(?:\s*--[^\n]*\n)*\s*begin;([\s\S]*)\bcommit;\s*$/i.exec(sql);
+  if (!match) throw new Error('Enveloppe transactionnelle Solo inattendue');
+  return match[1];
+}
+
+// Répétition synthétique de transition, pas une restauration ni une recette distante.
+export async function rehearseSoloCutover() {
+  const db = new PGlite({extensions:{pgcrypto}});
+  const actors = ['a3100000-0000-4000-8000-000000000001','a3100000-0000-4000-8000-000000000002'];
+  try {
+    await installSupabaseStubs(db);
+    for (const name of (await readdir(migrationDir)).filter(n=>n.endsWith('.sql')).sort()) {
+      if (soloCutoverMigrations.includes(name)) continue;
+      const {sql}=migrationForOffline(name,await readFile(new URL(name,migrationDir),'utf8'));
+      if (sql!==null) await db.exec(sql);
+    }
+    for (const [index,actor] of actors.entries()) await db.query(
+      'insert into auth.users(id,email,email_confirmed_at) values($1,$2,now())',[actor,`historical-${index}@example.test`]);
+    const snapshot = async()=>JSON.stringify((await db.query(`select
+      pg_get_functiondef('public.consume_usage_quota(uuid,text)'::regprocedure) as quota,
+      (select proacl::text from pg_proc where oid='public.consume_usage_quota(uuid,text)'::regprocedure) as quota_acl,
+      to_regclass('public.promotional_solo_access')::text as promotion,
+      (select jsonb_agg(to_jsonb(u) order by id) from public.users u) as users,
+      (select jsonb_agg(to_jsonb(s) order by user_id) from public.subscriptions s) as subscriptions,
+      (select jsonb_agg(to_jsonb(u) order by user_id,period_start) from public.usage_monthly u) as usage`)).rows);
+    const before = await snapshot();
+    const bodies = await Promise.all(soloCutoverMigrations.map(async name=>soloCutoverBody(name,await readFile(new URL(name,migrationDir),'utf8'))));
+    // Le même lot échoue volontairement après DDL/attribution, puis réussit avant ROLLBACK.
+    for (const injectFailure of [true,false]) {
+      await db.exec('begin; lock table public.users, public.subscriptions in share row exclusive mode;');
+      let expectedFailure=false;
+      try {
+        await db.exec(bodies.join('\n'));
+        await db.query(`insert into public.promotional_solo_access(user_id,starts_at,expires_at,activation_pending)
+          select id,null,null,true from public.users where id=any($1::uuid[])`,[actors]);
+        if (injectFailure) {
+          await db.exec("do $$ begin raise exception 'synthetic_cutover_failure'; end $$;");
+        }
+        const {rows}=await db.query(`select count(*)::int as n from public.promotional_solo_access
+          where activation_pending and starts_at is null and expires_at is null`);
+        if (rows[0].n!==2) throw new Error('Deux droits pré-GO sans dates requis');
+        const fresh='a3100000-0000-4000-8000-000000000003';
+        await db.query('insert into auth.users(id,email,email_confirmed_at) values($1,$2,now())',[fresh,'new-free@example.test']);
+        for (const actor of [...actors,fresh]) {
+          for (const [action,limit] of [['check',actor===fresh?3:30],['rewrite',actor===fresh?1:5],['mia',actor===fresh?3:20]]) {
+            for (let i=0;i<=limit;i++) {
+              const {rows}=await db.query('select public.consume_usage_quota($1,$2) as ok',[actor,action]);
+              if (rows[0].ok!==(i<limit)) throw new Error('Droits incorrects pendant cutover Solo');
+            }
+          }
+        }
+      } catch(error) {
+        if (!injectFailure || !String(error.message).includes('synthetic_cutover_failure')) throw error;
+        expectedFailure=true;
+      } finally { await db.exec('rollback;'); }
+      if (injectFailure&&!expectedFailure) throw new Error('Échec synthétique non observé');
+      if (await snapshot()!==before) throw new Error('Rollback Solo incomplet : fonction, table, utilisateurs ou usage modifiés');
+    }
+  } finally { await db.close(); }
+}
+
 export function migrationForOffline(name,original) {
   if(name==='202611032003_pgvector_match.sql')return {
     sql:null,omissions:['Fonction match_law_documents et privilèges pgvector : non testés.'],
@@ -104,6 +178,8 @@ export async function createOfflineDatabase() {
 }
 
 export async function runSqlOffline() {
+  await rehearseSoloCutover();
+  console.log('Transition Solo atomique synthétique OK : 2 droits pré-GO, nouveau Gratuit, rollback DDL/données après échec et succès.');
   const db=new PGlite({extensions:{pgcrypto}});
   const migrations=(await readdir(migrationDir)).filter(name=>name.endsWith('.sql')).sort();
   let applied=0;

@@ -366,7 +366,10 @@ export async function revokeSocialOAuthToken(input: {
   if (!Number.isFinite(expiresAt)) {
     throw new Error('Stored OAuth credential unavailable.');
   }
-  if (expiresAt <= (input.now ?? new Date()).getTime()) return;
+  if (expiresAt <= (input.now ?? new Date()).getTime()) {
+    // Expiry is not evidence that the provider grant was revoked.
+    throw new Error('OAuth provider revocation unconfirmed.');
+  }
 
   const body =
     input.provider === 'tiktok'

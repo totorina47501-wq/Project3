@@ -291,7 +291,7 @@ describe('Échange OAuth simulé hors ligne', () => {
     expect(revokeFetcher).toHaveBeenCalledTimes(1);
   });
 
-  it('révoque avec POST et n’envoie rien si le jeton est déjà expiré ou sans API', async () => {
+  it('révoque avec POST mais ne confirme pas un jeton expiré sans appel fournisseur', async () => {
     const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       expect(String(input)).toBe(socialOAuthProviders.youtube.revocationEndpoint);
       expect(init?.method).toBe('POST');
@@ -315,13 +315,13 @@ describe('Échange OAuth simulé hors ligne', () => {
     );
     expect(String(fetcher.mock.calls[0]?.[1]?.body)).toContain('simulated-access');
     expect(String(fetcher.mock.calls[0]?.[0])).not.toContain('simulated-access');
-    await revokeSocialOAuthToken({
+    await expect(revokeSocialOAuthToken({
       provider: 'youtube',
       config: config('youtube'),
       tokenSecret: JSON.stringify({ ...JSON.parse(tokenSecret), expiresAt: now.toISOString() }),
       fetcher: fetcher as typeof fetch,
       now,
-    });
+    })).rejects.toThrow('OAuth provider revocation unconfirmed.');
     await revokeSocialOAuthToken({
       provider: 'instagram',
       config: config('instagram'),

@@ -316,5 +316,17 @@ describe('Routes OAuth sociales', () => {
     expect(mocks.readCredential).toHaveBeenCalledWith({ userId, accountId });
     expect(mocks.disconnect).toHaveBeenCalledWith({ userId, accountId });
     expect(response.headers.get('cache-control')).toBe('private, no-store');
+
+    // Expiry between credential read and revocation must still disconnect locally,
+    // without claiming an unobserved provider revocation.
+    mocks.revoke.mockRejectedValueOnce(new Error('OAuth provider revocation unconfirmed.'));
+    const expiredResponse = await disconnectOAuth(
+      new Request(`https://local.test/api/social-accounts/oauth/disconnect/${accountId}`, {
+        method: 'POST', headers: { Origin: 'https://local.test' },
+      }),
+      { params: Promise.resolve({ id: accountId }) },
+    );
+    expect(await expiredResponse.json()).toEqual({ disconnected: true, revocation: 'unconfirmed' });
+    expect(mocks.disconnect).toHaveBeenCalledTimes(2);
   });
 });

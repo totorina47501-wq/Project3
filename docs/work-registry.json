@@ -380,7 +380,7 @@
       ],
       "next": [
         "Déclarations manuelles préservées. Activation serveur limitée à YouTube même si les flags des autres réseaux sont activés ; flags production explicitement false.",
-        "Trois migrations OAuth déjà appliquées au staging, absentes en production au 13 novembre. E2E fournisseur avec chaîne et persistance Vault non attestés ; conserver production fermée.",
+        "Trois migrations OAuth appliquées au staging, absentes en production au 13 novembre. Recette Google réelle : connexion avec chaîne, persistance Vault, reconnexions sans doublon, révocation confirmée par le handler et refus de consentement PASS. Preuves dans #16, commentaire 6839768857 ; production fermée.",
         "Jeton temporaire sans renouvellement automatique et première chaîne seulement : reconnexion requise après expiration."
       ]
     },
@@ -737,17 +737,18 @@
     {
       "id": "solo-prod-cutover",
       "status": "pending",
-      "scope": "Bascule atomique quotas/bridge des deux Solo historiques, après certification et autorisation",
+      "scope": "Bascule atomique quotas/bridge des deux Solo historiques différée. Répétition PGlite du lot et rollback PASS ; répétition clone réel/historique Supabase non attestées, aucune migration production",
       "environment": "production",
       "evidence": []
     },
     {
       "id": "oauth-provider-review",
       "status": "in_progress",
-      "scope": "Recettes réelles OAuth fournisseurs sur PR existante #132; aucun nouveau chantier",
+      "scope": "YouTube staging : connexion/persistance, reconnexions sans doublon, révocation et refus réels attestés. Expiration réelle et configuration Google publique restent à valider ; production fermée, PR #132 existante",
       "environment": "staging",
       "evidence": [
-        "https://github.com/totorina47501-wq/Project3/pull/132"
+        "https://github.com/totorina47501-wq/Project3/pull/132",
+        "https://github.com/totorina47501-wq/Project3/issues/16#issuecomment-6839768857"
       ]
     },
     {

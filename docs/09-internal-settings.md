@@ -1,5 +1,26 @@
 # Paramètres internes et modèles d’emails
 
+## État vérifié le 13 novembre 2026
+
+Sur le staging du candidat `f507054987dc7ba0bb990e5d839040810392d426`
+(Cloudflare `96a9d4d0-13e9-4d59-8b6f-c896dc895e3d`), le parcours Google réel
+a confirmé connexion avec chaîne, persistance serveur Vault, reconnexions sans
+doublon, déconnexion avec révocation confirmée par le handler et refus de
+consentement. Après le refus : zéro connexion active, zéro référence de jeton,
+zéro secret YouTube ; une fiche déconnectée conservée. Aucun secret extrait.
+Les trois migrations OAuth sont installées en staging, aucune en production.
+La [CI du candidat](https://github.com/totorina47501-wq/Project3/actions/runs/43398535618)
+est SUCCESS. Les preuves détaillées sont dans le
+[commentaire existant de #16](https://github.com/totorina47501-wq/Project3/issues/16#issuecomment-6839768857).
+
+Production OAuth reste désactivé. Google présente l'application comme étant en
+test/non validée et le consentement observé ne contient pas les liens vers les
+conditions et la confidentialité. L'expiration réelle n'a pas été attendue ;
+le code exige une reconnexion, sans renouvellement automatique, et retient la
+première chaîne retournée. Ces limites ne constituent pas une certification
+publique complète. Les sections historiques ci-dessous décrivent aussi des
+états antérieurs ; cette entrée prévaut pour les preuves opérationnelles.
+
 État du code : comptes sociaux déclarés manuellement, préférence de tonalité
 persistée et quatre emails rendus localement. Aucun OAuth, envoi Resend ou appel
 IA n’est déclenché par ces paramètres. La dépendance `resend` existait déjà ;
