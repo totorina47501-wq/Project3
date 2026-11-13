@@ -15,3 +15,16 @@ test('diagnostic strictement lecture seule sans appel OpenAI ni écriture Cloudf
   assert.match(workflow,/MENTIONCHECK_PROD_CLOUDFLARE_READ_TOKEN/);
   assert.doesNotMatch(workflow,/secrets\\.MENTIONCHECK_STAGING_CLOUDFLARE_API_TOKEN/);
 });
+
+import { closureBindings, closedFlags } from './production-close-guards.mjs';
+test('closure inherits every unrelated binding and never exposes secret values',()=>{
+  const bindings=[{name:'OPENAI_API_KEY',type:'secret_text'},{name:'DB',type:'hyperdrive',id:'private-id'},{name:'OPENAI_PAUSED',type:'plain_text',text:'false'}];
+  const result=closureBindings(bindings);
+  assert.deepEqual(result.slice(0,2),[{name:'OPENAI_API_KEY',type:'inherit'},{name:'DB',type:'inherit'}]);
+  assert.equal(result.length,2+Object.keys(closedFlags).length);
+  assert.equal(result.find(b=>b.name==='OPENAI_PAUSED').text,'true');
+  assert.ok(result.filter(b=>b.type==='plain_text' && b.name!=='OPENAI_PAUSED').every(b=>b.text==='false'));
+  assert.throws(()=>closureBindings([]));
+  assert.throws(()=>closureBindings([{name:'OPENAI_PAUSED',type:'secret_text'}]));
+  assert.throws(()=>closureBindings([bindings[0],bindings[0]]));
+});
