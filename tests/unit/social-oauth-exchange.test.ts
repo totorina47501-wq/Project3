@@ -69,7 +69,12 @@ describe('Échange OAuth simulé hors ligne', () => {
 
   it.each([
     ['instagram', { access_token: 'ig-access', user_id: 12345 }],
-    ['tiktok', { access_token: 'tt-access', expires_in: 3600, open_id: 'tt-user' }],
+    ['tiktok', {
+      access_token: 'tt-access',
+      expires_in: 3600,
+      open_id: 'tt-user',
+      scope: 'user.info.basic',
+    }],
     ['youtube', { access_token: 'yt-access', expires_in: 3600 }],
     ['linkedin', { access_token: 'li-access', expires_in: 3600 }],
   ] as const)(
@@ -126,6 +131,50 @@ describe('Échange OAuth simulé hors ligne', () => {
       expect(fetcher).toHaveBeenCalledTimes(provider === 'youtube' || provider === 'linkedin' ? 2 : 1);
     },
   );
+
+  it.each([
+    ['missing', undefined],
+    ['empty', ''],
+    ['unrelated', 'video.list'],
+  ])('refuse un jeton TikTok sans le scope réellement accordé (%s)', async (_name, scope) => {
+    const fetcher = vi.fn(async () => response({
+      access_token: 'private-token',
+      expires_in: 3600,
+      open_id: 'private-open-id',
+      ...(scope === undefined ? {} : { scope }),
+    }));
+    await expect(exchangeSocialOAuthCode({
+      provider: 'tiktok',
+      config: config('tiktok'),
+      redirectUri: config('tiktok').redirectUri,
+      authorizationCode: 'simulated-code',
+      codeVerifier: null,
+      fetcher: fetcher as typeof fetch,
+      now,
+    })).rejects.toMatchObject({
+      stage: 'token',
+      message: 'OAuth provider response unavailable.',
+    });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepte le scope TikTok requis même avec d’autres scopes accordés', async () => {
+    const fetcher = vi.fn(async () => response({
+      access_token: 'tt-access',
+      expires_in: 3600,
+      open_id: 'tt-user',
+      scope: 'video.list,user.info.basic',
+    }));
+    await expect(exchangeSocialOAuthCode({
+      provider: 'tiktok',
+      config: config('tiktok'),
+      redirectUri: config('tiktok').redirectUri,
+      authorizationCode: 'simulated-code',
+      codeVerifier: null,
+      fetcher: fetcher as typeof fetch,
+      now,
+    })).resolves.toMatchObject({ handle: 'tt-user' });
+  });
 
   it('refuse les jetons mal formés et masque les erreurs du fournisseur', async () => {
     const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
@@ -212,7 +261,7 @@ describe('Échange OAuth simulé hors ligne', () => {
 
   it.each([
     ['instagram', { access_token: 'ig-token', expires_in: 3600 }, null],
-    ['tiktok', { access_token: 'tt-token', expires_in: 3600 }, null],
+    ['tiktok', { access_token: 'tt-token', expires_in: 3600, scope: 'user.info.basic' }, null],
     ['linkedin', { access_token: 'li-token', expires_in: 3600 }, {}],
   ] as const)(
     'classe un profil %s absent sans inférer un compte inexistant',

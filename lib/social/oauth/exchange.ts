@@ -37,6 +37,11 @@ function safeGoogleTokenReason(value: unknown): GoogleTokenErrorReason | undefin
     ? value : undefined;
 }
 
+function hasTikTokBasicScope(value: unknown): boolean {
+  return typeof value === 'string' &&
+    value.split(/[,\s]+/).includes('user.info.basic');
+}
+
 export class OAuthProviderStageError extends Error {
   constructor(
     public readonly stage: 'token' | 'channel',
@@ -284,6 +289,9 @@ export async function exchangeSocialOAuthCode(input: {
       input.codeVerifier,
       fetcher,
     );
+    if (input.provider === 'tiktok' && !hasTikTokBasicScope(token.scope)) {
+      throw new Error('OAuth provider response unavailable.');
+    }
     accessToken = requiredText(token.access_token);
     expiresIn =
       input.provider === 'instagram' && token.expires_in === undefined

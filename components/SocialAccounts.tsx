@@ -7,7 +7,7 @@ type SocialPlatform = SocialDraft['platform'];
 const socialOAuthTokenMessages: Record<SocialPlatform, string> = {
   instagram: 'Instagram n’a pas finalisé la connexion. Vérifie les autorisations et la configuration de l’application Instagram, puis réessaie.',
   tiktok: 'TikTok n’a pas finalisé la connexion. Vérifie les autorisations et la configuration de l’application TikTok, puis réessaie.',
-  youtube: 'L’échange du code de connexion avec Google a échoué. Vérifie la configuration OAuth Google du staging.',
+  youtube: 'L’échange du code de connexion avec Google a échoué. Vérifie la configuration OAuth Google de cet environnement.',
   linkedin: 'LinkedIn n’a pas finalisé la connexion. Vérifie les autorisations et la configuration de l’application LinkedIn, puis réessaie.',
 };
 const socialOAuthProfileMessages: Record<SocialPlatform, string> = {
@@ -39,10 +39,10 @@ export function socialOAuthFeedback(query: URLSearchParams): string {
   if (stage === 'channel') return socialOAuthProfileMessages[provider];
   if (stage === 'token') {
     if (provider === 'youtube') {
-      if (reason === 'invalid_client') return 'Google refuse le client OAuth. Vérifie l’identifiant et le secret du même client dans Cloudflare staging.';
+      if (reason === 'invalid_client') return 'Google refuse le client OAuth. Vérifie que l’identifiant et le secret correspondent au même client dans cet environnement.';
       if (reason === 'invalid_grant') return 'Google refuse le code OAuth ou PKCE. Démarre une nouvelle connexion et vérifie le client et l’URI de retour.';
-      if (reason === 'redirect_uri_mismatch') return 'Google refuse l’URI de retour. Vérifie le callback staging dans Google Cloud.';
-      if (reason === 'invalid_request') return 'Google refuse les paramètres de la requête OAuth. Vérifie le client Google et la configuration staging.';
+      if (reason === 'redirect_uri_mismatch') return 'Google refuse l’URI de retour. Vérifie que le callback est enregistré dans la configuration OAuth Google de cet environnement.';
+      if (reason === 'invalid_request') return 'Google refuse les paramètres de la requête OAuth. Vérifie le client et la configuration Google de cet environnement.';
     }
     return socialOAuthTokenMessages[provider];
   }
@@ -170,7 +170,7 @@ export function SocialAccounts({initialItems,initialTotal,initialConnectedTotal=
     <ul className="divide-y divide-slate-100">
       {items.map(account=><li key={account.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
         <div className="min-w-0"><p className="break-all font-semibold">{platformLabels[account.platform]} · @{account.handle}</p>
-          <p className="text-xs text-slate-500">{account.connection_kind==='manual'?'Déclaration manuelle · aucune connexion OAuth':account.connection_kind==='oauth'?'Connexion OAuth active':account.connection_kind==='expired'?'Connexion expirée ou déconnectée':'Compte historique · connexion non vérifiée'}</p></div>
+          <p className="text-xs text-slate-500">{account.connection_kind==='manual'?'Déclaration manuelle · aucune connexion OAuth':account.connection_kind==='oauth'?'Connexion OAuth active':account.connection_kind==='expired'?'Connexion expirée ou déconnectée · reconnecte le compte pour le réactiver':'Compte historique · connexion non vérifiée'}</p></div>
         {account.connection_kind==='manual'&&<div className="flex gap-2 text-sm">
           <button type="button" disabled={busy} onClick={()=>{setEditing(account.id);setPlatform(account.platform);setHandle(account.handle);setMessage('');}} aria-label={'Modifier @'+account.handle} className="rounded-lg border px-3 py-2">Modifier</button>
           <button type="button" disabled={busy} onClick={()=>void remove(account)} aria-label={'Retirer la déclaration @'+account.handle} className="rounded-lg border px-3 py-2 text-red-700">Retirer</button>

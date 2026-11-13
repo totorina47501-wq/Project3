@@ -34,6 +34,8 @@ describe('Messages OAuth explicites et sûrs par réseau', () => {
     expect(socialOAuthFeedback(new URLSearchParams('social_oauth=connected&provider=youtube'))).toContain('YouTube relié');
     expect(feedback('other', 'channel')).toContain('réseau social');
     expect(socialOAuthFeedback(new URLSearchParams())).toBe('');
+    expect(feedback('youtube', 'token', 'invalid_client')).not.toContain('staging');
+    expect(feedback('youtube', 'token')).not.toContain('staging');
   });
 });
 
@@ -63,6 +65,7 @@ describe('Paramètres rendus sans fournisseur',()=>{
   it('identifie une connexion expirée sans la présenter comme OAuth active',()=>{
     const html=renderToStaticMarkup(createElement(SocialAccounts,{plan:'pro',initialTotal:1,initialItems:[{id:'expired',platform:'youtube',handle:'channel',connection_kind:'expired',connected_at:'2026-11-04'}]}));
     expect(html).toContain('Connexion expirée ou déconnectée');
+    expect(html).toContain('reconnecte le compte pour le réactiver');
     expect(html).not.toContain('Déconnecter');
     expect(html).toContain('Retirer la déclaration @channel');
   });
