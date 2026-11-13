@@ -1,5 +1,27 @@
 # Reprise MentionCheck — 6 novembre 2026
 
+## Reprise agents — 13 novembre, après recette Google réelle
+
+Cette entrée prévaut sur les snapshots historiques ci-dessous. Références avant
+écriture : main `4a832c6`, #128 `864da97`, #132 `f507054`.
+Production : garde-fous IA, facturation et OAuth fermés, version Cloudflare
+`482ac664-5f7b-49c2-b4f7-58cffc39712d` ; SHA applicatif non attesté.
+Staging #132 : connexion YouTube réelle avec chaîne et Vault, reconnexions sans
+doublon, révocation confirmée par le handler et refus Google attestés dans
+[la preuve existante #16](https://github.com/totorina47501-wq/Project3/issues/16#issuecomment-6839768857).
+CI #128 `43390572909` et #132 `43398535618` SUCCESS sur les anciens candidats.
+
+Audit DB renouvelé : 19 migrations production / 25 staging, deux Solo historiques,
+zéro abonnement Stripe actif. Aucune mutation client. Le harnais SQL existant
+répète désormais le lot de trois migrations Solo dans une transaction unique :
+deux droits pré-GO sans dates, nouveau compte Gratuit, rollback après erreur
+injectée et après succès. Empreintes fonction/ACL/table/utilisateurs/abonnements/
+consommations identiques après rollback. Cette preuve PGlite synthétique ne vaut
+ni répétition sur clone réel ni rapprochement de l'historique Supabase.
+La bascule production reste différée ; aucune promotion de 30 jours démarrée.
+Google public, expiration réelle/renouvellement, RGPD fournisseurs et SHA servi
+restent ouverts. Conserver les preuves PRA, Studio et RGPD déjà acquises.
+
 ## Reprise 13 novembre — lancement encore bloqué
 
 Voir l'addendum courant du [PV existant](docs/receipts/2026-11-10-final-internal-certification.md). Studio/RGPD #43331051325 SUCCESS confirmé, queue staging conservée. Production 19 migrations contre staging 25, deux Solo protégés sans mutation. Correction configuration IA fermée préparée dans #128 ; YouTube seul et tous flags OAuth production fermés dans #132. HTTP accueil 200, mais sonde IA runtime `configured` : fermeture non déployée/attestée. Accès Cloudflare authentifié absent, compte test avec chaîne absent. Aucun nouveau ticket ni migration ni sauvegarde.

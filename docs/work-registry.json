@@ -729,7 +729,7 @@
     {
       "id": "solo-prod-cutover",
       "status": "pending",
-      "scope": "Bascule atomique quotas/bridge des deux Solo historiques, après certification et autorisation",
+      "scope": "Bascule atomique quotas/bridge des deux Solo historiques différée. Répétition PGlite du lot et rollback PASS ; répétition clone réel/historique Supabase non attestées, aucune migration production",
       "environment": "production",
       "evidence": []
     },
