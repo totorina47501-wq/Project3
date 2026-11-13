@@ -32,8 +32,8 @@ describe('Échange OAuth simulé hors ligne', () => {
   it.each([
     ['legacy envelope', { data: { access_token: 'private-token', open_id: 'user', expires_in: 3600 } }],
     ['provider rejection', { error: 'invalid_grant', error_description: 'private-detail' }],
-    ['expired token', { access_token: 'private-token', open_id: 'user', expires_in: 0 }],
-    ['fractional expiry', { access_token: 'private-token', open_id: 'user', expires_in: 60.5 }],
+    ['expired token', { access_token: 'private-token', open_id: 'user', expires_in: 0, scope: 'user.info.basic' }],
+    ['fractional expiry', { access_token: 'private-token', open_id: 'user', expires_in: 60.5, scope: 'user.info.basic' }],
     ['oversized response', { access_token: 'private-token', open_id: 'user', expires_in: 3600, padding: 'x'.repeat(17000) }],
   ])('refuse TikTok %s sans retourner de compte ni de secret', async (_name, payload) => {
     const fetcher = vi.fn(async () => response(payload));
