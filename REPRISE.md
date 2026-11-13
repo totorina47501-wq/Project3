@@ -1,5 +1,10 @@
 # Reprise MentionCheck — 6 novembre 2026
 
+## Reprise 13 novembre — lancement encore bloqué
+
+Voir l'addendum courant du [PV existant](docs/receipts/2026-11-10-final-internal-certification.md). Studio/RGPD #43331051325 SUCCESS confirmé, queue staging conservée. Production 19 migrations contre staging 25, deux Solo protégés sans mutation. Correction configuration IA fermée préparée dans #128 ; YouTube seul et tous flags OAuth production fermés dans #132. HTTP accueil 200, mais sonde IA runtime `configured` : fermeture non déployée/attestée. Accès Cloudflare authentifié absent, compte test avec chaîne absent. Aucun nouveau ticket ni migration ni sauvegarde.
+
+
 ## État consolidé — 12 novembre 2026 (anti-doublons, remplace les snapshots historiques)
 
 **Références canoniques : [issue #16](https://github.com/totorina47501-wq/Project3/issues/16), [PR #128](https://github.com/totorina47501-wq/Project3/pull/128), [13/13 SHA-256 des archives](https://github.com/totorina47501-wq/Project3/pull/128#issuecomment-6805923183).** Branche de travail `codex/codex-certification-six-chantiers`, dernière CI intégrale contrôlée sur `d1da139b` avant cet addendum documentaire.

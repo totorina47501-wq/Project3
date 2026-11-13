@@ -2,6 +2,21 @@
 
 **Date :** 10 novembre 2026
 
+## Reprise du 13 novembre 2026 — preuves et limites actuelles
+
+- Références avant écriture : main `4a832c6a39b47e0c9537cefed4214c21021d4ff4`, PR #128 `1d5bb900837c5a412064d087ae3cd297d0bfa625`, PR #132 `11461b40f62b2c25ff1a4a6d1447d1814458d634`.
+- CI #128 [43331156656](https://github.com/totorina47501-wq/Project3/actions/runs/43331156656) et #132 [43324883167](https://github.com/totorina47501-wq/Project3/actions/runs/43324883167) SUCCESS sur ces SHAs. Studio [43331051325](https://github.com/totorina47501-wq/Project3/actions/runs/43331051325) SUCCESS, étapes HTTP Studio et RGPD incluses : l'ancien run annulé n'est plus un blocage. `queue: max` conservé.
+- Lecture seule Supabase : production 19 migrations, staging 25 ; production 2 profils Solo, tables promotion et transactions OAuth absentes. Aucune migration production effectuée. Les preuves PRA 13/13 sont préservées sans répétition.
+- HTTP public : accueil 200 ; `/api/health/ai` retourne `configured`. Cette sonde ne consomme pas d'IA et ne prouve pas un appel fournisseur. Le dépôt ferme maintenant OPENAI_PAUSED/texte/vision pour la prochaine livraison ; fermeture runtime NON attestée tant que le déploiement n'est pas vérifié.
+- Cloudflare : aucun jeton API disponible dans l'environnement de cette session, aucun connecteur Cloudflare installé. Le navigateur arrive sur la page de connexion Cloudflare. Identifiant de version active et correspondance SHA runtime non établis.
+- OAuth : PR #132 limite l'activation à YouTube et conserve les flags production fermés. Aucun compte de test autorisé avec chaîne disponible dans cette session : persistance fournisseur et E2E YouTube BLOCKED.
+- Les revues GitHub existantes indiquent qu'un passage de draft à ready déclenche une revue Codex automatique. Ne pas déclencher cette consommation IA sans autorisation ; les corrections restent sur les deux PR existantes.
+- RGPD réel, rétention/tiers, paramètres GA4 côté fournisseur et bascule atomique Solo restent PARTIAL/BLOCKED. Les documents publiés #138/#139 et l'identité de l'éditeur sont inchangés.
+
+Validations locales nouvelles : #128 459 tests unitaires PASS ; #132 493 tests unitaires et 15 suites SQL PASS ; TypeScript/lint/registre #132 PASS. Playwright essayé : 34 échecs de lancement Chromium (`socket() failed: Operation not permitted`), 6 tests PASS, 5 SKIP ; les 4 scénarios Analytics production sont également bloqués au lancement navigateur. Ces échecs environnementaux ne sont pas des PASS applicatifs et ne remplacent pas les CI précédentes.
+
+Verdict de cette reprise : **NO GO pour la nouvelle release demandée**, sans remettre en cause l'accessibilité de la version publique existante. Ni fermeture IA runtime ni SHA Cloudflare actif ni OAuth fournisseur ne sont prouvés. Aucun encaissement, appel IA payant, modification client ou activation des 30 jours effectué.
+
 ## État de certification courant — réconciliation anti-doublons du 11 novembre 2026
 
 **Source de vérité** : [issue #16](https://github.com/totorina47501-wq/Project3/issues/16), [preuves 13/13 SHA-256 sur archives](https://github.com/totorina47501-wq/Project3/pull/128#issuecomment-6805923183), [PR #128](https://github.com/totorina47501-wq/Project3/pull/128). **État technique contrôlé sur SHA `d1da139b` (12/11/2026)** : [CI #43273242174](https://github.com/totorina47501-wq/Project3/actions/runs/43273242174), [Auth staging #43273230718](https://github.com/totorina47501-wq/Project3/actions/runs/43273230718), [Studio staging + RGPD synthétique #43273230690](https://github.com/totorina47501-wq/Project3/actions/runs/43273230690) = **completed/success**. Ce succès ne prouve ni le runtime Production ni les obligations légales.

@@ -11,8 +11,8 @@ describe('Configuration Cloudflare sécurisée',()=>{
       MEDIA_JOBS_SCHEMA_READY:'true',MEDIA_PROCESSING_ENABLED:'true',
       MEDIA_CLOUDFLARE_RUNNER_ENABLED:'true',MEDIA_AI_ENABLED:'false',
       MEDIA_AI_SCHEMA_READY:'true',OPENAI_AUDIO_ENABLED:'false',
-      OPENAI_PAUSED:'false',OPENAI_TEXT_ENABLED:'true',
-      OPENAI_VISION_ENABLED:'true',OPENAI_EMBEDDINGS_ENABLED:'false',
+      OPENAI_PAUSED:'true',OPENAI_TEXT_ENABLED:'false',
+      OPENAI_VISION_ENABLED:'false',OPENAI_EMBEDDINGS_ENABLED:'false',
       PROMO_SOLO_ENABLED:'false',
       BILLING_ENABLED:'false',STRIPE_WEBHOOK_ENABLED:'false',
       STRIPE_MODE:'live',
@@ -31,7 +31,7 @@ describe('Configuration Cloudflare sécurisée',()=>{
     expect(config.vars.STRIPE_WEBHOOK_ENABLED).toBe('false');
     expect(config.vars.STRIPE_LIVE_APPROVED).toBe('false');
     expect(JSON.stringify(config.vars)).not.toMatch(/sk_live_|sk_test_|whsec_/);
-    // Activation à la demande sans audio / embeddings ni média IA automatique.
+    // IA payante fermée en attendant une activation séparée autorisée.
     // La clé reste un secret du Worker, jamais une variable publiée dans Git.
   });
   it('génère le dossier standalone nécessaire au packaging OpenNext',()=>{
