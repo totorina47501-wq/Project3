@@ -15,7 +15,9 @@ concurrency:
   cancel-in-progress: false
 jobs:
   text-qa:
+    # Recette du 14/11/2026 terminée (#43641142721) ; ne jamais relancer automatiquement.
     if: >-
+      false &&
       github.repository == 'totorina47501-wq/Project3' &&
       github.event_name == 'pull_request' &&
       github.event.action == 'opened' &&
