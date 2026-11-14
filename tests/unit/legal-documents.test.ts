@@ -14,6 +14,8 @@ describe('Documents juridiques MentionCheck en prépublication', () => {
     expect(html).toContain('14 jours');
     expect(html).toContain('médiateur');
     expect(html).toContain('Solo (9 € par mois)');
+    expect(html).toContain('TVA non applicable, art. 293 B du CGI');
+    expect(html).not.toContain('mentioncheckcorp@gmail.com');
     expect(html).toContain('non encore approuvé');
     expect(html).toContain('Ali Rassoul');
     expect(html).toContain('contact@aliaicorp.fr');
