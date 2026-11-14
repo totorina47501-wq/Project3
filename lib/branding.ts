@@ -4,7 +4,7 @@ export const BRAND = {
   legalName: 'Ali Rassoul',
   tradeName: 'Aliaicorp',
   legalAddress: '4, rue de la Boule, 75002 Paris, France',
-  siret: 'À venir',
+  siret: '899 123 459 00013',
   vatNotice: 'TVA non applicable, art. 293 B du CGI',
   contactEmail: 'contact@aliaicorp.fr',
   contactPhone: '0675814948',
