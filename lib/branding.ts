@@ -1,6 +1,10 @@
 // Source unique de l'identité publique MentionCheck.
 export const BRAND = {
-  // Informations déclarées par l'exploitant, sans vérification externe.
+  // Informations de contact déclarées par l'exploitant, sans vérification externe.
+  // Tant que la constitution et l'immatriculation ne sont pas attestées, ne pas
+  // publier de numéro d'immatriculation ou de régime de TVA comme acquis.
+  registrationVerified: false,
+  taxRegimeVerified: false,
   legalName: 'Ali Rassoul',
   tradeName: 'Aliaicorp',
   legalAddress: '100 avenue Gambetta, 47500 Fumel, France',

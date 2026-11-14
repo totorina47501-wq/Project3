@@ -1,5 +1,32 @@
 # MentionCheck — dossier de pré-lancement commercial
 État : **PROJET — NE PAS PUBLIER / NE PAS ACTIVER STRIPE LIVE**
+## Actualisation prioritaire — 14 novembre 2026, après confirmation de l'exploitant
+
+L'exploitant indique **ne pas avoir encore constitué de véritable entreprise**.
+En conséquence, les identifiants SIREN/SIRET déjà communiqués et le régime de
+franchise en base de TVA figurant dans des notes précédentes **ne constituent
+pas une preuve d'immatriculation ni une autorisation de facturation**. Les
+mentions légales et les documents prépublication ne doivent plus exposer le
+SIRET non attesté comme celui d'un professionnel déjà immatriculé ni présenter
+un régime de TVA comme applicable. Aucun numéro de substitution n'est inventé.
+
+Le nom du responsable du traitement, les coordonnées publiques déclarées,
+l'information sur les fournisseurs (Cloudflare/Supabase) et les droits des
+utilisateurs restent disponibles. Les CGV et la politique de confidentialité
+restent en **prépublication / noindex**. Le lancement Stripe Live reste fermé,
+avec médiation B2C et validation fiscale/juridique à compléter après création de
+la structure. Ne pas effacer des données Supabase, rejouer les migrations Solo
+ou créer de nouveaux prix Stripe : le chantier est limité à la vérité des
+mentions précommerciales et aux tests de non-régression.
+
+**Travaux indépendants toujours autorisés** : recette Stripe TEST #148
+(paiement réellement terminé + webhook signé + droits, sans Live),
+certification technique #16 (sécurité Auth/RLS, RGPD, CI, sauvegardes et
+réversibilité sans répétition des preuves), OAuth social différé, contrôle
+des pages Auth déjà déployées, vérification de l'accessibilité et suivi
+des agents. Le médiateur CM2C peut être étudié, mais **aucune convention
+n'est signée** tant que l'adhésion n'est pas réellement finalisée.
+
 Date de préparation : 10 novembre 2026. France, régime de franchise en base
 de TVA **envisagé**, sous réserve d'éligibilité et de confirmation fiscale.
 

@@ -11,7 +11,7 @@ const sections = [
   {
     "title": "Responsable du traitement et contact",
     "body": [
-      `Le responsable du traitement est ${BRAND.legalName} (${BRAND.tradeName}), exploitant du service MentionCheck, domicilié ${BRAND.legalAddress}. SIRET : ${BRAND.siret}.`,
+      `Le responsable du traitement du service en prépublication est ${BRAND.legalName} (${BRAND.tradeName}), domicilié ${BRAND.legalAddress}. L'immatriculation professionnelle reste à confirmer avant ouverture commerciale.`,
       `Pour exercer vos droits ou signaler un incident relatif aux données personnelles, utilisez ${BRAND.contactEmail} ou écrivez à l'adresse indiquée ci-dessus. N'envoyez pas d'informations sensibles ou de mots de passe par e-mail.`
     ]
   },
