@@ -35,6 +35,12 @@ export async function POST(request: Request) {
     const { error } = await client.auth.signInWithPassword(body.data);
     if (error) {
       const category = categorizeAuthError(error);
+      if (category === 'email_not_confirmed') {
+        return Response.json({
+          code: 'email_not_confirmed',
+          error: 'Adresse email non confirmée. Utilise le lien du dernier email de validation ou demande un nouvel envoi.',
+        }, { status: 403, headers: { 'Cache-Control': 'no-store' } });
+      }
       if (category === 'invalid_credentials') {
         return Response.json({ error: 'Email ou mot de passe incorrect.' },
           { status: 401, headers: { 'Cache-Control': 'no-store' } });
