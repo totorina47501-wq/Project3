@@ -7,6 +7,17 @@ Ce fichier sert à finaliser les pièces réelles avant publication. Il ne
 prouve aucune immatriculation, n'identifie pas l'exploitant et ne constitue
 ni un contrat approuvé ni un avis juridique.
 
+### Confirmation d'identité du 14 novembre 2026 — déclaration de l'exploitant
+
+- **Identité de l'entrepreneur individuel : Rassoul Ali** (présentée « Ali Rassoul » dans la source publique `lib/branding.ts` et les mentions légales ; il s'agit de la même personne). « Jean Dupont » n'est pas l'exploitant et ne doit être repris dans aucun document.
+- **Nom commercial déclaré : Aliaicorp** (source publique existante : `aliaicorp`). Statut micro-entreprise / EI déclaré, sans attestation d'immatriculation annexée au dossier.
+- **SIREN / SIRET : non renseignés pour publication**. Les identifiants communiqués précédemment nécessitent une correction et ne doivent pas être traités comme attestés ou insérés dans les flags `STRIPE_LIVE_LEGAL_REGISTRATION`. Aucune vérification en ligne n'a été réalisée.
+- **Coordonnées professionnelles : arbitrage restant** entre l'adresse et le contact actuellement publiés (Fumel, `mentioncheckcorp@gmail.com`) et les coordonnées parisiennes / `contact@aliaicorp.fr` communiquées ensuite. Ne modifier ni `lib/branding.ts` ni les pages publiques avant confirmation explicite des coordonnées à publier.
+- **Fiscalité :** franchise en base et mention « TVA non applicable, art. 293 B du CGI » déclarées par l'exploitant, mais revue du champ d'application, des ventes B2C/B2B et de la présentation des prix toujours requise.
+- **CGV :** validation finale non encore fournie ; conserver le statut brouillon. Ne pas activer Stripe Live, ne créer ni encaissement ni abonnement sur la seule déclaration d'identité.
+
+Cette note est un relevé interne des informations déclarées, pas une attestation d'identité, de numéro d'immatriculation ou de conformité juridique. Elle ne remplace pas le dossier opérateur privé.
+
 ## 1. Informations éditeur à fournir (jamais inventer)
 
 | Champ | À fournir et vérifier |
