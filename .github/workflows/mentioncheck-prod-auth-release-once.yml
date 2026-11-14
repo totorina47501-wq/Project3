@@ -1,0 +1,80 @@
+name: MentionCheck production auth release one-shot
+on:
+  push:
+    branches:
+      - ops/prod-auth-release-20261114
+    paths:
+      - .github/workflows/mentioncheck-prod-auth-release-once.yml
+permissions:
+  contents: read
+concurrency:
+  group: mentioncheck-prod-auth-release-once
+  cancel-in-progress: false
+jobs:
+  production-auth:
+    if: github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/ops/prod-auth-release-20261114'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_ACCOUNT_ID: f9b14d5d93b1fe8ef3982d3ddb87131d
+      CLOUDFLARE_API_TOKEN: ${{ secrets.MENTIONCHECK_PROD_CLOUDFLARE_API_TOKEN }}
+      NEXT_PUBLIC_APP_URL: https://mentioncheck.app
+      NEXT_PUBLIC_SUPABASE_URL: https://zcztvberuihphqklhjsr.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'sb_publishable_kGhlPEUUUCt9nZ2qWEu6qQ_-0Li9ojv'
+      OPENAI_PAUSED: 'false'
+      OPENAI_TEXT_ENABLED: 'true'
+      OPENAI_VISION_ENABLED: 'true'
+      OPENAI_AUDIO_ENABLED: 'false'
+      OPENAI_EMBEDDINGS_ENABLED: 'false'
+      BILLING_ENABLED: 'false'
+      STRIPE_WEBHOOK_ENABLED: 'false'
+      STRIPE_LIVE_APPROVED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - name: Checkout exact reviewed main commit
+        uses: actions/checkout@v4
+        with:
+          ref: 578d02bce4b25052d40dbd7e5274c7fae0dd9c19
+          persist-credentials: false
+      - name: Verify main and release source SHA (fail closed)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "578d02bce4b25052d40dbd7e5274c7fae0dd9c19"
+          remote_main="$(curl --silent --show-error --fail --max-time 20 -H 'Accept: application/vnd.github+json' https://api.github.com/repos/totorina47501-wq/Project3/commits/main | node -e 'let data="";process.stdin.on("data",x=>data+=x);process.stdin.on("end",()=>console.log(JSON.parse(data).sha))')"
+          test "$remote_main" = "578d02bce4b25052d40dbd7e5274c7fae0dd9c19" || { echo 'Main advanced since audit; abort'; exit 1; }
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo 'Cloudflare production token missing; abort'; exit 1; }
+          test -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY" || { echo 'Supabase publishable key missing; abort'; exit 1; }
+      - name: Preflight Cloudflare Worker production guard bindings (read only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const acc=process.env.CLOUDFLARE_ACCOUNT_ID;
+          const key=process.env.CLOUDFLARE_API_TOKEN;
+          const resp=await fetch(`https://api.cloudflare.com/client/v4/accounts/${acc}/workers/scripts/mentioncheck/settings`,{headers:{Authorization:`Bearer ${key}`}});
+          const data=await resp.json();
+          assert.ok(resp.ok && data.success && data.result && Array.isArray(data.result.bindings),'Cloudflare production binding read failed');
+          const vars=new Map(data.result.bindings.filter(x=>x.type==='plain_text').map(x=>[x.name,x.text]));
+          for (const name of ['BILLING_ENABLED','STRIPE_WEBHOOK_ENABLED','STRIPE_LIVE_APPROVED']) assert.equal(vars.get(name),'false',name+' must stay disabled');
+          assert.equal(vars.get('NEXT_PUBLIC_APP_URL'),'https://mentioncheck.app','Wrong production target');
+          console.log('PROD_AUTH_DEPLOY_PREFLIGHT_OK billing/stripe guards off; correct domain');
+          NODE
+      - name: Install pinned dependencies
+        run: npm ci --ignore-scripts
+      - name: Build Next.js
+        run: npm run build
+      - name: Build Cloudflare worker
+        run: npx @opennextjs/cloudflare build --skipNextBuild
+      - name: Publish existing Worker without overwriting secrets or vars
+        run: npx @opennextjs/cloudflare deploy -- --keep-vars
+      - name: Smoke prod auth pages (unauthenticated, no account mutation)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for page in /login /register /forgot-password /reset-password; do
+            curl --fail --silent --show-error --retry 3 --retry-delay 2 --max-time 25 "https://mentioncheck.app${page}" -o /dev/null
+            echo "PROD_AUTH_PAGE_HTTP_OK ${page}"
+          done
+          echo 'PROD_AUTH_PAGES_HTTP_OK; email link and session E2E still require scoped test'
