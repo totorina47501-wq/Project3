@@ -1,4 +1,9 @@
 # MentionCheck — décisions de pré-lancement du 10 novembre 2026
+
+## Actualisation prioritaire — 14 novembre 2026, cutover pre-GO Production terminé
+
+Les trois migrations `20261110093000`, `20261110170000`, `20261111103000` ont été appliquées EN UNE SEULE TRANSACTION à Production (22 migrations comptabilisées). Les deux anciens comptes Solo conservent leurs droits via `activation_pending=true`, dates vides, et aucune souscription Stripe n'a été créée. Test identique avec rollback effectué préalablement sur le clone PRA existant. Preuves opérationnelles dans [issue #16](https://github.com/totorina47501-wq/Project3/issues/16#issuecomment-6878076215) ; les notes anciennes disant « aucune migration production » sont historiques. **Interdiction de réappliquer les migrations**, de lancer les 30 jours Solo prématurément ou de mettre `PROMO_SOLO_ENABLED=true` sans contrôle Auth et GO séparé. Le déverrouillage Stripe Live et IA reste non certifié.
+
 **Choix approuvés par l'exploitant ; statut : PRÉPARATION TECHNIQUE, AUCUNE OUVERTURE COMMERCIALE.**
 Ces choix n'établissent aucune immatriculation, certification, souscription, dépense API ni paramétrage fournisseur.
 
