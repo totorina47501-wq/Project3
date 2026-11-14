@@ -44,15 +44,15 @@ jobs:
       - name: Checkout latest approved main application commit
         uses: actions/checkout@v4
         with:
-          ref: 578d02bce4b25052d40dbd7e5274c7fae0dd9c19
+          ref: 1db25ec9e1696f63bf31e907f5e278db8cf2573b
           persist-credentials: false
       - name: Verify exact main source SHA
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "578d02bce4b25052d40dbd7e5274c7fae0dd9c19"
+          test "$(git rev-parse HEAD)" = "1db25ec9e1696f63bf31e907f5e278db8cf2573b"
           remote_main="$(curl --fail --silent --show-error --max-time 20 -H 'Accept: application/vnd.github+json' https://api.github.com/repos/totorina47501-wq/Project3/commits/main | node -e 'let data="";process.stdin.on("data",x=>data+=x);process.stdin.on("end",()=>console.log(JSON.parse(data).sha))')"
-          test "$remote_main" = "578d02bce4b25052d40dbd7e5274c7fae0dd9c19" || { echo "::error::main advanced; staging release blocked"; exit 1; }
+          test "$remote_main" = "1db25ec9e1696f63bf31e907f5e278db8cf2573b" || { echo "::error::main advanced; staging release blocked"; exit 1; }
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
@@ -142,3 +142,10 @@ jobs:
           content="$(curl --fail --silent --show-error --max-time 25 "${stage}/login")"
           grep -q 'Mot de passe oublié' <<< "$content" || { echo "::error::Version Auth attendue non visible"; exit 1; }
           echo 'STAGING_AUTH_FEATURES_VISIBLE; email recovery links require separate Supabase allowlist verification'
+          legal="$(curl --fail --silent --show-error --max-time 25 "${stage}/legal/mentions-legales")"
+          grep -q 'en cours de vérification' <<< "$legal" || { echo 'Precommercial registration notice missing'; exit 1; }
+          if grep -q 'SIRET déclaré par l' <<< "$legal"; then echo 'Unverified SIRET visibly claimed'; exit 1; fi
+          if grep -q 'TVA non applicable, art.' <<< "$legal"; then echo 'Unverified VAT exemption visibly claimed'; exit 1; fi
+          curl --fail --silent --show-error --max-time 25 "${stage}/legal/cgu" -o /dev/null
+          curl --fail --silent --show-error --max-time 25 "${stage}/legal/confidentialite" -o /dev/null
+          echo 'STAGING_LEGAL_PRELAUNCH_VISIBLE_AND_PAYMENT_GUARDS_OFF'
