@@ -14,7 +14,9 @@ describe('Documents juridiques MentionCheck en prépublication', () => {
     expect(html).toContain('14 jours');
     expect(html).toContain('médiateur');
     expect(html).toContain('Solo (9 € par mois)');
-    expect(html).toContain('TVA non applicable, art. 293 B du CGI');
+    expect(html).toContain("Le régime de TVA n&#x27;est pas encore confirmé.");
+    expect(html).not.toContain('293 B du CGI');
+    expect(html).not.toContain('899 123 459 00013');
     expect(html).toContain('Les abonnements Solo, Pro et Studio sont mensuels et reconduits automatiquement');
     expect(html).toContain('depuis son compte, rubrique Paramètres');
     expect(html).toContain('quatorze jours après la notification');
@@ -44,6 +46,8 @@ describe('Documents juridiques MentionCheck en prépublication', () => {
     expect(html).toContain('prépublication');
     expect(html).toContain('Ali Rassoul');
     expect(html).toContain('contact@aliaicorp.fr');
+    expect(html).not.toContain('899 123 459 00013');
+    expect(html).toContain('L&#x27;immatriculation professionnelle reste à confirmer');
     expect(html).toContain('180 jours');
     expect(html).toContain('GTM-P83X0PBJ');
     expect(html).toContain('G-JKXWT2NBWT');

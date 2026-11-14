@@ -11,7 +11,7 @@ const clauses = [
   {
     "title": "1. Éditeur, portée et version",
     "body": [
-      `Le service MentionCheck (https://mentioncheck.app) est proposé par ${BRAND.legalName} (${BRAND.tradeName}), à ${BRAND.legalAddress}. SIRET : ${BRAND.siret}. Contact : ${BRAND.contactEmail}. Les autres mentions de l'éditeur figurent dans les mentions légales.`,
+      `Le service MentionCheck (https://mentioncheck.app) est préparé sous la responsabilité de ${BRAND.legalName} (${BRAND.tradeName}), à ${BRAND.legalAddress}. Contact : ${BRAND.contactEmail}. L'immatriculation professionnelle n'est pas encore confirmée et les abonnements payants ne sont pas ouverts. Les autres mentions de l'éditeur figurent dans les mentions légales.`,
       "Les présentes conditions couvrent la consultation du site, l'utilisation de la démonstration gratuite et, après activation commerciale et acceptation expresse, les abonnements mensuels Solo, Pro et Studio. En cas de vente à un consommateur, les règles impératives du Code de la consommation prévalent sur toute stipulation contraire."
     ]
   },
@@ -33,8 +33,8 @@ const clauses = [
     "title": "4. Offres, quotas et prix",
     "body": [
       "Une offre gratuite sans carte bancaire peut être proposée. Les offres payantes préparées sont Solo (9 € par mois), Pro (19 € par mois) et Studio (49 € par mois). Elles ne constituent pas une vente ouverte tant que la page Tarifs les présente comme indicatives et que les paiements Live restent désactivés.",
-      `Selon le régime de franchise en base de TVA déclaré par l'éditeur, les tarifs annoncés sont nets et aucune TVA supplémentaire n'est ajoutée au tarif mensuel affiché. Mention fiscale déclarée : ${BRAND.vatNotice}. L'applicabilité de ce régime dépend de la situation fiscale et du territoire de vente. Avant chaque commande réelle, le prix final applicable, les taxes, la périodicité, le périmètre fonctionnel, les quotas et les éventuelles limitations doivent être affichés clairement sur /tarifs et dans le récapitulatif de commande. Le dépassement des quotas peut entraîner le blocage temporaire de la fonction concernée ; aucun surcoût automatique n'est autorisé sans consentement explicite.`,
-      "Les montants annoncés sont des prix mensuels en euros nets selon la franchise en base de TVA déclarée par l'éditeur pour les opérations auxquelles elle s'applique : Solo 9 €, Pro 19 € et Studio 49 €. Aucun dépassement ne déclenche de prélèvement automatique. Une facturation à un client situé hors de France ou soumis à un régime fiscal particulier ne peut être ouverte sans analyse préalable des règles de territorialité et d'imposition applicables.",
+      "Le régime de TVA n'est pas encore confirmé. Les montants de prépublication ne valent pas facturation ; avant chaque commande réelle, le prix final, les taxes applicables, la périodicité, les services et quotas disponibles doivent être affichés clairement sur la page Tarifs et dans le récapitulatif de commande. Aucun dépassement de quotas ne déclenche un surcoût automatique sans consentement explicite.",
+      "Les prix indicatifs mensuels sont Solo 9 €, Pro 19 € et Studio 49 € ; ils seront confirmés avec la fiscalité et l'identité du vendeur avant le lancement. Aucun dépassement ne déclenche de prélèvement automatique. Une facturation à un client situé hors de France ou soumis à un régime fiscal particulier ne peut être ouverte sans analyse préalable des règles de territorialité et d'imposition applicables.",
       "Le récapitulatif avant paiement doit identifier clairement l'offre choisie, le prix total exigible, la facturation mensuelle, la reconduction automatique, les services et quotas effectivement disponibles et les modalités de résiliation. Les fonctionnalités IA ne peuvent être vendues comme disponibles si leur exploitation en production est suspendue."
     ]
   },

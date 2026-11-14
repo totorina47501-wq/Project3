@@ -240,3 +240,8 @@ webhooks signés, le Checkout authentifié sans carte et le portail Sandbox sont
 validés sur staging. Une vraie transaction par carte de test, les règles de
 rétractation, l'immatriculation et l'activation des services IA restent à
 valider. Voir [dossier de lancement](61-dossier-lancement-commercial-2026.md).
+
+
+## Précommercial — décision de l'exploitant (14 novembre 2026)
+
+L'exploitant a confirmé que sa structure n'est pas encore créée. Conserver `BILLING_ENABLED=false`, `STRIPE_WEBHOOK_ENABLED=false`, `STRIPE_LIVE_APPROVED=false` en production. La revue d'une immatriculation, du régime fiscal, d'une convention de médiation effective (si ventes B2C) et des CGV approuvées ne peut pas être attestée par des numéros simplement déclarés. Les parcours techniques TEST #148, la certification #16 et la vérification des applications peuvent avancer sans ces formalités et sans facturer de client. Ne jamais mettre `STRIPE_LIVE_LEGAL_REGISTRATION`, `STRIPE_LIVE_TAX_REVIEW`, `STRIPE_LIVE_TERMS_REVIEW` ou `STRIPE_LIVE_E2E_REVIEW` à des valeurs fictivement approuvées.
