@@ -1,0 +1,42 @@
+name: MentionCheck — Activate production AI text and vision only
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mentioncheck-ai-production-activate.yml'
+      - 'scripts/recette/production-ai-activate.mjs'
+      - 'scripts/recette/production-ai-activate.test.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mentioncheck-ai-production-activate
+  cancel-in-progress: false
+jobs:
+  activate-ai:
+    # Single explicit operator-approved cutover; never from PRs or staging.
+    if: >-
+      github.repository == 'totorina47501-wq/Project3' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+       startsWith(github.event.head_commit.message, 'ops(ai): activate production AI in Cloudflare'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      CLOUDFLARE_ACCOUNT_ID: f9b14d5d93b1fe8ef3982d3ddb87131d
+      CLOUDFLARE_API_TOKEN: ${{ secrets.MENTIONCHECK_PROD_CLOUDFLARE_API_TOKEN }}
+      ACTIVATE_PRODUCTION_AI: text-vision-only
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Tester les limites de l'activation Cloudflare hors réseau
+        run: node --test scripts/recette/production-ai-activate.test.mjs
+      - name: Activer uniquement le texte et la vision sur le Worker principal
+        run: node scripts/recette/production-ai-activate.mjs
+      - name: Relire les indicateurs Cloudflare sans secret ni dépense IA
+        if: always()
+        run: node scripts/recette/production-ai-readonly.mjs
