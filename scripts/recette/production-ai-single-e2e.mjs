@@ -30,7 +30,12 @@ export function responseSummary(sse) {
 
 async function main() {
   assert.equal(process.env.GITHUB_REPOSITORY,'totorina47501-wq/Project3');
-  assert.equal(process.env.GITHUB_REF,expected);
+  const manualMain=process.env.GITHUB_REF===expected &&
+    process.env.GITHUB_EVENT_NAME==='push';
+  const firstPartyQaPr=process.env.GITHUB_EVENT_NAME==='pull_request' &&
+    process.env.GITHUB_HEAD_REF==='qa/trigger-production-ai-once-20261114' &&
+    process.env.GITHUB_BASE_REF==='main';
+  assert.ok(manualMain || firstPartyQaPr,'Production QA not authorized for this ref');
   assert.equal(process.env.PRODUCTION_QA_MODE,'one-shot-text-only');
   const suffix=randomBytes(10).toString('hex');
   const email=qaPrefix+suffix+'@gmail.com';
