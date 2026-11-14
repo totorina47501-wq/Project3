@@ -11,8 +11,8 @@ describe('Configuration Cloudflare sécurisée',()=>{
       MEDIA_JOBS_SCHEMA_READY:'true',MEDIA_PROCESSING_ENABLED:'true',
       MEDIA_CLOUDFLARE_RUNNER_ENABLED:'true',MEDIA_AI_ENABLED:'false',
       MEDIA_AI_SCHEMA_READY:'true',OPENAI_AUDIO_ENABLED:'false',
-      OPENAI_PAUSED:'true',OPENAI_TEXT_ENABLED:'false',
-      OPENAI_VISION_ENABLED:'false',OPENAI_EMBEDDINGS_ENABLED:'false',
+      OPENAI_PAUSED:'false',OPENAI_TEXT_ENABLED:'true',
+      OPENAI_VISION_ENABLED:'true',OPENAI_EMBEDDINGS_ENABLED:'false',
       SOCIAL_OAUTH_ENABLED:'false',SOCIAL_OAUTH_YOUTUBE_ENABLED:'false',
       SOCIAL_OAUTH_INSTAGRAM_ENABLED:'false',SOCIAL_OAUTH_TIKTOK_ENABLED:'false',
       SOCIAL_OAUTH_LINKEDIN_ENABLED:'false',
@@ -36,7 +36,13 @@ describe('Configuration Cloudflare sécurisée',()=>{
     expect(config.vars.STRIPE_LIVE_BUYER_SCOPE).toBe('general_public');
     expect(config.previews.vars).not.toHaveProperty('STRIPE_LIVE_BUYER_SCOPE');
     expect(JSON.stringify(config.vars)).not.toMatch(/sk_live_|sk_test_|whsec_/);
-    // IA payante fermée en attendant une activation séparée autorisée.
+    // Le lot autorise uniquement l'IA texte/vision sur le Worker principal.
+    // Aucun coût IA ne doit être engagé par la CI ni par les previews/staging.
+    expect(config.vars.OPENAI_PAUSED).toBe('false');
+    expect(config.vars.OPENAI_TEXT_ENABLED).toBe('true');
+    expect(config.vars.OPENAI_VISION_ENABLED).toBe('true');
+    for(const key of ['OPENAI_AUDIO_ENABLED','OPENAI_EMBEDDINGS_ENABLED','MEDIA_AI_ENABLED'])
+      expect(config.vars[key]).toBe('false');
     // La clé reste un secret du Worker, jamais une variable publiée dans Git.
   });
   it('génère le dossier standalone nécessaire au packaging OpenNext',()=>{
