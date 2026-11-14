@@ -1,5 +1,20 @@
 # MentionCheck — réactivation IA payante contrôlée
-**État : configuration proposée sur la branche dédiée ; activation distante à prouver.**
+**État au 14 novembre 2026 : activation texte et vision autorisée par l'exploitant et proposée dans le code de production ; propagation réelle Cloudflare et fonctionnement modèle non encore attestés.**
+
+### Activation décidée le 14/11/2026
+
+- Dans `wrangler.jsonc` **Worker principal seulement** : `OPENAI_PAUSED=false`, `OPENAI_TEXT_ENABLED=true`, `OPENAI_VISION_ENABLED=true`.
+- IA texte pour vérification explicite, réécriture et réponses Mia ; image en mode `detail: low`. Mia utilise la recherche juridique **lexicale** existante tant que les embeddings et la recherche vectorielle restent désactivés.
+- `OPENAI_AUDIO_ENABLED=false`, `OPENAI_EMBEDDINGS_ENABLED=false`, `MEDIA_AI_ENABLED=false` : aucune réindexation, transcription, traitement automatique audio/vidéo ni activation du modèle embeddings.
+- **Toutes les previews et le staging conservent** `OPENAI_PAUSED=true`, texte/vision désactivés. Les tests CI utilisent des mocks et aucun token fournisseur ; les appels réels restent réservés aux actions de l'utilisateur authentifié, soumises aux quotas SQL existants, au rate limiting et au max 2 500 tokens de sortie.
+- **Stripe reste fermé** : `BILLING_ENABLED=false`, `STRIPE_WEBHOOK_ENABLED=false`, `STRIPE_LIVE_APPROVED=false`. Cette opération n'autorise aucun paiement ni activation des 30 jours Solo historiques.
+- **Budget non garanti par le dépôt :** enveloppe pilote **25 USD par mois visée**, avec contrôle de limite de dépense et alerte 80 % dans le projet API OpenAI à confirmer dans la console fournisseur. Aucun accès de ce connecteur ne permet de lire ou fixer ce plafond. Les quotas par utilisateur ne remplacent PAS un plafonnement monétaire global.
+- **Preuve à fournir après intégration :** vérification du dernier déploiement du Worker Cloudflare `mentioncheck` et de ses variables runtime (attention : `keep_vars=true` peut préserver des variables distantes anciennes). `GET /api/health/ai` peut confirmer la configuration et la présence de la clé sans consommer de crédits, mais **pas** sa validité ; ensuite **une seule analyse texte réelle** et une image légère, depuis un compte de test autorisé et avec limite fournisseur vérifiée, doivent prouver sortie, quota et facturation.
+- **Coupe-circuit :** restaurer `OPENAI_PAUSED=true` dans le Worker en cas d'erreur fournisseur, d'absence de budget ou de dérive des dépenses. Aucun secret ni client réel n'est modifié par la PR.
+
+**Le merge GitHub n'est pas un déploiement ni une preuve que l'IA est disponible sur `mentioncheck.app`.** Une approbation technique post-déploiement doit s'appuyer sur les résultats de la sonde et d'une requête modèle contrôlée.
+
+
 Date : 10 novembre 2026. Projet GitHub : `totorina47501-wq/Project3`.
 
 ## Périmètre autorisé
