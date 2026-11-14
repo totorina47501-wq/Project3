@@ -18,6 +18,24 @@ immatriculation, et ne constitue ni un contrat approuvé ni un avis juridique.
 
 Cette note est un relevé interne des informations déclarées, pas une attestation d'identité, de numéro d'immatriculation ou de conformité juridique. Elle ne remplace pas le dossier opérateur privé.
 
+## Décision opérateur — lancement sans convention de médiation (14 novembre 2026)
+
+L'exploitant demande explicitement de **poursuivre sans adhésion à un médiateur**. Cette instruction permet les travaux préparatoires, les tests hors production et l'étude d'une **offre exclusivement destinée aux acheteurs professionnels**, mais **n'efface pas l'obligation de médiation des ventes aux consommateurs** (Code de la consommation, article L612-1). Il est interdit d'attester `STRIPE_LIVE_TERMS_REVIEW=approved` pour des ventes B2C, ou de supprimer silencieusement les droits à la médiation des CGV.
+
+**Option commerciale conditionnelle : lancement limité aux clients professionnels réellement éligibles (B2B)** :
+- Avant le paiement, recueillir l'identification vérifiable de l'entreprise cliente (raison sociale, identifiant professionnel selon pays, adresse de facturation) et documenter la finalité **professionnelle** de l'achat. Ne pas accepter une simple case « je suis professionnel » comme preuve suffisante ; contrôler spécialement les petites entreprises lorsque le contrat est hors de leur activité principale et peut relever de protections du Code de la consommation.
+- Configurer une restriction **côté serveur** de l'accès Checkout Live aux comptes dont la qualité professionnelle et le lien de la prestation à leur activité ont été vérifiés. Un affichage « réservé aux professionnels » dans la page Tarifs n'est pas un contrôle d'accès. Les abonnements Solo/Pro/Studio ne doivent pas être proposés indistinctement à des consommateurs.
+- Prévoir des conditions et factures destinées aux professionnels, vérifier territorialité/TVA, gestion des justificatifs, conséquences des droits particuliers des très petites entreprises, ainsi que confirmation durable/résiliation ; soumettre cette option à une revue juridique/fiscale spécifique et à une recette Stripe **Sandbox**.
+- Conserver **l'intégralité des flags Live fermés** et les CGV en prépublication tant que le contrôle d'éligibilité côté serveur, la fiscalité, la livraison réelle des services IA et le parcours paiement/webhook n'ont pas été attestés. Aucune donnée client ou abonnement réel ne doit être modifié pour déclarer cette option ouverte.
+
+L'alternative B2B **n'est ni construite ni commercialement activée** à la date de cette note ; elle permet de ne pas faire dépendre sa préparation du contrat CM2C. Le segment B2C demeure **NO GO** sans dispositif de médiation effectivement accessible.
+
+**Sources officielles :**
+- [Article L612-1 — médiation pour les consommateurs](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000032224805)
+- [FAQ officielle : litiges entre professionnels exclus de la médiation de la consommation](https://www.economie.gouv.fr/mediation-conso/foire-aux-questions)
+- [Service-Public — médiation et certaines petites entreprises](https://entreprendre.service-public.gouv.fr/vosdroits/F33338)
+- [Article liminaire — distinctions consommateur, non-professionnel et professionnel](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000049464063)
+
 ## Médiation de la consommation — option préparée (14 novembre 2026)
 
 **Option à examiner : CM2C (Centre de Médiation de la Consommation des Conciliateurs de justice)**, présent dans la [liste officielle CECMC](https://www.economie.gouv.fr/mediation-conso/vous-etes-un-professionnel/choisir-un-mediateur-de-la-consommation/mediateurs-references). Son [barème public](https://www.cm2c.net/tarifs.php) indique, au contrôle du 14 novembre 2026, **48 € pour trois ans** jusqu'à 10 salariés, payables en une fois, et **36 € pour une médiation à distance**. [Inscription professionnelle](https://www.cm2c.net/inscription-professionnel.php).
