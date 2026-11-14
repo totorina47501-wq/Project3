@@ -3,9 +3,20 @@
 Date de préparation : 10 novembre 2026. France, régime de franchise en base
 de TVA **envisagé**, sous réserve d'éligibilité et de confirmation fiscale.
 
-Ce fichier sert à finaliser les pièces réelles avant publication. Il ne
-prouve aucune immatriculation, n'identifie pas l'exploitant et ne constitue
-ni un contrat approuvé ni un avis juridique.
+Ce fichier sert à finaliser les pièces réelles avant publication. Il mentionne
+l'identité et les identifiants déclarés par l'exploitant, sans prouver son
+immatriculation, et ne constitue ni un contrat approuvé ni un avis juridique.
+
+### Confirmation d'identité du 14 novembre 2026 — déclaration de l'exploitant
+
+- **Identité de l'entrepreneur individuel : Rassoul Ali** (présentée « Ali Rassoul » dans la source publique `lib/branding.ts` et les mentions légales ; il s'agit de la même personne). « Jean Dupont » n'est pas l'exploitant et ne doit être repris dans aucun document.
+- **Nom commercial déclaré : Aliaicorp** (source publique alignée : `Aliaicorp`). Statut micro-entreprise / EI déclaré, sans attestation d'immatriculation annexée au dossier.
+- **SIREN déclaré par l'exploitant : `899 123 459` ; SIRET corrigé communiqué : `899 123 459 00013`.** Ces identifiants sont repris tels que fournis par l'exploitant, sans vérification administrative sur Internet ni attestation d'immatriculation jointe. Le SIRET antérieurement communiqué (`899 123 459 00017`) est remplacé et ne doit plus être utilisé. Le SIRET figure dans la source des mentions légales de cette PR avec la qualification « déclaré » ; cette déclaration ne prouve pas sa validité administrative et ne suffit pas, à elle seule, à attester les autres conditions légales, fiscales et fonctionnelles de l'activation Stripe Live.
+- **Coordonnées professionnelles utilisées selon la dernière déclaration de l'exploitant :** 4, rue de la Boule, 75002 Paris, France ; `contact@aliaicorp.fr`. Ces coordonnées remplacent les anciennes coordonnées de Fumel dans la source juridique publique de cette PR, sans vérification externe ; le téléphone antérieurement fourni est conservé.
+- **Fiscalité :** franchise en base déclarée ; tarifs nets communiqués : Solo 9 €/mois, Pro 19 €/mois, Studio 49 €/mois, sans TVA ajoutée au paiement. Mention affichée : « TVA non applicable, art. 293 B du CGI ». Cela ne vaut pas revue fiscale du champ d'application, notamment pour les ventes B2C/B2B hors de France.
+- **CGV :** validation finale non encore fournie ; conserver le statut brouillon. Ne pas activer Stripe Live, ne créer ni encaissement ni abonnement sur la seule déclaration d'identité.
+
+Cette note est un relevé interne des informations déclarées, pas une attestation d'identité, de numéro d'immatriculation ou de conformité juridique. Elle ne remplace pas le dossier opérateur privé.
 
 ## 1. Informations éditeur à fournir (jamais inventer)
 

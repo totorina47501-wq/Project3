@@ -120,6 +120,7 @@ export default function PricingPage() {
     </section>
     <footer className="mt-12 border-t border-slate-200 pt-6 text-sm leading-6 text-slate-600">
       <p>{live ? 'Prix mensuels finaux, reconduits automatiquement. Les conditions fiscales et de résiliation figurent dans les documents contractuels et les factures.' : 'Prix et quotas indicatifs, non contractuels. Conditions fiscales, fonctionnalités et limites à confirmer avant commercialisation.'}</p>
+      <p className="mt-2">Prix en euros nets selon le régime de franchise en base de TVA déclaré par l’éditeur : {BRAND.vatNotice}. Aucune TVA supplémentaire n’est ajoutée aux prix affichés dans les offres françaises concernées ; l’applicabilité de ce régime à d’autres situations reste à confirmer.</p>
       <p className="mt-2">Les vérifications automatiques constituent une aide à la préparation des publications, pas une garantie de conformité juridique.</p>
       <Link href="/" className="mt-4 inline-block font-semibold text-indigo-700 underline underline-offset-4">Retour à l’accueil</Link>
     </footer>

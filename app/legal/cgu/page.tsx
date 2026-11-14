@@ -33,7 +33,7 @@ const clauses = [
     "title": "4. Offres, quotas et prix",
     "body": [
       "Une offre gratuite sans carte bancaire peut être proposée. Les offres payantes préparées sont Solo (9 € par mois), Pro (19 € par mois) et Studio (49 € par mois). Elles ne constituent pas une vente ouverte tant que la page Tarifs les présente comme indicatives et que les paiements Live restent désactivés.",
-      "Avant chaque commande réelle, le prix final applicable, les taxes, la périodicité, le périmètre fonctionnel, les quotas et les éventuelles limitations doivent être affichés clairement sur /tarifs et dans le récapitulatif de commande. Le dépassement des quotas peut entraîner le blocage temporaire de la fonction concernée ; aucun surcoût automatique n'est autorisé sans consentement explicite."
+      `Selon le régime de franchise en base de TVA déclaré par l'éditeur, les tarifs annoncés sont nets et aucune TVA supplémentaire n'est ajoutée au tarif mensuel affiché. Mention fiscale déclarée : ${BRAND.vatNotice}. L'applicabilité de ce régime dépend de la situation fiscale et du territoire de vente. Avant chaque commande réelle, le prix final applicable, les taxes, la périodicité, le périmètre fonctionnel, les quotas et les éventuelles limitations doivent être affichés clairement sur /tarifs et dans le récapitulatif de commande. Le dépassement des quotas peut entraîner le blocage temporaire de la fonction concernée ; aucun surcoût automatique n'est autorisé sans consentement explicite.`
     ]
   },
   {
@@ -102,7 +102,7 @@ const clauses = [
   {
     "title": "14. Réclamations, médiation et différends",
     "body": [
-      "Le support et les réclamations sont reçus à mentioncheckcorp@gmail.com. Le client peut fournir les informations nécessaires à l'identification de son abonnement sans communiquer ses mots de passe ni ses numéros de carte.",
+      `Le support et les réclamations sont reçus à ${BRAND.contactEmail}. Le client peut fournir les informations nécessaires à l'identification de son abonnement sans communiquer ses mots de passe ni ses numéros de carte.`,
       "En cas de litige avec un consommateur, une médiation gratuite doit pouvoir être sollicitée après réclamation écrite préalable et dans les conditions légales. Le médiateur compétent doit être choisi, effectivement conventionné et identifié par ses coordonnées avant l'ouverture des ventes. Les droits d'accès au juge et les règles de compétence protectrices des consommateurs demeurent inchangés."
     ]
   },

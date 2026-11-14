@@ -7,8 +7,8 @@ import { BRAND } from '../../lib/branding';
 describe('Branding légal public', () => {
   it('aligne le nom légal déclaré et le domaine canonique', () => {
     expect(BRAND.legalName).toBe('Ali Rassoul');
-    expect(BRAND.tradeName).toBe('aliaicorp');
-    expect(BRAND.siret).toBe('À venir');
+    expect(BRAND.tradeName).toBe('Aliaicorp');
+    expect(BRAND.siret).toBe('899 123 459 00013');
     expect(BRAND.domain).toBe('mentioncheck.app');
   });
 
@@ -20,9 +20,10 @@ describe('Branding légal public', () => {
   it('n expose pas de fausses mentions légales', () => {
     const html = renderToStaticMarkup(createElement(MentionsLegalesPage));
     expect(html).toContain('Ali Rassoul');
-    expect(html).toContain('aliaicorp');
-    expect(html).toContain('100 avenue Gambetta');
-    expect(html).toContain('mentioncheckcorp@gmail.com');
+    expect(html).toContain('899 123 459 00013');
+    expect(html).toContain('Aliaicorp');
+    expect(html).toContain('4, rue de la Boule');
+    expect(html).toContain('contact@aliaicorp.fr');
     expect(html).toContain('0675814948');
     expect(html).toContain('293 B du CGI');
     expect(html).toContain('Cloudflare, Inc.');

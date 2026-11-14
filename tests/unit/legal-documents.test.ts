@@ -14,9 +14,11 @@ describe('Documents juridiques MentionCheck en prépublication', () => {
     expect(html).toContain('14 jours');
     expect(html).toContain('médiateur');
     expect(html).toContain('Solo (9 € par mois)');
+    expect(html).toContain('TVA non applicable, art. 293 B du CGI');
+    expect(html).not.toContain('mentioncheckcorp@gmail.com');
     expect(html).toContain('non encore approuvé');
     expect(html).toContain('Ali Rassoul');
-    expect(html).toContain('mentioncheckcorp@gmail.com');
+    expect(html).toContain('contact@aliaicorp.fr');
     expect(html).not.toContain('MentionsCheckIA');
     expect(html).not.toMatch(/\b\d{9}\b/);
   });
@@ -32,7 +34,7 @@ describe('Documents juridiques MentionCheck en prépublication', () => {
     expect(html).toContain('pas encore certifiée');
     expect(html).toContain('prépublication');
     expect(html).toContain('Ali Rassoul');
-    expect(html).toContain('mentioncheckcorp@gmail.com');
+    expect(html).toContain('contact@aliaicorp.fr');
     expect(html).toContain('180 jours');
     expect(html).toContain('GTM-P83X0PBJ');
     expect(html).toContain('G-JKXWT2NBWT');
