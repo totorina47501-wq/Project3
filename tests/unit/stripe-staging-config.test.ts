@@ -38,6 +38,7 @@ describe('MentionCheck Stripe Sandbox — isolation', () => {
     const production = readConfig('wrangler.jsonc');
     expect(production.name).toBe('mentioncheck');
     expect(production.vars.STRIPE_MODE).toBe('live');
+    expect(production.vars.STRIPE_LIVE_BUYER_SCOPE).toBe('general_public');
     expect(production.vars.STRIPE_PRICE_SOLO).toBe('price_1UaKLwCdRRAa9LkpiXUiv0wc');
     expect(production.vars.STRIPE_PRICE_PRO).toBe('price_1UaKLyCdRRAa9Lkp5daPFLZK');
     expect(production.vars.STRIPE_PRICE_STUDIO).toBe('price_1UaKM0CdRRAa9Lkptx9oZCS8');
@@ -51,6 +52,7 @@ describe('MentionCheck Stripe Sandbox — isolation', () => {
     // La Preview QA du Worker production reste strictement en sandbox et sans facturation.
     expect(production.previews?.vars?.BILLING_ENABLED).toBe('false');
     expect(production.previews?.vars?.STRIPE_MODE).toBe('test');
+    expect(production.previews?.vars).not.toHaveProperty('STRIPE_LIVE_BUYER_SCOPE');
     expect(Object.keys(production.previews?.vars ?? {}).some(key => key.startsWith('STRIPE_PRICE_'))).toBe(false);
   });
 });
