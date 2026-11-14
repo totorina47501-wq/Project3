@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useId, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
@@ -15,20 +15,21 @@ function PasswordField({
   label: string;
   autoComplete: string;
 }) {
+  const inputId = useId();
   return (
-    <label className="block text-sm font-semibold">
-      {label}
+    <div className="block text-sm font-semibold">
+      <label htmlFor={inputId} className="block">{label}</label>
       <div className="relative mt-2">
-        <input type={visible ? 'text' : 'password'} required minLength={12} maxLength={200}
+        <input id={inputId} type={visible ? 'text' : 'password'} required minLength={12} maxLength={200}
           autoComplete={autoComplete} value={value} onChange={(event) => onChange(event.target.value)}
           className="w-full rounded-xl border border-slate-300 px-4 py-3 pr-12 outline-none focus:border-accent" />
         <button type="button" onClick={onToggle} aria-pressed={visible}
-          aria-label={visible ? 'Masquer ' + label.toLowerCase() : 'Afficher ' + label.toLowerCase()}
+          aria-controls={inputId} aria-label={visible ? 'Masquer les caractères saisis' : 'Afficher les caractères saisis'}
           className="absolute inset-y-0 right-2 flex min-h-11 min-w-11 items-center justify-center rounded-lg text-slate-600 hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent">
           {visible ? <EyeOff size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
         </button>
       </div>
-    </label>
+    </div>
   );
 }
 

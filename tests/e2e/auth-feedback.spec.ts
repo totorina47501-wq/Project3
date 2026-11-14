@@ -57,3 +57,29 @@ test('une réponse non JSON affiche une erreur utile et permet de réessayer', a
   await expect(page.getByRole('main').getByRole('alert')).toHaveText('Le service est momentanément indisponible. Réessaie dans un instant.');
   await expect(page.getByRole('button', { name: 'Se connecter' })).toBeEnabled();
 });
+
+
+test('afficher et masquer les caractères saisis sans ambiguïté de label', async ({ page }) => {
+  await page.goto('/login');
+  const password = page.getByLabel('Mot de passe');
+  await expect(password).toHaveCount(1);
+  await password.fill('Mot-de-passe-de-test');
+  const show = page.getByRole('button', { name: 'Afficher les caractères saisis' });
+  await show.click();
+  await expect(password).toHaveAttribute('type', 'text');
+  await page.getByRole('button', { name: 'Masquer les caractères saisis' }).click();
+  await expect(password).toHaveAttribute('type', 'password');
+  await expect(password).toHaveValue('Mot-de-passe-de-test');
+});
+
+test('réinitialisation : champs accessibles séparés de leurs boutons œil', async ({ page }) => {
+  await page.goto('/reset-password');
+  const password = page.getByLabel('Nouveau mot de passe');
+  const confirmation = page.getByLabel('Confirmer le mot de passe');
+  await expect(password).toHaveCount(1);
+  await expect(confirmation).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Afficher les caractères saisis' })).toHaveCount(2);
+  await page.getByRole('button', { name: 'Afficher les caractères saisis' }).first().click();
+  await expect(password).toHaveAttribute('type', 'text');
+  await expect(confirmation).toHaveAttribute('type', 'password');
+});

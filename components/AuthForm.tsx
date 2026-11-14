@@ -1,13 +1,14 @@
 // Chemin : components/AuthForm.tsx
 'use client';
 
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 
 export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
   const router = useRouter();
+  const passwordInputId = useId();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -101,15 +102,15 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
               className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-accent"
               placeholder="toi@exemple.fr" />
           </label>
-          <label className="block text-sm font-semibold">
-            Mot de passe
+          <div className="block text-sm font-semibold">
+            <label htmlFor={passwordInputId} className="block">Mot de passe</label>
             <div className="relative mt-2">
-              <input type={showPassword ? 'text' : 'password'} required disabled={loading}
+              <input id={passwordInputId} type={showPassword ? 'text' : 'password'} required disabled={loading}
                 minLength={isLogin ? 8 : 12} autoComplete={isLogin ? 'current-password' : 'new-password'}
                 value={password} onChange={(e) => setPassword(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 pr-12 outline-none focus:border-accent" />
-              <button type="button" aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                aria-pressed={showPassword} onClick={() => setShowPassword((visible) => !visible)}
+              <button type="button" aria-label={showPassword ? 'Masquer les caractères saisis' : 'Afficher les caractères saisis'}
+                aria-controls={passwordInputId} aria-pressed={showPassword} onClick={() => setShowPassword((visible) => !visible)}
                 className="absolute inset-y-0 right-2 flex min-h-11 min-w-11 items-center justify-center rounded-lg text-slate-600 hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent">
                 {showPassword ? <EyeOff aria-hidden="true" size={20} /> : <Eye aria-hidden="true" size={20} />}
               </button>
@@ -117,7 +118,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
             {!isLogin && <span className="mt-1 block text-xs font-normal text-slate-500">
               Au moins 12 caractères avec une minuscule, une majuscule, un chiffre et un symbole. Utilise un mot de passe unique et non compromis.
             </span>}
-          </label>
+          </div>
           {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}
           {message && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{message}</p>}
           <button disabled={loading} type="submit"
