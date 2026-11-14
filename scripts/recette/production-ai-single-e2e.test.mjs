@@ -20,3 +20,10 @@ test('SSE requires exactly one full completion and validates a bounded score',()
  assert.equal(responseSummary(full+full).completed,false);
  assert.equal(responseSummary('event: done\ndata: {"analysisMode":"full","score":999}\n\n').scoreValid,false);
 });
+
+test('GitHub workflow YAML step names contain no unquoted spaced colon',()=>{
+ const yaml=readFileSync(new URL('../../.github/workflows/mentioncheck-ai-production-single-qa.yml',import.meta.url),'utf8');
+ assert.match(yaml,/pull_request:/);
+ assert.match(yaml,/types: \[opened\]/);
+ assert.doesNotMatch(yaml,/^\s+- name: [^\n]* : [^\n]*$/m);
+});
