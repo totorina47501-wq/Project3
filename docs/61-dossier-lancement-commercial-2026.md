@@ -18,6 +18,16 @@ immatriculation, et ne constitue ni un contrat approuvé ni un avis juridique.
 
 Cette note est un relevé interne des informations déclarées, pas une attestation d'identité, de numéro d'immatriculation ou de conformité juridique. Elle ne remplace pas le dossier opérateur privé.
 
+## Médiation de la consommation — option préparée (14 novembre 2026)
+
+**Option à examiner : CM2C (Centre de Médiation de la Consommation des Conciliateurs de justice)**, présent dans la [liste officielle CECMC](https://www.economie.gouv.fr/mediation-conso/vous-etes-un-professionnel/choisir-un-mediateur-de-la-consommation/mediateurs-references). Son [barème public](https://www.cm2c.net/tarifs.php) indique, au contrôle du 14 novembre 2026, **48 € pour trois ans** jusqu'à 10 salariés, payables en une fois, et **36 € pour une médiation à distance**. [Inscription professionnelle](https://www.cm2c.net/inscription-professionnel.php).
+
+**À ne pas considérer comme convention déjà conclue :** vérifier d'abord auprès de CM2C qu'il accepte explicitement les litiges de **prestations de services numériques/SaaS d'abonnement B2C**, et confirmer le coût total, la durée, les frais au dossier et les modalités de convention. L'exploitant doit accepter le contrat et tout paiement. La DGCCRF rappelle qu'un médiateur doit être effectivement choisi et conventionné avant publication de ses coordonnées sur le site et les CGV : [guide officiel](https://www.economie.gouv.fr/mediation-conso/vous-etes-un-professionnel/choisir-un-mediateur-de-la-consommation). Après obtention de la convention, renseigner **le nom exact, l'adresse et le site du médiateur** dans les CGV et les mentions requises. **Ne pas inscrire « médiateur CM2C désigné » avant cela.**
+
+### Lot agent commercial — sans encaissement
+
+Mission unique `stripe-sandbox-consumer-e2e` inscrite dans `docs/work-registry.json` pour préparer la recette Stripe **Sandbox** et les preuves des parcours B2C (confirmation sur support durable, portail résiliation, rétractation, remboursements, échecs de paiement, droits payants et retour au plan gratuit). Réutiliser les scripts/tests actuels et le code de facturation ; **aucune migration Solo**, aucune souscription Live, aucun basculement de drapeaux Cloudflare ni appel OpenAI facturable. Les validations fiscales, la convention de médiation et les dépenses restent hors de portée de l'agent, avec décision opérateur séparée.
+
 ## Actualisation CGV et fiscalité — 14 novembre 2026
 
 **Travail réalisé, sans recherche externe sur l'immatriculation :**
