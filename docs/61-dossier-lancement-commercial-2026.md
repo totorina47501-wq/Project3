@@ -3,15 +3,15 @@
 Date de préparation : 10 novembre 2026. France, régime de franchise en base
 de TVA **envisagé**, sous réserve d'éligibilité et de confirmation fiscale.
 
-Ce fichier sert à finaliser les pièces réelles avant publication. Il ne
-prouve aucune immatriculation, n'identifie pas l'exploitant et ne constitue
-ni un contrat approuvé ni un avis juridique.
+Ce fichier sert à finaliser les pièces réelles avant publication. Il mentionne
+l'identité et les identifiants déclarés par l'exploitant, sans prouver son
+immatriculation, et ne constitue ni un contrat approuvé ni un avis juridique.
 
 ### Confirmation d'identité du 14 novembre 2026 — déclaration de l'exploitant
 
 - **Identité de l'entrepreneur individuel : Rassoul Ali** (présentée « Ali Rassoul » dans la source publique `lib/branding.ts` et les mentions légales ; il s'agit de la même personne). « Jean Dupont » n'est pas l'exploitant et ne doit être repris dans aucun document.
 - **Nom commercial déclaré : Aliaicorp** (source publique existante : `aliaicorp`). Statut micro-entreprise / EI déclaré, sans attestation d'immatriculation annexée au dossier.
-- **SIREN déclaré par l'exploitant : `912 345 678` ; SIRET déclaré : `912 345 678 00019`.** Valeurs reproduites exactement comme communiquées, à titre de **brouillon non validé** et **non destinées à publication**. Leurs clés de contrôle ne sont pas cohérentes : elles ne doivent pas être considérées comme une preuve d'immatriculation, insérées comme attestation dans `STRIPE_LIVE_LEGAL_REGISTRATION` ni utilisées pour activer Stripe Live. L'exploitant doit fournir les identifiants corrects avant la publication. Aucune vérification sur Internet n'a été réalisée.
+- **SIREN déclaré par l'exploitant : `899 123 459` ; SIRET déclaré : `899 123 459 00017`.** Ces deux valeurs remplacent les anciens identifiants dans ce dossier de **préparation non publié** et sont reproduites telles que communiquées. Contrôle mathématique local uniquement : SIREN **cohérent (Luhn)**, SIRET **incohérent (Luhn)**. Aucun des deux identifiants n'a fait l'objet d'une vérification administrative sur Internet. Tant que le SIRET n'est pas corrigé ou étayé, ces données ne valent pas preuve d'immatriculation, ne sont pas destinées à publication et ne doivent pas servir d'attestation pour `STRIPE_LIVE_LEGAL_REGISTRATION` ou à débloquer Stripe Live.
 - **Coordonnées professionnelles : arbitrage restant** entre l'adresse et le contact actuellement publiés (Fumel, `mentioncheckcorp@gmail.com`) et les coordonnées parisiennes / `contact@aliaicorp.fr` communiquées ensuite. Ne modifier ni `lib/branding.ts` ni les pages publiques avant confirmation explicite des coordonnées à publier.
 - **Fiscalité :** franchise en base et mention « TVA non applicable, art. 293 B du CGI » déclarées par l'exploitant, mais revue du champ d'application, des ventes B2C/B2B et de la présentation des prix toujours requise.
 - **CGV :** validation finale non encore fournie ; conserver le statut brouillon. Ne pas activer Stripe Live, ne créer ni encaissement ni abonnement sur la seule déclaration d'identité.
