@@ -25,5 +25,6 @@ test('GitHub workflow YAML step names contain no unquoted spaced colon',()=>{
  const yaml=readFileSync(new URL('../../.github/workflows/mentioncheck-ai-production-single-qa.yml',import.meta.url),'utf8');
  assert.match(yaml,/pull_request:/);
  assert.match(yaml,/types: \[opened\]/);
+ assert.match(yaml,/^\s+false &&$/m,'Production paid test must stay disarmed after the one-shot run');
  assert.doesNotMatch(yaml,/^\s+- name: [^\n]* : [^\n]*$/m);
 });
