@@ -86,6 +86,17 @@ it('exige le consentement aux CGV pour le Checkout Live après contrôle du tari
  vi.stubEnv('STRIPE_PRICE_SOLO','price_SOLO');
  mocks.forceLiveMode=true;
  vi.stubEnv('NEXT_PUBLIC_APP_URL','https://mentioncheck.app');
+ vi.stubEnv('STRIPE_LIVE_BUYER_SCOPE','verified_b2b_fr');
+ // Live code now requires an operator-verified French professional buyer.
+ mocks.user.mockResolvedValueOnce({user:{
+   id:actor,email:'fixture@example.test',
+   app_metadata:{mentioncheck_b2b:{
+     verified:true,country:'FR',purchase_purpose:'core_professional_activity',
+     reviewed_by:'operator',legal_name:'Société de Test',
+     registration_id:'123456789',
+     reviewed_at:new Date(Date.now()-60_000).toISOString(),
+   }},
+ }});
  const response=await POST(request('solo','https://mentioncheck.app'));
  expect(response.status,await response.clone().text()).toBe(200);
  expect(mocks.retrievePrice).toHaveBeenCalledWith('price_SOLO');
