@@ -284,7 +284,7 @@
         "Page /tarifs améliorée : cartes responsives, comparaison accessible, FAQ et positionnement Pro ; prix et quotas restent indicatifs, Stripe live désactivé.",
         "Gratuit 3/1/3 distinct de Solo payant 30/5/20 ; migration SQL et tests locaux sur PR #114, staging à certifier avant tout déploiement production.",
         "Staging : Checkout Solo/Pro/Studio authentifié + portail et vrais événements Stripe signés création/résiliation certifiés ; sans carte ni vente. Code live prêt derrière garde-fous légaux/fiscaux/IA ; paiement par carte test non certifié.",
-        "Dossier juridique de pré-lancement à compléter : docs/61-dossier-lancement-commercial-2026.md. TVA française : mention CIBS de septembre 2026, 293 B en tolérance jusqu'à fin 2027.",
+        "Dossier juridique de pré-lancement à compléter : docs/61-dossier-lancement-commercial-2026.md. TVA 2026 : la référence 293 B du CGI reste indiquée par impots.gouv.fr pour les assujettis éligibles ; report de la recodification TVA dans le CIBS au 1er janvier 2027 (ordonnance 2026-671, art. 17). Situation fiscale de l'exploitant et territorialité toujours non certifiées.",
         "Lecture Stripe Live 11/11 : 3 produits et 3 prix mensuels existants (Solo 9, Pro 19, Studio 49 EUR), webhook unique enabled et portail actif mais URLs légales absentes ; garder BILLING_ENABLED=false et STRIPE_LIVE_APPROVED=false jusqu'au GO explicite."
       ]
     },

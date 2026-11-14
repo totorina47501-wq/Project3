@@ -152,13 +152,24 @@ totale des fichiers chez tous les prestataires n'est pas encore prouvée.
 
 Sous une **franchise en base de TVA réellement applicable**, les
 prestations françaises concernées ne donnent pas lieu à perception de TVA.
-La facture doit porter la mention de non-application. Depuis
-le **1er septembre 2026**, la référence privilégiée est :
-**« TVA non applicable, art. L. 223 et s. du CIBS »**.
-La référence historique à l'article 293 B du CGI reste tolérée jusqu'au
-**31 décembre 2027**. Un libellé « prix TTC » dans un catalogue
-technique Stripe (`tax_behavior=inclusive`) ne prouve en aucun cas
-qu'une TVA est effectivement due ou collectée.
+La facture doit porter la mention de non-application : au **14 novembre
+2026**, l'administration fiscale indique notamment **« TVA non applicable,
+art. 293 B du CGI »** pour les entreprises bénéficiant effectivement de
+la franchise en base. La recodification correspondante de la TVA dans
+le CIBS, initialement annoncée pour le 1er septembre 2026, a été reportée
+au **1er janvier 2027** par l'article 17 de l'ordonnance n° 2026-671 du
+27 juillet 2026 (modifiant l'article 49 de l'ordonnance n° 2025-1247).
+Ne pas présenter l'article 293 B comme simplement « toléré depuis
+septembre 2026 ». La prochaine date d'effet doit être revue lors de la
+préparation des factures postérieures à 2026. Le code ne certifie ni
+l'éligibilité de l'exploitant à la franchise ni son application aux ventes
+hors France. Un libellé « prix TTC » dans un catalogue technique Stripe
+(`tax_behavior=inclusive`) ne prouve en aucun cas qu'une TVA est
+effectivement due ou collectée.
+
+Sources officielles consultées le 14/11/2026 :
+- [Ordonnance n° 2026-671, article 17, report de la date](https://www.legifrance.gouv.fr/eli/ordonnance/2026/7/27/ECOE2610185R/jo/article_17)
+- [Impôts — obligations TVA du micro-entrepreneur](https://www.impots.gouv.fr/professionnel/questions/en-tant-que-micro-entrepreneur-puis-je-etre-redevable-de-la-tva)
 
 Ne pas activer Stripe Tax automatiquement ni créer de taxe ou de
 registration sans confirmer le pays de l'éditeur et les ventes
