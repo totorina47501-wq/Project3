@@ -1,4 +1,4 @@
-name: MentionCheck production auth release one-shot
+name: MentionCheck production precommercial legal release
 on:
   push:
     branches:
@@ -34,15 +34,15 @@ jobs:
       - name: Checkout exact reviewed main commit
         uses: actions/checkout@v4
         with:
-          ref: 578d02bce4b25052d40dbd7e5274c7fae0dd9c19
+          ref: 1db25ec9e1696f63bf31e907f5e278db8cf2573b
           persist-credentials: false
       - name: Verify main and release source SHA (fail closed)
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "578d02bce4b25052d40dbd7e5274c7fae0dd9c19"
+          test "$(git rev-parse HEAD)" = "1db25ec9e1696f63bf31e907f5e278db8cf2573b"
           remote_main="$(curl --silent --show-error --fail --max-time 20 -H 'Accept: application/vnd.github+json' https://api.github.com/repos/totorina47501-wq/Project3/commits/main | node -e 'let data="";process.stdin.on("data",x=>data+=x);process.stdin.on("end",()=>console.log(JSON.parse(data).sha))')"
-          test "$remote_main" = "578d02bce4b25052d40dbd7e5274c7fae0dd9c19" || { echo 'Main advanced since audit; abort'; exit 1; }
+          test "$remote_main" = "1db25ec9e1696f63bf31e907f5e278db8cf2573b" || { echo 'Main advanced since audit; abort'; exit 1; }
           test -n "$CLOUDFLARE_API_TOKEN" || { echo 'Cloudflare production token missing; abort'; exit 1; }
           test -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY" || { echo 'Supabase publishable key missing; abort'; exit 1; }
       - name: Preflight Cloudflare Worker production guard bindings (read only)
@@ -78,3 +78,10 @@ jobs:
             echo "PROD_AUTH_PAGE_HTTP_OK ${page}"
           done
           echo 'PROD_AUTH_PAGES_HTTP_OK; email link and session E2E still require scoped test'
+          html="$(curl --fail --silent --show-error --max-time 25 https://mentioncheck.app/legal/mentions-legales)"
+          grep -q 'en cours de vérification' <<< "$html" || { echo 'Missing precommercial registration status'; exit 1; }
+          if grep -q 'SIRET déclaré par l' <<< "$html"; then echo 'Unverified SIRET displayed'; exit 1; fi
+          if grep -q 'TVA non applicable, art.' <<< "$html"; then echo 'Unverified tax regime displayed'; exit 1; fi
+          curl --fail --silent --show-error --max-time 25 https://mentioncheck.app/legal/cgu -o /dev/null
+          curl --fail --silent --show-error --max-time 25 https://mentioncheck.app/legal/confidentialite -o /dev/null
+          echo 'PROD_LEGAL_PRELAUNCH_VISIBLE; payments remain blocked'
