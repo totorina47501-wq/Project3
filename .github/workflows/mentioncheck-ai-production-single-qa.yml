@@ -32,7 +32,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-      - name: Préflight : un seul appel et aucune donnée réelle
+      - name: Vérifier avant le test sans données réelles
         run: node --test scripts/recette/production-ai-single-e2e.test.mjs
       - name: Créer un compte technique éphémère et exécuter UNE analyse IA
         run: node scripts/recette/production-ai-single-e2e.mjs
