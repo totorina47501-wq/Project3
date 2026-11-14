@@ -38,11 +38,22 @@ beforeEach(() => {
 
 afterEach(() => vi.unstubAllEnvs());
 
-it('refuse tout Checkout Live sans opt-in B2B explicite avant authentification', async () => {
+it('refuse tout Checkout Live sans portée de clientèle explicite avant authentification', async () => {
   const response=await POST(request());
   expect(response.status).toBe(503);
   expect(mocks.user).not.toHaveBeenCalled();
   expect(mocks.admin).not.toHaveBeenCalled();
+  expect(mocks.stripe).not.toHaveBeenCalled();
+});
+
+it('la portée general_public accepte un compte particulier authentifié sans vérifier une entreprise', async () => {
+  vi.stubEnv('STRIPE_LIVE_BUYER_SCOPE','general_public');
+  mocks.user.mockResolvedValue({user:{id:'consumer-fixture',email:'consumer@example.test',app_metadata:{}}});
+  const response=await POST(request());
+  // Un stub stoppe la suite après le contrôle d'accès, avant toute opération Stripe.
+  expect(response.status).toBe(503);
+  expect(mocks.user).toHaveBeenCalledTimes(1);
+  expect(mocks.admin).toHaveBeenCalledTimes(1);
   expect(mocks.stripe).not.toHaveBeenCalled();
 });
 
