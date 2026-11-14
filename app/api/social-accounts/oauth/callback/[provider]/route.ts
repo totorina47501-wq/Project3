@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { createSocialOAuthAccountStore } from '@/lib/social/oauth/accounts';
 import {
+  exchangeFacebookOAuthCode,
   exchangeSocialOAuthCode,
   revokeSocialOAuthToken,
   OAuthProviderStageError,
@@ -15,10 +16,10 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 type Context = { params: Promise<{ provider: string }> };
-const providerSchema = z.enum(['instagram', 'tiktok', 'youtube', 'linkedin']);
+const providerSchema = z.enum(['instagram', 'tiktok', 'youtube', 'linkedin', 'facebook']);
 
 function returnToSettings(
-  result: 'connected' | 'unavailable',
+  result: 'connected' | 'pages' | 'unavailable',
   provider?: string,
   stage?: 'token' | 'channel' | 'storage',
   reason?: OAuthProviderErrorReason,
@@ -81,6 +82,32 @@ export async function GET(request: Request, context: Context) {
       store: createSocialOAuthTransactionStore(),
       config,
     });
+    if (provider === 'facebook') {
+      const exchanged = await exchangeFacebookOAuthCode({
+        config,
+        redirectUri: config.redirectUri,
+        authorizationCode: callback.authorizationCode,
+      });
+      try {
+        await createSocialOAuthAccountStore().stageFacebookPageSelection({
+          userId: user.id,
+          sessionId,
+          tokenSecret: exchanged.tokenSecret,
+          pages: exchanged.pages,
+        });
+      } catch {
+        try {
+          await revokeSocialOAuthToken({
+            provider,
+            config,
+            tokenSecret: exchanged.tokenSecret,
+          });
+        } catch {}
+        return returnToSettings('unavailable', provider, 'storage');
+      }
+      return returnToSettings('pages', provider);
+    }
+
     const exchanged = await exchangeSocialOAuthCode({
       provider,
       config,

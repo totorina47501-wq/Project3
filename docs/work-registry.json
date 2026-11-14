@@ -352,7 +352,7 @@
     },
     {
       "id": "oauth-social",
-      "name": "Comptes sociaux manuels et OAuth YouTube seul, production fermée",
+      "name": "Comptes manuels, OAuth YouTube, TikTok staging et sélection Facebook Pages staging",
       "status": "partial",
       "anchor": "lib/social/oauth/exchange.ts",
       "test": "tests/unit/social-oauth-routes.test.ts",
@@ -362,6 +362,7 @@
         "instagram",
         "tiktok",
         "youtube",
+        "facebook",
         "oauth"
       ],
       "routes": [
@@ -371,17 +372,21 @@
         "app/api/social-accounts/oauth/providers/route.ts",
         "app/api/social-accounts/oauth/start/route.ts",
         "app/api/social-accounts/oauth/callback/[provider]/route.ts",
-        "app/api/social-accounts/oauth/disconnect/[id]/route.ts"
+        "app/api/social-accounts/oauth/disconnect/[id]/route.ts",
+        "app/api/social-accounts/oauth/facebook/pages/route.ts"
       ],
       "migrations": [
         "supabase/migrations/20261110210000_social_oauth_transactions.sql",
         "supabase/migrations/20261110220000_social_oauth_vault_accounts.sql",
-        "supabase/migrations/20261112072300_social_oauth_expiry_actor.sql"
+        "supabase/migrations/20261112072300_social_oauth_expiry_actor.sql",
+        "supabase/migrations/20261114000100_social_oauth_facebook_platform.sql",
+        "supabase/migrations/20261114000200_social_oauth_facebook_pages.sql"
       ],
       "next": [
-        "Déclarations manuelles préservées. Activation serveur limitée à YouTube même si les flags des autres réseaux sont activés ; flags production explicitement false.",
+        "Déclarations manuelles préservées. YouTube éligible ; TikTok autorisable uniquement sur origine staging exacte après demande opérateur du 13 novembre. Instagram/LinkedIn refusés ; tous flags production false. Réponse TikTok v2 vérifiée sur user.info.basic accordé avant persistance ; le mock scope manquant/insuffisant est refusé. TikTok bloqué par rotation du secret exposé, configuration Sandbox et recette fournisseur ; aucun secret dans Git.",
         "Trois migrations OAuth appliquées au staging, absentes en production au 13 novembre. Recette Google réelle : connexion avec chaîne, persistance Vault, reconnexions sans doublon, révocation confirmée par le handler et refus de consentement PASS. Preuves dans #16, commentaire 6839768857 ; production fermée.",
-        "Jeton temporaire sans renouvellement automatique et première chaîne seulement : reconnexion requise après expiration."
+        "Facebook Pages staging only : pages_show_list, sélection explicite, liste max 20, tokens serveur/Vault, quota atomique et révocation app-wide traitée ; pas de post/message/contenu. App Meta, App Review, Business Verification et recette externe BLOCKED ; migrations locales non appliquées à distance.",
+        "Jeton temporaire sans renouvellement automatique ; reconnexion requise après expiration. Sélection Pages temporaire dix minutes ; refresh disponible avant sélection."
       ]
     },
     {
@@ -744,7 +749,7 @@
     {
       "id": "oauth-provider-review",
       "status": "in_progress",
-      "scope": "YouTube staging : connexion/persistance, reconnexions sans doublon, révocation et refus réels attestés. Expiration réelle et configuration Google publique restent à valider ; production fermée, PR #132 existante",
+      "scope": "YouTube staging : connexion/persistance, reconnexions sans doublon, révocation et refus réels attestés. Expiration réelle et configuration Google publique restent à valider ; production fermée, PR #132 existante Diagnostic Cloudflare OAuth staging étendu dans le workflow existant, sans navigateur et sans valeurs secrètes ; présence/rotation fournisseur distinctes.",
       "environment": "staging",
       "evidence": [
         "https://github.com/totorina47501-wq/Project3/pull/132",

@@ -22,6 +22,9 @@ describe('Routes de déclarations sociales',()=>{
     expect((await PATCH(request({platform:'tiktok',handle:'ok'}),context)).status).toBe(200);
     expect(mocks.rpc).toHaveBeenLastCalledWith('save_social_account',{p_id:id,p_platform:'tiktok',p_handle:'ok'});
     expect((await POST(request({platform:'instagram',handle:'ok',plan:'studio'}))).status).toBe(400);
+    const calls=mocks.rpc.mock.calls.length;
+    expect((await POST(request({platform:'facebook',handle:'personal-profile'}))).status).toBe(400);
+    expect(mocks.rpc).toHaveBeenCalledTimes(calls);
   });
   it('rapporte la limite, les doublons, les lignes absentes et masque les erreurs SDK',async()=>{
     for(const [code,status] of [['P0001',409],['23505',409],['P0002',404],['42501',403],['SDK_PRIVATE',503]] as const){

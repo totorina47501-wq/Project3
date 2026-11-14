@@ -181,6 +181,11 @@ export async function completeSocialOAuthCallback(input: {
     'error_uri',
   ]);
   if (input.provider === 'tiktok') allowedParameters.add('scopes');
+  if (input.provider === 'facebook') {
+    for (const parameter of ['auth_type', 'granted_scopes', 'denied_scopes', 'error_reason']) {
+      allowedParameters.add(parameter);
+    }
+  }
   if (input.provider === 'youtube') {
     // Google documents these optional redirect parameters; none are trusted for
     // identity or authorization. State, session binding and PKCE remain mandatory.

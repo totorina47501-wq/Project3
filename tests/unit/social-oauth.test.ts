@@ -14,6 +14,7 @@ import {
   socialOAuthProviders,
   type SocialOAuthProvider,
 } from '@/lib/social/oauth/providers';
+import { platformSchema } from '@/lib/ai/schemas';
 
 const owner = '20000000-0000-0000-0000-000000000001';
 const other = '20000000-0000-0000-0000-000000000002';
@@ -105,11 +106,57 @@ describe('Socle OAuth social désactivé', () => {
     })).toBeNull();
   });
 
-  it('déclare quatre adaptateurs distincts avec des scopes sans publication', () => {
+  it('autorise TikTok seulement sur staging avec flags, secrets et origine concordants', () => {
+    const origin = 'https://mentioncheck-staging.toto-rina47501.workers.dev';
+    const env = {
+      SOCIAL_OAUTH_ENABLED: 'true', SOCIAL_OAUTH_TIKTOK_ENABLED: 'true',
+      SOCIAL_OAUTH_TIKTOK_CLIENT_KEY: 'offline-client',
+      SOCIAL_OAUTH_TIKTOK_CLIENT_SECRET: 'offline-secret',
+      SOCIAL_OAUTH_PUBLIC_ORIGIN: origin, SOCIAL_OAUTH_ALLOWED_ORIGINS: origin,
+    };
+    expect(socialOAuthConfig('tiktok', env)?.redirectUri).toBe(`${origin}/api/social-accounts/oauth/callback/tiktok`);
+    expect(socialOAuthConfig('tiktok', {...env, SOCIAL_OAUTH_TIKTOK_ENABLED:'false'})).toBeNull();
+    expect(socialOAuthConfig('tiktok', {...env, SOCIAL_OAUTH_TIKTOK_CLIENT_SECRET:''})).toBeNull();
+    expect(socialOAuthConfig('tiktok', {...env, SOCIAL_OAUTH_ALLOWED_ORIGINS:'https://mentioncheck.app'})).toBeNull();
+    expect(socialOAuthConfig('tiktok', {...env, SOCIAL_OAUTH_PUBLIC_ORIGIN:'https://other.test', SOCIAL_OAUTH_ALLOWED_ORIGINS:'https://other.test'})).toBeNull();
+  });
+
+  it('autorise Facebook Pages uniquement sur staging avec flags et secrets dédiés', () => {
+    const origin = 'https://mentioncheck-staging.toto-rina47501.workers.dev';
+    const env = {
+      SOCIAL_OAUTH_ENABLED: 'true',
+      SOCIAL_OAUTH_FACEBOOK_ENABLED: 'true',
+      SOCIAL_OAUTH_FACEBOOK_CLIENT_ID: 'offline-client',
+      SOCIAL_OAUTH_FACEBOOK_CLIENT_SECRET: 'offline-secret',
+      SOCIAL_OAUTH_PUBLIC_ORIGIN: origin,
+      SOCIAL_OAUTH_ALLOWED_ORIGINS: origin,
+    };
+    expect(socialOAuthConfig('facebook', env)?.redirectUri).toBe(
+      `${origin}/api/social-accounts/oauth/callback/facebook`,
+    );
+    expect(socialOAuthConfig('facebook', {
+      ...env,
+      SOCIAL_OAUTH_PUBLIC_ORIGIN: 'https://mentioncheck.app',
+      SOCIAL_OAUTH_ALLOWED_ORIGINS: 'https://mentioncheck.app',
+    })).toBeNull();
+    expect(socialOAuthConfig('facebook', {
+      ...env,
+      SOCIAL_OAUTH_FACEBOOK_ENABLED: 'false',
+    })).toBeNull();
+    expect(socialOAuthConfig('facebook', {
+      ...env,
+      SOCIAL_OAUTH_FACEBOOK_CLIENT_SECRET: '',
+    })).toBeNull();
+    expect(socialOAuthProviders.facebook.scopes).toEqual(['pages_show_list']);
+  });
+
+  it('déclare cinq adaptateurs distincts avec des scopes sans publication', () => {
     expect(socialOAuthProviders.instagram.authorizationEndpoint).toContain('instagram.com');
     expect(socialOAuthProviders.tiktok.clientIdParameter).toBe('client_key');
     expect(socialOAuthProviders.youtube.pkce).toBe(true);
     expect(socialOAuthProviders.linkedin.scopes).toEqual(['openid', 'profile']);
+    expect(socialOAuthProviders.facebook.scopes).toEqual(['pages_show_list']);
+    expect(platformSchema.safeParse('facebook').success).toBe(false);
     for (const provider of Object.values(socialOAuthProviders)) {
       expect(provider.scopes.join(' ')).not.toMatch(/publish|write|message|email/i);
     }

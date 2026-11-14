@@ -2,7 +2,7 @@
 name: MentionCheck Cloudflare read-only diagnostic
 on:
   push:
-    branches: [test/mentioncheck-staging-auth-20261108]
+    branches: [test/mentioncheck-staging-auth-20261108, copilot/social-oauth-001-completion-phase-2]
     paths:
       - '.github/workflows/mentioncheck-cloudflare-readonly-diagnostic.yml'
       - 'scripts/recette/staging-cloudflare-readonly.mjs'
@@ -13,13 +13,24 @@ permissions:
   contents: read
 jobs:
   diagnostic:
-    if: github.repository == 'totorina47501-wq/Project3' && github.ref == 'refs/heads/test/mentioncheck-staging-auth-20261108'
+    if: github.repository == 'totorina47501-wq/Project3' && (github.ref == 'refs/heads/test/mentioncheck-staging-auth-20261108' || github.ref == 'refs/heads/copilot/social-oauth-001-completion-phase-2')
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     env:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.MENTIONCHECK_STAGING_CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.MENTIONCHECK_STAGING_CLOUDFLARE_API_TOKEN }}
     steps:
+      - name: Présence des secrets TikTok GitHub (booléens uniquement)
+        env:
+          STAGING_KEY_PRESENT: ${{ secrets.MENTIONCHECK_STAGING_SOCIAL_OAUTH_TIKTOK_CLIENT_KEY != '' }}
+          STAGING_SECRET_PRESENT: ${{ secrets.MENTIONCHECK_STAGING_SOCIAL_OAUTH_TIKTOK_CLIENT_SECRET != '' }}
+          GENERIC_KEY_PRESENT: ${{ secrets.SOCIAL_OAUTH_TIKTOK_CLIENT_KEY != '' }}
+          GENERIC_SECRET_PRESENT: ${{ secrets.SOCIAL_OAUTH_TIKTOK_CLIENT_SECRET != '' }}
+        run: |
+          printf 'GITHUB_TIKTOK_STAGING_KEY_PRESENT=%s\n' "$STAGING_KEY_PRESENT"
+          printf 'GITHUB_TIKTOK_STAGING_SECRET_PRESENT=%s\n' "$STAGING_SECRET_PRESENT"
+          printf 'GITHUB_TIKTOK_GENERIC_KEY_PRESENT=%s\n' "$GENERIC_KEY_PRESENT"
+          printf 'GITHUB_TIKTOK_GENERIC_SECRET_PRESENT=%s\n' "$GENERIC_SECRET_PRESENT"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:

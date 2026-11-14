@@ -1,5 +1,32 @@
 # Paramètres internes et modèles d’emails
 
+## TikTok — préparation staging demandée le 13 novembre
+
+La demande explicite de l'exploitant étend le périmètre YouTube. Réutiliser le
+ticket #124 et la branche sociale existante ; #132 étant déjà fusionnée, la
+suite TikTok nécessite sa propre PR de revue, sans recréer routes ou migrations.
+Le code accepte TikTok uniquement sur l'origine staging exacte, avec les deux
+flags actifs et les secrets serveur présents. Le fichier Wrangler et la
+production restent fermés. Le parseur utilise la réponse OAuth v2 à la racine.
+
+Configuration opérateur nécessaire :
+- Régénérer le secret exposé dans la capture ; ne pas le réutiliser ni le publier.
+- Dans TikTok **Sandbox**, ajouter Login Kit / Web, permission `user.info.basic`
+  et un compte de test autorisé ; aucun scope de publication ou import vidéo.
+- Redirect URI exacte :
+  `https://mentioncheck-staging.toto-rina47501.workers.dev/api/social-accounts/oauth/callback/tiktok`.
+- Dans les secrets du Worker **mentioncheck-staging** uniquement, renseigner les
+  identifiants de cette Sandbox : `SOCIAL_OAUTH_TIKTOK_CLIENT_KEY` et
+  `SOCIAL_OAUTH_TIKTOK_CLIENT_SECRET`. Ne pas copier un secret production dans staging.
+- N'activer `SOCIAL_OAUTH_TIKTOK_ENABLED` qu'après déploiement du candidat et
+  confirmation de la configuration fournisseur. `SOCIAL_OAUTH_ENABLED` existe déjà.
+
+Les tests hors ligne ne prouvent pas le consentement TikTok, la persistance
+réelle ni sa révocation. Renouvellement automatique non implémenté : reconnexion
+à expiration. Aucun TikTok opérationnel ou validé en production n'est revendiqué.
+Références : [Login Kit Web](https://developers.tiktok.com/docs/en/login-kit-web),
+[échange OAuth v2](https://developers.tiktok.com/docs/en/oauth-get-a-user-access-token).
+
 ## État vérifié le 13 novembre 2026
 
 Sur le staging du candidat `f507054987dc7ba0bb990e5d839040810392d426`
@@ -75,6 +102,7 @@ interrupteur et ses identifiants :
 | TikTok | `SOCIAL_OAUTH_TIKTOK_ENABLED` | `SOCIAL_OAUTH_TIKTOK_CLIENT_KEY` / `SOCIAL_OAUTH_TIKTOK_CLIENT_SECRET` |
 | YouTube | `SOCIAL_OAUTH_YOUTUBE_ENABLED` | `SOCIAL_OAUTH_YOUTUBE_CLIENT_ID` / `SOCIAL_OAUTH_YOUTUBE_CLIENT_SECRET` |
 | LinkedIn | `SOCIAL_OAUTH_LINKEDIN_ENABLED` | `SOCIAL_OAUTH_LINKEDIN_CLIENT_ID` / `SOCIAL_OAUTH_LINKEDIN_CLIENT_SECRET` |
+| Facebook Pages | `SOCIAL_OAUTH_FACEBOOK_ENABLED` | `SOCIAL_OAUTH_FACEBOOK_CLIENT_ID` / `SOCIAL_OAUTH_FACEBOOK_CLIENT_SECRET` |
 
 Ne pas placer les identifiants ou jetons dans le navigateur, une URL, un journal,
 `.env.example` ou le dépôt. Les migrations initiales
@@ -110,17 +138,58 @@ reste à vérifier dans les paramètres de l’application concernée.
 | Réseau | Adaptateur et permissions minimales implémentés | État externe |
 |---|---|---|
 | Instagram / Meta | Instagram Login ; `instagram_business_basic` (séparateur conforme Meta), échange de code sur `api.instagram.com/oauth/access_token`, identifiant de compte renvoyé par le jeton. Le jeton court est traité comme valide 1 h ; aucun échange vers un jeton long ni scope de publication. | **BLOCKED** — compte Business/Creator, app Meta Business, callback enregistré, App Review/permissions et procédure de révocation à confirmer. |
-| TikTok | Login Kit Web ; `user.info.basic`, échange sur `/v2/oauth/token/`, identifiant `open_id`, révocation sur `/v2/oauth/revoke/` avec client key, secret et token en corps form-urlencoded. Pas de contenu de profil collecté. | **BLOCKED** — produit Login Kit et app approuvés, callback enregistré ; confirmer la recette de révocation de l’app. |
+| TikTok | Login Kit Web ; `user.info.basic`, échange sur `/v2/oauth/token/`, validation de ce scope dans la réponse token avant persistance, identifiant `open_id`, révocation sur `/v2/oauth/revoke/` avec client key, secret et token en corps form-urlencoded. Pas de contenu de profil collecté. | **BLOCKED** — produit Login Kit et app approuvés, callback enregistré ; confirmer la recette de révocation de l’app. |
 | YouTube / Google | OAuth web ; `youtube.readonly`, PKCE S256, `channels.list` (`part=id`, `mine=true`, identifiant de chaîne uniquement) et révocation Google. | **BLOCKED** — projet, API/quota, écran de consentement et vérification Google selon les utilisateurs/scopes. |
 | LinkedIn | OIDC ; `openid profile`, échange de code puis endpoint `userinfo`; aucun email. | **BLOCKED** — produit « Sign In with LinkedIn using OpenID Connect », app/callback approuvés et procédure de révocation à confirmer. |
+| Facebook Pages | Facebook Login, échange du code sur le serveur, contrôle de `pages_show_list` via `/me/permissions`, puis liste bornée à 20 des Pages gérées par `/me/accounts` (`id`, `name`, jeton Page seulement en mémoire serveur). L’utilisateur choisit explicitement les Pages. Aucun profil Facebook seul, contenu, messages ou publication. Disponible uniquement avec flags/secrets et origine staging exacte. | **BLOCKED** — App Meta, utilisateurs de test, callback, permission/App Review et Business Verification/Advanced Access à vérifier ; aucune activation production ni E2E fournisseur attestés. |
 
 Documentation officielle : [Instagram Login](https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/business-login/),
+[Meta Pages API — gérer et lister les Pages](https://developers.facebook.com/documentation/pages-api/manage-pages/),
+[permissions Meta et pages_show_list](https://developers.facebook.com/documentation/development/permissions/),
+[demander/vérifier/révoquer les permissions Facebook Login](https://developers.facebook.com/documentation/facebook-login/guides/permissions/request-revoke/),
+[durée et protection des jetons Meta](https://developers.facebook.com/documentation/facebook-login/guides/access-tokens/),
 [TikTok Login Kit Web](https://developers.tiktok.com/doc/login-kit-web/),
 [TikTok token revocation](https://developers.tiktok.com/docs/en/oauth-revoke-a-user-access-token),
 [Google OAuth web server](https://developers.google.com/identity/protocols/oauth2/web-server),
 [YouTube channels.list](https://developers.google.com/youtube/v3/docs/channels/list),
 [Google token revocation](https://developers.google.com/identity/protocols/oauth2/web-server#tokenrevoke),
 [LinkedIn OIDC](https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/sign-in-with-linkedin-v2).
+
+### Facebook Pages — portée et révocation
+
+Facebook est distinct de l’adaptateur Instagram et reste fermé hors de
+`https://mentioncheck-staging.toto-rina47501.workers.dev`. Callback staging :
+`https://mentioncheck-staging.toto-rina47501.workers.dev/api/social-accounts/oauth/callback/facebook`.
+La permission demandée est uniquement `pages_show_list` ; aucun `pages_read_engagement`,
+permission de messages ou permission de publication n’est ajoutée. Meta peut
+demander App Review et Business Verification/Advanced Access avant l’usage hors
+des rôles de test.
+
+Après le retour OAuth, le serveur échange le code, vérifie la permission accordée,
+puis conserve temporairement dans Vault les jetons nécessaires à la sélection.
+Le navigateur reçoit uniquement les noms et identifiants bornés des Pages, jamais
+un jeton. La sélection est liée à la session, expire après dix minutes, contrôle
+que chaque identifiant provient de la liste serveur, déduplique les Pages et
+persiste leurs jetons en Vault dans une transaction qui applique le quota existant.
+Une tâche `pg_cron` supprime les secrets et sélections expirés toutes les cinq
+minutes ; `pg_cron` doit être activé avant d’appliquer la migration. Les accès
+aux routes suppriment aussi immédiatement une sélection expirée. Le harnais
+PGlite simule l’enregistrement de cette tâche, pas l’ordonnanceur Supabase réel.
+L’expiration conservatrice suit celle du jeton utilisateur ; aucun renouvellement
+automatique n’est revendiqué. « Actualiser la liste » revalide les Pages pendant
+la sélection ; pour en ajouter plus tard, relancer la connexion et sélectionner
+les nouvelles Pages.
+
+Meta documente `DELETE /{user-id}/permissions` comme une révocation complète de
+l’autorisation de l’application, qui invalide les jetons utilisateur associés.
+Une déconnexion Facebook enlève donc toutes les Pages Facebook locales de cette
+application, pas seulement la ligne cliquée : une confirmation est demandée puis
+toutes les références Vault Facebook du propriétaire sont supprimées. Si l’appel
+Meta échoue ou si l’intégration n’est pas configurée, les Pages sont tout de même
+désactivées localement et le résultat indique que la révocation distante n’est
+pas confirmée ; il ne prétend pas avoir révoqué l’autorisation Meta. Avant le
+nettoyage Vault, le serveur tente la révocation une fois pour chaque jeton
+utilisateur distinct parmi les Pages enregistrées et les sélections en attente.
 
 Les handles OAuth affichés sont les identifiants techniques stables renvoyés par
 les fournisseurs, pas des noms d’utilisateur vérifiés. Scopes et endpoints sont
@@ -135,11 +204,13 @@ scraping, import média ou publication n’est implémenté.
 |---|---|
 | Échange simulé hors ligne, state/PKCE/callback/anti-replay, contrôles d’accès et tests SQL locaux | **PASS** (suite locale seulement ; le stub SQL ne teste pas le chiffrement Vault natif). |
 | Expiration OAuth : acteur nul refusé, autre propriétaire refusé, propriétaire et service_role autorisés | **PASS** local après migration corrective ; application staging en attente de revue. |
-| Identifiants/app review/callbacks et permissions des quatre plateformes | **BLOCKED** (non fournis/non vérifiés). |
-| E2E staging avec comptes jetables | **BLOCKED** (des tentatives antérieures n’ont pas persisté de compte OAuth ; le parcours complet après le dernier correctif reste à prouver). |
+| Identifiants/app review/callbacks et permissions des cinq réseaux | **BLOCKED** (non fournis/non vérifiés). |
+| E2E Playwright hors ligne avec fournisseurs simulés | **PASS** (2 parcours locaux ; aucune requête Meta réelle ni persistance fournisseur). |
+| E2E staging avec comptes jetables | **BLOCKED** (le parcours fournisseur avec persistance réelle reste à prouver). |
 | Activation en production, migration distante et recette de production | **BLOCKED** (non effectuées et interdites par ce lot). |
 
-Avant une activation ultérieure, il faut créer les applications développeur,
+Avant une activation ultérieure, il faut activer `pg_cron` dans la base de test
+autorisée, créer les applications développeur,
 enregistrer les URI de callback exactes, obtenir les revues/scopes requis, valider
 les méthodes de révocation et renseigner uniquement les secrets du serveur de
 l’environnement isolé. Puis faire une revue humaine Auth/RLS/Vault, appliquer
@@ -235,3 +306,14 @@ Validation locale du correctif : 493 tests unitaires, 15 suites SQL, TypeScript,
 ### Réconciliation avec la certification #128 — 13 novembre
 
 Les branches aux SHAs `b8bf010` (#128) et `6915314` (#132) ont chacune une CI complète SUCCESS (runs 43334929844 et 43335085078), y compris Playwright/SQL/RLS/Next/OpenNext. Les échecs Chromium locaux ne bloquent donc plus ces preuves CI. Cette branche intègre ensuite #128 en conservant le bridge Solo, les preuves PRA/RGPD, le groupe staging `queue: max`, la fermeture IA et les déclarations manuelles. La CI du nouveau commit combiné reste à vérifier séparément. Aucune migration production ni activation OAuth/paiement n'est incluse.
+
+## Reprise sans navigateur — 14 novembre 2026
+
+Réutiliser le workflow `mentioncheck-cloudflare-readonly-diagnostic.yml` et son
+script existant sur la branche de #141. Il inspecte uniquement les noms de
+secrets OAuth staging, les flags booléens autorisés et la concordance stricte
+des origines. Aucun déploiement ni valeur secrète dans les sorties. Les secrets
+Cloudflare restent dans GitHub Actions. Une présence ne prouve ni validité ni
+rotation d'un secret TikTok. Production : job `inspect` existant relançable seul.
+Copilot a indiqué un échec de signature GPG pour publier Facebook : aucun code
+Facebook au HEAD 6ff0889 malgré la fin de session. Ne pas contourner la signature.

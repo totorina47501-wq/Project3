@@ -49,6 +49,18 @@ export const socialOAuthProviders = {
     scopeSeparator: ' ',
     scopes: ['openid', 'profile'],
   },
+  facebook: {
+    authorizationEndpoint: 'https://www.facebook.com/v25.0/dialog/oauth',
+    tokenEndpoint: 'https://graph.facebook.com/v25.0/oauth/access_token',
+    revocationEndpoint: 'https://graph.facebook.com/v25.0/me/permissions',
+    enabledEnv: 'SOCIAL_OAUTH_FACEBOOK_ENABLED',
+    clientIdParameter: 'client_id',
+    clientIdEnv: 'SOCIAL_OAUTH_FACEBOOK_CLIENT_ID',
+    clientSecretEnv: 'SOCIAL_OAUTH_FACEBOOK_CLIENT_SECRET',
+    pkce: false,
+    scopeSeparator: ',',
+    scopes: ['pages_show_list'],
+  },
 } as const;
 
 export type SocialOAuthProvider = keyof typeof socialOAuthProviders;
@@ -68,8 +80,12 @@ export function socialOAuthConfig(
   provider: SocialOAuthProvider,
   env: Record<string, string | undefined> = process.env,
 ): SocialOAuthRuntimeConfig | null {
-  // Only YouTube is eligible for this release, regardless of stale runtime flags.
-  if (provider !== 'youtube') return null;
+  // TikTok is eligible only on the isolated staging origin until provider certification.
+  const tiktokStaging = provider === 'tiktok' &&
+    env.SOCIAL_OAUTH_PUBLIC_ORIGIN === 'https://mentioncheck-staging.toto-rina47501.workers.dev';
+  const facebookStaging = provider === 'facebook' &&
+    env.SOCIAL_OAUTH_PUBLIC_ORIGIN === 'https://mentioncheck-staging.toto-rina47501.workers.dev';
+  if (provider !== 'youtube' && !tiktokStaging && !facebookStaging) return null;
 
   if (
     env.SOCIAL_OAUTH_ENABLED !== 'true' ||

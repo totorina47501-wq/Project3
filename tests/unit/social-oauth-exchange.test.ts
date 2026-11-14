@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 import {
+  exchangeFacebookOAuthCode,
   exchangeSocialOAuthCode,
   revokeSocialOAuthToken,
 } from '@/lib/social/oauth/exchange';
@@ -29,9 +30,183 @@ function response(data: unknown, status = 200) {
 describe('Échange OAuth simulé hors ligne', () => {
   beforeEach(() => vi.restoreAllMocks());
 
+  it('liste les Pages Facebook autorisées sans exposer leurs jetons au navigateur', async () => {
+    const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      expect(init?.redirect).toBe('manual');
+      expect(url).not.toMatch(/[?&](?:access_token|token|client_secret)=/i);
+      if (url === socialOAuthProviders.facebook.tokenEndpoint) {
+        expect(init?.method).toBe('POST');
+        expect(String(init?.body)).toContain('offline-secret');
+        return response({ access_token: 'offline-user-token', expires_in: 3600 });
+      }
+      if (url.endsWith('/me/permissions')) {
+        expect(new Headers(init?.headers).get('authorization')).toContain('offline-user-token');
+        return response({ data: [{ permission: 'pages_show_list', status: 'granted' }] });
+      }
+      if (url.includes('/me/accounts?')) {
+        expect(url).toContain('limit=20');
+        expect(new Headers(init?.headers).get('authorization')).toContain('offline-user-token');
+        return response({ data: [{
+          id: '123456789',
+          name: 'Page de test',
+          access_token: 'offline-page-token',
+        }] });
+      }
+      throw new Error('Unexpected provider request');
+    });
+    const exchanged = await exchangeFacebookOAuthCode({
+      config: config('facebook'),
+      redirectUri: config('facebook').redirectUri,
+      authorizationCode: 'simulated-facebook-code',
+      fetcher: fetcher as typeof fetch,
+      now,
+    });
+    expect(exchanged.pages).toEqual([{ id: '123456789', name: 'Page de test' }]);
+    expect(exchanged.tokenSecret).toContain('offline-page-token');
+    expect(exchanged.tokenSecret).toContain('offline-user-token');
+    expect(JSON.stringify(exchanged.pages)).not.toContain('offline-');
+    expect(fetcher).toHaveBeenCalledTimes(3);
+  });
+
+  it('refuse une autorisation Facebook sans pages_show_list et tente la révocation globale', async () => {
+    const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      expect(url).not.toMatch(/[?&](?:access_token|token|client_secret)=/i);
+      if (url === socialOAuthProviders.facebook.tokenEndpoint) {
+        return response({ access_token: 'offline-user-token', expires_in: 3600 });
+      }
+      if (url.endsWith('/me/permissions')) return response({ data: [] });
+      if (url === socialOAuthProviders.facebook.revocationEndpoint) {
+        expect(init?.method).toBe('DELETE');
+        expect(new Headers(init?.headers).get('authorization')).toContain('offline-user-token');
+        return response(true);
+      }
+      throw new Error('Unexpected provider request');
+    });
+    await expect(exchangeFacebookOAuthCode({
+      config: config('facebook'),
+      redirectUri: config('facebook').redirectUri,
+      authorizationCode: 'simulated-facebook-code',
+      fetcher: fetcher as typeof fetch,
+      now,
+    })).rejects.toMatchObject({
+      stage: 'channel',
+      reason: 'permission_denied',
+      message: 'OAuth provider response unavailable.',
+    });
+    expect(fetcher).toHaveBeenCalledTimes(3);
+  });
+
+  it('refuse plus de vingt Pages et ne persiste aucun token en cas de dépassement', async () => {
+    const fetcher = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url === socialOAuthProviders.facebook.tokenEndpoint) {
+        return response({ access_token: 'offline-user-token', expires_in: 3600 });
+      }
+      if (url.endsWith('/me/permissions')) {
+        return response({ data: [{ permission: 'pages_show_list', status: 'granted' }] });
+      }
+      if (url.includes('/me/accounts?')) {
+        return response({ data: Array.from({ length: 21 }, (_, index) => ({
+          id: String(index + 1), name: `Page ${index + 1}`, access_token: 'offline-page-token',
+        })) });
+      }
+      if (url === socialOAuthProviders.facebook.revocationEndpoint) return response(true);
+      throw new Error('Unexpected provider request');
+    });
+    await expect(exchangeFacebookOAuthCode({
+      config: config('facebook'),
+      redirectUri: config('facebook').redirectUri,
+      authorizationCode: 'simulated-facebook-code',
+      fetcher: fetcher as typeof fetch,
+      now,
+    })).rejects.toMatchObject({ stage: 'channel', message: 'OAuth provider response unavailable.' });
+    expect(fetcher).toHaveBeenCalledTimes(4);
+  });
+
+  it('révoque le consentement Meta côté serveur sans jeton dans l’URL', async () => {
+    const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      expect(String(input)).toBe(socialOAuthProviders.facebook.revocationEndpoint);
+      expect(String(input)).not.toMatch(/[?&](?:access_token|token)=/i);
+      expect(init?.method).toBe('DELETE');
+      expect(new Headers(init?.headers).get('authorization')).toContain('offline-user-token');
+      return response(true);
+    });
+    await expect(revokeSocialOAuthToken({
+      provider: 'facebook',
+      config: config('facebook'),
+      tokenSecret: JSON.stringify({
+        accessToken: 'offline-page-token',
+        userAccessToken: 'offline-user-token',
+        expiresAt: '2026-11-10T13:00:00.000Z',
+      }),
+      fetcher: fetcher as typeof fetch,
+      now,
+    })).resolves.toBeUndefined();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('ne confirme pas une révocation Meta si le fournisseur répond false', async () => {
+    await expect(revokeSocialOAuthToken({
+      provider: 'facebook',
+      config: config('facebook'),
+      tokenSecret: JSON.stringify({
+        accessToken: 'offline-page-token',
+        userAccessToken: 'offline-user-token',
+        expiresAt: '2026-11-10T13:00:00.000Z',
+      }),
+      fetcher: (async () => response(false)) as typeof fetch,
+      now,
+    })).rejects.toThrow('OAuth provider response unavailable.');
+  });
+
+  it.each([
+    ['legacy envelope', { data: { access_token: 'private-token', open_id: 'user', expires_in: 3600 } }],
+    ['provider rejection', { error: 'invalid_grant', error_description: 'private-detail' }],
+    ['expired token', { access_token: 'private-token', open_id: 'user', expires_in: 0, scope: 'user.info.basic' }],
+    ['fractional expiry', { access_token: 'private-token', open_id: 'user', expires_in: 60.5, scope: 'user.info.basic' }],
+    ['oversized response', { access_token: 'private-token', open_id: 'user', expires_in: 3600, padding: 'x'.repeat(17000) }],
+  ])('refuse TikTok %s sans retourner de compte ni de secret', async (_name, payload) => {
+    const fetcher = vi.fn(async () => response(payload));
+    await expect(exchangeSocialOAuthCode({
+      provider: 'tiktok', config: config('tiktok'),
+      redirectUri: config('tiktok').redirectUri, authorizationCode: 'offline-code',
+      codeVerifier: null, now, fetcher: fetcher as typeof fetch,
+    })).rejects.toMatchObject({ stage: 'token', message: expect.stringMatching(/^OAuth provider (request|response) unavailable\.$/) });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('masque les détails réseau TikTok et ne retourne pas de compte', async () => {
+    await expect(exchangeSocialOAuthCode({
+      provider: 'tiktok', config: config('tiktok'),
+      redirectUri: config('tiktok').redirectUri, authorizationCode: 'offline-code',
+      codeVerifier: null, now,
+      fetcher: (async () => { throw new Error('private-token private-secret'); }) as typeof fetch,
+    })).rejects.toMatchObject({ stage: 'token', message: 'OAuth provider response unavailable.' });
+  });
+
+  it.each([
+    ['HTTP rejection', 401, '{"error":"invalid_token"}'],
+    ['logical rejection', 200, '{"error":"invalid_token","error_description":"private-token"}'],
+    ['malformed response', 200, '<html>private-token</html>'],
+    ['redirect', 302, ''],
+  ])('ne confirme pas la révocation TikTok après %s', async (_name, status, body) => {
+    await expect(revokeSocialOAuthToken({
+      provider: 'tiktok', config: config('tiktok'), now,
+      tokenSecret: JSON.stringify({ accessToken: 'private-token', expiresAt: '2026-11-10T13:00:00.000Z' }),
+      fetcher: (async () => new Response(body, { status })) as typeof fetch,
+    })).rejects.toThrow(/^OAuth provider (request|response) unavailable\.$/);
+  });
+
   it.each([
     ['instagram', { access_token: 'ig-access', user_id: 12345 }],
-    ['tiktok', { data: { access_token: 'tt-access', expires_in: 3600, open_id: 'tt-user' } }],
+    ['tiktok', {
+      access_token: 'tt-access',
+      expires_in: 3600,
+      open_id: 'tt-user',
+      scope: 'user.info.basic',
+    }],
     ['youtube', { access_token: 'yt-access', expires_in: 3600 }],
     ['linkedin', { access_token: 'li-access', expires_in: 3600 }],
   ] as const)(
@@ -88,6 +263,50 @@ describe('Échange OAuth simulé hors ligne', () => {
       expect(fetcher).toHaveBeenCalledTimes(provider === 'youtube' || provider === 'linkedin' ? 2 : 1);
     },
   );
+
+  it.each([
+    ['missing', undefined],
+    ['empty', ''],
+    ['unrelated', 'video.list'],
+  ])('refuse un jeton TikTok sans le scope réellement accordé (%s)', async (_name, scope) => {
+    const fetcher = vi.fn(async () => response({
+      access_token: 'private-token',
+      expires_in: 3600,
+      open_id: 'private-open-id',
+      ...(scope === undefined ? {} : { scope }),
+    }));
+    await expect(exchangeSocialOAuthCode({
+      provider: 'tiktok',
+      config: config('tiktok'),
+      redirectUri: config('tiktok').redirectUri,
+      authorizationCode: 'simulated-code',
+      codeVerifier: null,
+      fetcher: fetcher as typeof fetch,
+      now,
+    })).rejects.toMatchObject({
+      stage: 'token',
+      message: 'OAuth provider response unavailable.',
+    });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepte le scope TikTok requis même avec d’autres scopes accordés', async () => {
+    const fetcher = vi.fn(async () => response({
+      access_token: 'tt-access',
+      expires_in: 3600,
+      open_id: 'tt-user',
+      scope: 'video.list,user.info.basic',
+    }));
+    await expect(exchangeSocialOAuthCode({
+      provider: 'tiktok',
+      config: config('tiktok'),
+      redirectUri: config('tiktok').redirectUri,
+      authorizationCode: 'simulated-code',
+      codeVerifier: null,
+      fetcher: fetcher as typeof fetch,
+      now,
+    })).resolves.toMatchObject({ handle: 'tt-user' });
+  });
 
   it('refuse les jetons mal formés et masque les erreurs du fournisseur', async () => {
     const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
@@ -174,7 +393,7 @@ describe('Échange OAuth simulé hors ligne', () => {
 
   it.each([
     ['instagram', { access_token: 'ig-token', expires_in: 3600 }, null],
-    ['tiktok', { data: { access_token: 'tt-token', expires_in: 3600 } }, null],
+    ['tiktok', { access_token: 'tt-token', expires_in: 3600, scope: 'user.info.basic' }, null],
     ['linkedin', { access_token: 'li-token', expires_in: 3600 }, {}],
   ] as const)(
     'classe un profil %s absent sans inférer un compte inexistant',

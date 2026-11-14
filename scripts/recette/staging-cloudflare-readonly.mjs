@@ -112,3 +112,39 @@ try{
   }
  }
 }catch{console.log('STAGING_PREVIEW_INVENTORY_NETWORK_BLOCKED');}
+
+// OAuth preflight: inspect binding names and allowlisted booleans only.
+// Never log arbitrary settings or read secret values.
+const oauthRoot='https://api.cloudflare.com/client/v4/accounts/'+account+
+ '/workers/scripts/mentioncheck-staging';
+for(const path of ['/secrets','/settings']){
+ try{
+  const response=await fetch(oauthRoot+path,{method:'GET',
+   headers:{Authorization:'Bearer '+token},signal:AbortSignal.timeout(16000)});
+  if(!response.ok){console.log('STAGING_OAUTH_PREFLIGHT_HTTP_'+response.status);continue;}
+  const payload=await response.json();
+  if(payload.success!==true){console.log('STAGING_OAUTH_PREFLIGHT_REJECTED');continue;}
+  if(path==='/secrets'){
+   const names=new Set((Array.isArray(payload.result)?payload.result:[]).map(x=>x?.name));
+   for(const provider of ['YOUTUBE','TIKTOK','FACEBOOK']){
+    for(const suffix of [provider==='TIKTOK'?'CLIENT_KEY':'CLIENT_ID','CLIENT_SECRET']){
+     const name='SOCIAL_OAUTH_'+provider+'_'+suffix;
+     console.log('STAGING_OAUTH_SECRET_PRESENT '+name+'='+names.has(name));
+    }
+   }
+  }else{
+   const bindings=Array.isArray(payload.result?.bindings)?payload.result.bindings:[];
+   for(const name of ['SOCIAL_OAUTH_ENABLED','SOCIAL_OAUTH_YOUTUBE_ENABLED',
+    'SOCIAL_OAUTH_TIKTOK_ENABLED','SOCIAL_OAUTH_FACEBOOK_ENABLED']){
+    const binding=bindings.find(x=>x?.name===name&&x.type==='plain_text');
+    const value=binding?.text;
+    console.log('STAGING_OAUTH_FLAG '+name+'='+(value==='true'?'true':value==='false'?'false':'unknown'));
+   }
+   for(const name of ['SOCIAL_OAUTH_PUBLIC_ORIGIN','SOCIAL_OAUTH_ALLOWED_ORIGINS']){
+    const binding=bindings.find(x=>x?.name===name&&x.type==='plain_text');
+    console.log('STAGING_OAUTH_ORIGIN_EXACT '+name+'='+
+     (binding?.text==='https://mentioncheck-staging.toto-rina47501.workers.dev'));
+   }
+  }
+ }catch{console.log('STAGING_OAUTH_PREFLIGHT_NETWORK_ERROR');}
+}
