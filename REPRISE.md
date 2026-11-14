@@ -1,5 +1,11 @@
 # Reprise MentionCheck — 6 novembre 2026
 
+## Actualisation du 14 novembre 2026 — transition Solo Production exécutée
+
+**Source prioritaire sur les notes du 13 novembre et antérieures.** Les trois migrations EXISTANTES Gratuit/Solo/promotion/bridge ont été appliquées à Supabase Production `zcztvberuihphqklhjsr` dans **une seule transaction** avec préflight strict, vérification des privilèges/RLS et historisation de chacune des trois versions. Relevé après COMMIT : **22 migrations**, 2 comptes Solo historiques intacts, 2 droits `activation_pending=true` sans `starts_at` ni `expires_at`, 0 souscription Stripe, 0 période promotionnelle démarrée. Le harnais des mêmes migrations a également été exécuté et annulé intégralement sur le clone PRA déjà existant (aucun effet persistant). **Ne pas refaire cette migration.** [Preuves #16](https://github.com/totorina47501-wq/Project3/issues/16#issuecomment-6878076215).
+
+**La commercialisation n'est pas activée** : `PROMO_SOLO_ENABLED`, `BILLING_ENABLED`, `STRIPE_WEBHOOK_ENABLED` et `STRIPE_LIVE_APPROVED` restent désactivés. Les CGV sont toujours en prépublication, un médiateur consommateur n'est pas désigné et la réactivation texte/vision IA sous budget contrôlé ainsi que les recettes E2E Stripe restent à attester. Le code juridique a été fusionné dans [PR #143](https://github.com/totorina47501-wq/Project3/pull/143), SHA main `41c7ea582477ac4ef9b9aad5c25b7996baaaae6b`. Le statut du déploiement Cloudflare est à contrôler séparément.
+
 ## Reprise agents — 13 novembre, après recette Google réelle
 
 Cette entrée prévaut sur les snapshots historiques ci-dessous. Références avant
