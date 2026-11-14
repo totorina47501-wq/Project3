@@ -47,3 +47,22 @@ it('présente les limites réellement accordées, dont cinq sièges Studio propr
  expect(markup).toContain('href="/developpeurs"');
  expect(markup).not.toMatch(/illimité|brand safety certifié/i);
 });
+
+it('ne propose le Checkout Live qu’avec l’opt-in professionnel et un affichage explicite',()=>{
+ const keys={
+  BILLING_ENABLED:'true',STRIPE_MODE:'live',STRIPE_SECRET_KEY:'sk_live_fixture',
+  STRIPE_WEBHOOK_SECRET:'whsec_fixture',STRIPE_PRICE_SOLO:'price_SOLO',
+  STRIPE_PRICE_PRO:'price_PRO',STRIPE_PRICE_STUDIO:'price_STUDIO',
+  STRIPE_LIVE_APPROVED:'true',STRIPE_LIVE_LEGAL_REGISTRATION:'123456789',
+  STRIPE_LIVE_TAX_REVIEW:'approved',STRIPE_LIVE_TERMS_REVIEW:'approved',
+  STRIPE_LIVE_E2E_REVIEW:'passed',OPENAI_PAUSED:'false',
+  OPENAI_TEXT_ENABLED:'true',OPENAI_VISION_ENABLED:'true',
+  OPENAI_API_KEY:'sk-proj-fixture',NEXT_PUBLIC_APP_URL:'https://mentioncheck.app',
+ };
+ for(const [key,value] of Object.entries(keys))vi.stubEnv(key,value);
+ expect(renderToStaticMarkup(PricingPage())).not.toContain('Paiement test solo');
+ vi.stubEnv('STRIPE_LIVE_BUYER_SCOPE','verified_b2b_fr');
+ const page=renderToStaticMarkup(PricingPage());
+ expect(page).toContain('Paiement test solo');
+ expect(page).toContain('professionnels français préalablement vérifiés');
+});
