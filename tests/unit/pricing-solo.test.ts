@@ -27,6 +27,7 @@ it('présente les trois prix indicatifs et les états sans paiement quand Stripe
  expect(markup.match(/Abonnement bientôt disponible/g)).toHaveLength(3);
  expect(markup).toContain('Gratuit — 0 € / mois');
  expect(markup).toContain('sans carte bancaire ni abonnement Stripe');
+ expect(markup).toContain('TVA non applicable, art. 293 B du CGI');
  expect(markup).not.toContain('Paiement test');
 });
 it('présente les limites réellement accordées, dont cinq sièges Studio propriétaire compris',()=>{
