@@ -18,7 +18,7 @@ describe('Configuration Cloudflare sécurisée',()=>{
       SOCIAL_OAUTH_LINKEDIN_ENABLED:'false',
       PROMO_SOLO_ENABLED:'false',
       BILLING_ENABLED:'false',STRIPE_WEBHOOK_ENABLED:'false',
-      STRIPE_MODE:'live',
+      STRIPE_MODE:'live',STRIPE_LIVE_BUYER_SCOPE:'general_public',
       STRIPE_PRICE_SOLO:'price_1UaKLwCdRRAa9LkpiXUiv0wc',
       STRIPE_PRICE_PRO:'price_1UaKLyCdRRAa9Lkp5daPFLZK',
       STRIPE_PRICE_STUDIO:'price_1UaKM0CdRRAa9Lkptx9oZCS8',
@@ -33,6 +33,8 @@ describe('Configuration Cloudflare sécurisée',()=>{
     expect(config.vars.BILLING_ENABLED).toBe('false');
     expect(config.vars.STRIPE_WEBHOOK_ENABLED).toBe('false');
     expect(config.vars.STRIPE_LIVE_APPROVED).toBe('false');
+    expect(config.vars.STRIPE_LIVE_BUYER_SCOPE).toBe('general_public');
+    expect(config.previews.vars).not.toHaveProperty('STRIPE_LIVE_BUYER_SCOPE');
     expect(JSON.stringify(config.vars)).not.toMatch(/sk_live_|sk_test_|whsec_/);
     // IA payante fermée en attendant une activation séparée autorisée.
     // La clé reste un secret du Worker, jamais une variable publiée dans Git.
