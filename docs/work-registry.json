@@ -82,7 +82,8 @@
         "Adaptateur audio inchangé, désactivé par défaut et non raccordé au flux distant.",
         "Réactivation texte/vision explicite sur branche dédiée : audio, embeddings et médias IA automatiques restent interdits. Vérifier clé production et plafond strict API avant preuve de dépense ; docs/62-ai-reactivation-20261110.md.",
         "Probe HTTP de production GET /api/health/ai : ne fait aucun appel payant, n'expose ni clé ni détails sensibles ; retourne configured uniquement si flags texte/vision et clé sont présents. Ne prouve pas la validité de la clé ni le succès d'un appel GPT-4o.",
-        "Activation IA 14/11/2026 autorisée et préparée : wrangler.jsonc du Worker production passe OPENAI_PAUSED=false, OPENAI_TEXT_ENABLED=true, OPENAI_VISION_ENABLED=true ; audio, embeddings et IA média restent OFF, staging et preview OFF, Stripe OFF. Ne pas déclarer disponible avant preuve Cloudflare runtime, plafond fournisseur OpenAI confirmé et test API réel contrôlé. Voir docs/62-ai-reactivation-20261110.md et issue #16."
+        "Activation IA 14/11/2026 autorisée et préparée : wrangler.jsonc du Worker production passe OPENAI_PAUSED=false, OPENAI_TEXT_ENABLED=true, OPENAI_VISION_ENABLED=true ; audio, embeddings et IA média restent OFF, staging et preview OFF, Stripe OFF. Ne pas déclarer disponible avant preuve Cloudflare runtime, plafond fournisseur OpenAI confirmé et test API réel contrôlé. Voir docs/62-ai-reactivation-20261110.md et issue #16.",
+        "Cloudflare Production conserve les flags IA fermés après fusion #155 (diagnostic read-only : secret OpenAI présent par nom, anciens flags actifs). Lot #156 : script et workflow PATCH **uniquement 3 flags texte/vision**, préflight version/secret/Stripe fermé, secret hérité, vérification post-écriture + probe sans coût. Activation effective, plafond fournisseur 25 USD et réponse modèle restent à attester. Aucune nouvelle migration ni activation Stripe."
       ]
     },
     {
