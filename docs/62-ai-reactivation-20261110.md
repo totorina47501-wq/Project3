@@ -1,6 +1,19 @@
 # MentionCheck — réactivation IA payante contrôlée
 **État au 14 novembre 2026 : activation texte et vision autorisée par l'exploitant et proposée dans le code de production ; propagation réelle Cloudflare et fonctionnement modèle non encore attestés.**
 
+### Exécution Cloudflare ciblée après fusion (14/11/2026)
+
+La **PR de paramètres IA #155** a été fusionnée (commit `4e7948d9bb9f30be94a462a91e68f8d462ea2c8f`, CI verte), mais le diagnostic API Cloudflare lu après fusion affichait encore `OPENAI_PAUSED=true`, `OPENAI_TEXT_ENABLED=false`, `OPENAI_VISION_ENABLED=false`. Il a confirmé la **présence du nom** du secret `OPENAI_API_KEY`.
+
+Pour corriger la non-propagation due à `keep_vars=true`, un lot opérateur dédié ajoute :
+- `scripts/recette/production-ai-activate.mjs` : modification **exclusive** des trois indicateurs IA via PATCH des settings Cloudflare, avec lecture des versions, comparaison des bindings avant écriture, héritage des secrets et préservation du namespace Durable Object.
+- `.github/workflows/mentioncheck-ai-production-activate.yml` : tentative de modification du Worker principal **uniquement** depuis la branche `main`, lors du commit opérateur explicite (ou relance `workflow_dispatch`), avec le secret Github Actions `MENTIONCHECK_PROD_CLOUDFLARE_API_TOKEN` si disponible. Aucun jeton de staging.
+- Contrôle POST-PATCH des paramètres et GET `/api/health/ai` **sans appel payant** à OpenAI. Un HTTP 200 `configured` ne certifie pas le fonctionnement du modèle ; une réponse réelle d'un utilisateur authentifié reste nécessaire.
+- Le script **refuse toute mutation** si Stripe, les fonctionnalités IA non autorisées ou la promotion Solo sont ouverts, si le Worker ou domaine diffère, si la clé OpenAI est absente, si la version déployée est incohérente ou si des bindings changent concurrentiellement.
+- La permission Cloudflare GitHub Actions peut être en lecture seule ou absente : dans ce cas, la tentative doit échouer **sans altérer la production** et la connexion Cloudflare devra être rétablie. Conserver tous les logs sans secret.
+
+**Important : le plafond budgétaire fournisseur OpenAI de 25 USD/mois n'a pas été consulté par ce workflow.** L'autorisation opérateur de fournir l'IA ne constitue pas une attestation de plafond. Ne pas annoncer de plafonnement garanti ni certifier le succès des réponses IA sans vérifications fournisseur et utilisateur.
+
 ### Activation décidée le 14/11/2026
 
 - Dans `wrangler.jsonc` **Worker principal seulement** : `OPENAI_PAUSED=false`, `OPENAI_TEXT_ENABLED=true`, `OPENAI_VISION_ENABLED=true`.
