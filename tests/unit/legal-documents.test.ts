@@ -15,6 +15,12 @@ describe('Documents juridiques MentionCheck en prépublication', () => {
     expect(html).toContain('médiateur');
     expect(html).toContain('Solo (9 € par mois)');
     expect(html).toContain('TVA non applicable, art. 293 B du CGI');
+    expect(html).toContain('Les abonnements Solo, Pro et Studio sont mensuels et reconduits automatiquement');
+    expect(html).toContain('depuis son compte, rubrique Paramètres');
+    expect(html).toContain('quatorze jours après la notification');
+    expect(html).toContain('aucun médiateur effectivement conventionné');
+    expect(html).toContain('avant toute vente aux consommateurs');
+    expect(html).toContain('situé hors de France');
     expect(html).not.toContain('mentioncheckcorp@gmail.com');
     expect(html).toContain('non encore approuvé');
     expect(html).toContain('Ali Rassoul');
