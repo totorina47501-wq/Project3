@@ -3,7 +3,7 @@ export const BRAND = {
   // Informations déclarées par l'exploitant, sans vérification externe.
   legalName: 'Ali Rassoul',
   tradeName: 'Aliaicorp',
-  legalAddress: '4, rue de la Boule, 75002 Paris, France',
+  legalAddress: '100 avenue Gambetta, 47500 Fumel, France',
   siret: '899 123 459 00013',
   vatNotice: 'TVA non applicable, art. 293 B du CGI',
   contactEmail: 'contact@aliaicorp.fr',

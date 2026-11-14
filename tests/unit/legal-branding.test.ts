@@ -22,7 +22,9 @@ describe('Branding légal public', () => {
     expect(html).toContain('Ali Rassoul');
     expect(html).toContain('899 123 459 00013');
     expect(html).toContain('Aliaicorp');
-    expect(html).toContain('4, rue de la Boule');
+    expect(html).toContain('100 avenue Gambetta');
+    expect(html).toContain('47500 Fumel');
+    expect(html).not.toContain('4, rue de la Boule');
     expect(html).toContain('contact@aliaicorp.fr');
     expect(html).toContain('0675814948');
     expect(html).toContain('293 B du CGI');
