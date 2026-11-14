@@ -1,6 +1,7 @@
 name: MentionCheck AI Production — One-shot authenticated text QA
 on:
-  push:
+  pull_request:
+    types: [opened]
     branches: [main]
     paths:
       - '.github/workflows/mentioncheck-ai-production-single-qa.yml'
@@ -15,8 +16,10 @@ jobs:
   text-qa:
     if: >-
       github.repository == 'totorina47501-wq/Project3' &&
-      github.ref == 'refs/heads/main' &&
-      startsWith(github.event.head_commit.message, 'ops(ai): run one-shot production text QA')
+      github.event_name == 'pull_request' &&
+      github.event.action == 'opened' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'qa/trigger-production-ai-once-20261114'
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     env:
