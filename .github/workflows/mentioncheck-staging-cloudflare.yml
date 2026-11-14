@@ -1,6 +1,9 @@
 # Déploiement sûr et explicite ; aucune PR ou push ne publie un Worker.
 name: MentionCheck Staging Cloudflare
 on:
+  push:
+    branches: [ops/staging-auth-align-20261114]
+    paths: ['.github/workflows/mentioncheck-staging-cloudflare.yml']
   workflow_dispatch:
     inputs:
       mode:
@@ -16,7 +19,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   staging:
-    if: github.ref == 'refs/heads/main' && github.repository == 'totorina47501-wq/Project3'
+    if: github.repository == 'totorina47501-wq/Project3' && ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name == 'push' && github.ref == 'refs/heads/ops/staging-auth-align-20261114'))
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
@@ -38,7 +41,18 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.MENTIONCHECK_STAGING_SUPABASE_ANON_KEY }}
       SUPABASE_SERVICE_KEY: ${{ secrets.MENTIONCHECK_STAGING_SUPABASE_SERVICE_KEY }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout latest approved main application commit
+        uses: actions/checkout@v4
+        with:
+          ref: 578d02bce4b25052d40dbd7e5274c7fae0dd9c19
+          persist-credentials: false
+      - name: Verify exact main source SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "578d02bce4b25052d40dbd7e5274c7fae0dd9c19"
+          remote_main="$(curl --fail --silent --show-error --max-time 20 -H 'Accept: application/vnd.github+json' https://api.github.com/repos/totorina47501-wq/Project3/commits/main | node -e 'let data="";process.stdin.on("data",x=>data+=x);process.stdin.on("end",()=>console.log(JSON.parse(data).sha))')"
+          test "$remote_main" = "578d02bce4b25052d40dbd7e5274c7fae0dd9c19" || { echo "::error::main advanced; staging release blocked"; exit 1; }
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
@@ -46,7 +60,7 @@ jobs:
       - name: Vérifier le périmètre staging
         run: node scripts/recette/check-cloudflare-staging-boundary.mjs
       - name: Refuser publication sans les quatre secrets staging
-        if: inputs.mode == 'publish'
+        if: inputs.mode == 'publish' || github.event_name == 'push'
         shell: bash
         run: |
           set -euo pipefail
@@ -57,7 +71,7 @@ jobs:
             fi
           done
       - name: Prouver que les deux clés sont valides sur la base Supabase staging, pas production
-        if: inputs.mode == 'publish'
+        if: inputs.mode == 'publish' || github.event_name == 'push'
         shell: bash
         run: |
           set -euo pipefail
@@ -75,6 +89,28 @@ jobs:
       - name: Fournir une clé fictive pour le dry-run sans authentification
         if: inputs.mode == 'dry-run'
         run: echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=staging-dry-run-placeholder" >> "$GITHUB_ENV"
+      - name: Contrôler les frontières du Worker staging avant publication
+        if: inputs.mode == 'publish' || github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const acc=process.env.CLOUDFLARE_ACCOUNT_ID;
+          const key=process.env.CLOUDFLARE_API_TOKEN;
+          assert.ok(acc && key, 'Missing staging account credentials');
+          const url=`https://api.cloudflare.com/client/v4/accounts/${acc}/workers/scripts/mentioncheck-staging/settings`;
+          const resp=await fetch(url,{headers:{Authorization:`Bearer ${key}`}});
+          const data=await resp.json();
+          assert.ok(resp.ok && data.success && Array.isArray(data.result?.bindings),'Staging settings unavailable');
+          const flags=new Map(data.result.bindings.filter(x=>x.type==='plain_text').map(x=>[x.name,x.text]));
+          assert.equal(flags.get('NEXT_PUBLIC_SUPABASE_URL'),'https://ukvgnkxgzyhswgpnvyzz.supabase.co','Wrong staging database');
+          assert.equal(flags.get('NEXT_PUBLIC_APP_URL'),'https://mentioncheck-staging.toto-rina47501.workers.dev','Wrong staging hostname');
+          assert.equal(flags.get('BILLING_ENABLED'),'false','Checkout must stay off');
+          assert.equal(flags.get('STRIPE_MODE'),'test','Staging must be Stripe TEST');
+          assert.equal(flags.get('OPENAI_PAUSED'),'true','OpenAI must remain paused in staging');
+          console.log('STAGING_AUTH_RELEASE_PREFLIGHT_OK isolated staging Supabase/Worker; AI and billing off');
+          NODE
       - name: Installation déterministe
         run: npm ci --ignore-scripts
       - name: Compiler Next.js sur la référence staging
@@ -84,15 +120,25 @@ jobs:
       - name: Prévisualiser le package Cloudflare sans déployer
         run: npx wrangler deploy --config wrangler.staging.jsonc --dry-run
       - name: Publier uniquement mentioncheck-staging
-        if: inputs.mode == 'publish'
+        if: inputs.mode == 'publish' || github.event_name == 'push'
         run: npx @opennextjs/cloudflare deploy --config wrangler.staging.jsonc -- --keep-vars
       - name: Définir les secrets sur le Worker staging uniquement
-        if: inputs.mode == 'publish'
+        if: inputs.mode == 'publish' || github.event_name == 'push'
         shell: bash
         run: |
           set -euo pipefail
           printf '%s' "$NEXT_PUBLIC_SUPABASE_ANON_KEY" | npx wrangler secret put NEXT_PUBLIC_SUPABASE_ANON_KEY --config wrangler.staging.jsonc
           printf '%s' "$SUPABASE_SERVICE_KEY" | npx wrangler secret put SUPABASE_SERVICE_KEY --config wrangler.staging.jsonc
-      - name: Vérifier la page connexion staging
-        if: inputs.mode == 'publish'
-        run: curl --fail --silent --show-error --retry 3 --max-time 25 https://mentioncheck-staging.toto-rina47501.workers.dev/login --output /dev/null
+      - name: Vérifier les quatre pages d'authentification staging
+        if: inputs.mode == 'publish' || github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage='https://mentioncheck-staging.toto-rina47501.workers.dev'
+          for page in /login /register /forgot-password /reset-password; do
+            curl --fail --silent --show-error --retry 3 --retry-delay 2 --max-time 25 "${stage}${page}" -o /dev/null
+            echo "STAGING_AUTH_HTTP_OK ${page}"
+          done
+          content="$(curl --fail --silent --show-error --max-time 25 "${stage}/login")"
+          grep -q 'Mot de passe oublié' <<< "$content" || { echo "::error::Version Auth attendue non visible"; exit 1; }
+          echo 'STAGING_AUTH_FEATURES_VISIBLE; email recovery links require separate Supabase allowlist verification'
