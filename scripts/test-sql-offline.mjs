@@ -94,6 +94,10 @@ export function migrationForOffline(name,original) {
       omissions:['Chiffrement, clés et privilèges natifs de Supabase Vault remplacés par un stub éphémère.'],
     };
   }
+  if(name==='20261114000200_social_oauth_facebook_pages.sql')return {
+    sql:original,
+    omissions:['pg_cron simulé localement ; l’exécution réelle du planificateur n’est pas testée.'],
+  };
   if(name!=='202611032001_initial_schema.sql')return {sql:original,omissions:[]};
   const omissions=[];
   let sql=original;
@@ -120,6 +124,7 @@ export async function installSupabaseStubs(db) {
     create schema storage;
     create schema extensions;
     create schema vault;
+    create schema cron;
     grant usage on schema auth to anon,authenticated,service_role;
     create table auth.users (
       id uuid primary key,
@@ -147,6 +152,24 @@ export async function installSupabaseStubs(db) {
         insert into vault.secrets(secret,name,description)
         values(p_secret,p_name,p_description) returning id into v_id;
         return v_id;
+      end
+    $$;
+    create table cron.job (
+      jobid bigserial primary key,
+      jobname text unique not null,
+      schedule text not null,
+      command text not null
+    );
+    create function cron.schedule(job_name text, schedule text, command text)
+      returns bigint language plpgsql as $$
+      declare v_jobid bigint;
+      begin
+        insert into cron.job(jobname,schedule,command)
+        values(job_name,schedule,command)
+        on conflict(jobname) do update
+          set schedule=excluded.schedule, command=excluded.command
+        returning jobid into v_jobid;
+        return v_jobid;
       end
     $$;
     create table storage.buckets (

@@ -171,6 +171,10 @@ Le navigateur reçoit uniquement les noms et identifiants bornés des Pages, jam
 un jeton. La sélection est liée à la session, expire après dix minutes, contrôle
 que chaque identifiant provient de la liste serveur, déduplique les Pages et
 persiste leurs jetons en Vault dans une transaction qui applique le quota existant.
+Une tâche `pg_cron` supprime les secrets et sélections expirés toutes les cinq
+minutes ; `pg_cron` doit être activé avant d’appliquer la migration. Les accès
+aux routes suppriment aussi immédiatement une sélection expirée. Le harnais
+PGlite simule l’enregistrement de cette tâche, pas l’ordonnanceur Supabase réel.
 L’expiration conservatrice suit celle du jeton utilisateur ; aucun renouvellement
 automatique n’est revendiqué. « Actualiser la liste » revalide les Pages pendant
 la sélection ; pour en ajouter plus tard, relancer la connexion et sélectionner
@@ -183,7 +187,9 @@ application, pas seulement la ligne cliquée : une confirmation est demandée pu
 toutes les références Vault Facebook du propriétaire sont supprimées. Si l’appel
 Meta échoue ou si l’intégration n’est pas configurée, les Pages sont tout de même
 désactivées localement et le résultat indique que la révocation distante n’est
-pas confirmée ; il ne prétend pas avoir révoqué l’autorisation Meta.
+pas confirmée ; il ne prétend pas avoir révoqué l’autorisation Meta. Avant le
+nettoyage Vault, le serveur tente la révocation une fois pour chaque jeton
+utilisateur distinct parmi les Pages enregistrées et les sélections en attente.
 
 Les handles OAuth affichés sont les identifiants techniques stables renvoyés par
 les fournisseurs, pas des noms d’utilisateur vérifiés. Scopes et endpoints sont
@@ -202,7 +208,8 @@ scraping, import média ou publication n’est implémenté.
 | E2E staging avec comptes jetables | **BLOCKED** (des tentatives antérieures n’ont pas persisté de compte OAuth ; le parcours complet après le dernier correctif reste à prouver). |
 | Activation en production, migration distante et recette de production | **BLOCKED** (non effectuées et interdites par ce lot). |
 
-Avant une activation ultérieure, il faut créer les applications développeur,
+Avant une activation ultérieure, il faut activer `pg_cron` dans la base de test
+autorisée, créer les applications développeur,
 enregistrer les URI de callback exactes, obtenir les revues/scopes requis, valider
 les méthodes de révocation et renseigner uniquement les secrets du serveur de
 l’environnement isolé. Puis faire une revue humaine Auth/RLS/Vault, appliquer

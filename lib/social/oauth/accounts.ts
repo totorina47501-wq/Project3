@@ -1,4 +1,5 @@
 import 'server-only';
+import { HttpError } from '@/lib/security/auth';
 import { createAdminSupabase } from '@/lib/supabase/admin';
 import type { FacebookPageCandidate } from './exchange';
 import type { SocialOAuthProvider } from './providers';
@@ -59,6 +60,19 @@ export function createSocialOAuthAccountStore(
         tokenSecret: credential.token_secret,
       };
     },
+    async readFacebookCredentials(input: { userId: string }): Promise<string[]> {
+      const { data, error } = await admin.rpc('read_facebook_oauth_credentials', {
+        p_user: input.userId,
+      });
+      if (
+        error ||
+        !Array.isArray(data) ||
+        data.some((tokenSecret) => typeof tokenSecret !== 'string')
+      ) {
+        throw new Error('Social OAuth account unavailable.');
+      }
+      return data as string[];
+    },
     async disconnect(input: { userId: string; accountId: string }): Promise<void> {
       const { error } = await admin.rpc('disconnect_social_oauth_account', {
         p_user: input.userId,
@@ -116,6 +130,9 @@ export function createSocialOAuthAccountStore(
         p_session: input.sessionId,
         p_page_ids: input.pageIds,
       });
+      if (error?.code === 'MC001') {
+        throw new HttpError(409, 'La limite de 3 comptes du plan Solo est atteinte.');
+      }
       if (error || !Number.isInteger(data)) {
         throw new Error('Facebook Page selection unavailable.');
       }

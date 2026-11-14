@@ -1,5 +1,13 @@
 begin;
 
+do $$
+begin
+  if to_regnamespace('cron') is null then
+    raise exception 'pg_cron must be enabled before Facebook OAuth can be installed';
+  end if;
+end;
+$$;
+
 alter table public.social_oauth_transactions
   drop constraint if exists social_oauth_transactions_redirect_uri_check;
 alter table public.social_oauth_transactions
@@ -47,6 +55,35 @@ alter table public.social_facebook_page_selections enable row level security;
 revoke all on public.social_facebook_page_selections from public, anon, authenticated;
 grant all on public.social_facebook_page_selections to service_role;
 
+create function public.expire_facebook_page_selections()
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_selection record;
+  v_count integer := 0;
+begin
+  for v_selection in
+    select id, token_vault_id
+    from public.social_facebook_page_selections
+    where expires_at <= clock_timestamp()
+    order by expires_at
+    for update skip locked
+  loop
+    delete from vault.secrets where id = v_selection.token_vault_id;
+    delete from public.social_facebook_page_selections where id = v_selection.id;
+    v_count := v_count + 1;
+  end loop;
+  return v_count;
+end;
+$$;
+revoke all on function public.expire_facebook_page_selections()
+  from public, anon, authenticated;
+grant execute on function public.expire_facebook_page_selections()
+  to service_role;
+
 create function public.stage_facebook_page_selection(
   p_user uuid,
   p_session uuid,
@@ -83,6 +120,8 @@ begin
   if not found then
     raise exception 'OAuth owner unavailable' using errcode = '42501';
   end if;
+
+  perform public.expire_facebook_page_selections();
 
   for v_old_secret in
     select token_vault_id from public.social_facebook_page_selections
@@ -250,7 +289,7 @@ begin
   );
   if v_plan = 'solo'
     and (select count(*) from public.social_accounts where user_id = p_user) + v_new_count > 3 then
-    raise exception 'Social account limit reached' using errcode = 'P0001';
+    raise exception 'Social account limit reached' using errcode = 'MC001';
   end if;
 
   foreach v_page_id in array p_page_ids loop
@@ -310,6 +349,42 @@ revoke all on function public.save_facebook_page_selection(uuid,uuid,text[])
 grant execute on function public.save_facebook_page_selection(uuid,uuid,text[])
   to service_role;
 
+create function public.read_facebook_oauth_credentials(p_user uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if p_user is null then
+    raise exception 'OAuth owner unavailable' using errcode = '42501';
+  end if;
+  return (
+    select coalesce(jsonb_agg(credentials.token_secret order by credentials.created_at), '[]'::jsonb)
+    from (
+      select secret.decrypted_secret as token_secret, account.connected_at as created_at
+      from public.social_accounts as account
+      join vault.decrypted_secrets as secret
+        on secret.id = account.access_token_vault_id
+      where account.user_id = p_user
+        and account.platform = 'facebook'
+        and account.connection_kind = 'oauth'
+      union all
+      select secret.decrypted_secret as token_secret, selection.created_at
+      from public.social_facebook_page_selections as selection
+      join vault.decrypted_secrets as secret
+        on secret.id = selection.token_vault_id
+      where selection.user_id = p_user
+        and selection.expires_at > clock_timestamp()
+    ) as credentials
+  );
+end;
+$$;
+revoke all on function public.read_facebook_oauth_credentials(uuid)
+  from public, anon, authenticated;
+grant execute on function public.read_facebook_oauth_credentials(uuid)
+  to service_role;
+
 create function public.disconnect_facebook_oauth_accounts(p_user uuid)
 returns integer
 language plpgsql
@@ -356,5 +431,11 @@ revoke all on function public.disconnect_facebook_oauth_accounts(uuid)
   from public, anon, authenticated;
 grant execute on function public.disconnect_facebook_oauth_accounts(uuid)
   to service_role;
+
+select cron.schedule(
+  'social-facebook-page-selection-cleanup',
+  '*/5 * * * *',
+  'select public.expire_facebook_page_selections();'
+);
 
 commit;

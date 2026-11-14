@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => {
     revoke: vi.fn(),
     save: vi.fn(),
     readCredential: vi.fn(),
+    readFacebookCredentials: vi.fn(),
     disconnect: vi.fn(),
     stageFacebookPageSelection: vi.fn(),
     readFacebookPageSelection: vi.fn(),
@@ -50,6 +51,7 @@ vi.mock('@/lib/social/oauth/accounts', () => ({
   createSocialOAuthAccountStore: () => ({
     save: mocks.save,
     readCredential: mocks.readCredential,
+    readFacebookCredentials: mocks.readFacebookCredentials,
     disconnect: mocks.disconnect,
     stageFacebookPageSelection: mocks.stageFacebookPageSelection,
     readFacebookPageSelection: mocks.readFacebookPageSelection,
@@ -74,6 +76,7 @@ vi.mock('@/lib/social/oauth/exchange', () => ({
 }));
 
 import { OAuthProviderStageError } from '@/lib/social/oauth/exchange';
+import { HttpError } from '@/lib/security/auth';
 import { GET as listFacebookPages, POST as updateFacebookPages } from '@/app/api/social-accounts/oauth/facebook/pages/route';
 import { GET as listProviders } from '@/app/api/social-accounts/oauth/providers/route';
 import { POST as startOAuth } from '@/app/api/social-accounts/oauth/start/route';
@@ -230,15 +233,66 @@ describe('Routes OAuth sociales', () => {
 
   it('déconnecte toutes les Pages locales quand Facebook confirme la révocation globale', async () => {
     enableFacebook();
+    const firstGrantPage = JSON.stringify({
+      accessToken: 'offline-page-token',
+      userAccessToken: 'offline-user-token-a',
+      expiresAt: '2026-11-14T01:00:00.000Z',
+    });
     mocks.readCredential.mockResolvedValue({
       provider: 'facebook',
-      tokenSecret: JSON.stringify({
-        accessToken: 'offline-page-token',
-        userAccessToken: 'offline-user-token',
+      tokenSecret: firstGrantPage,
+    });
+    mocks.readFacebookCredentials.mockResolvedValue([
+      firstGrantPage,
+      JSON.stringify({
+        accessToken: 'offline-page-token-two',
+        userAccessToken: 'offline-user-token-a',
         expiresAt: '2026-11-14T01:00:00.000Z',
       }),
-    });
+      JSON.stringify({
+        accessToken: 'offline-page-token-three',
+        userAccessToken: 'offline-user-token-b',
+        expiresAt: '2026-11-14T01:00:00.000Z',
+      }),
+    ]);
     mocks.revoke.mockResolvedValue(undefined);
+    const response = await disconnectOAuth(
+      new Request(`https://local.test/api/social-accounts/oauth/disconnect/${accountId}`, {
+        method: 'POST',
+        headers: { Origin: 'https://local.test' },
+      }),
+      { params: Promise.resolve({ id: accountId }) },
+    );
+    expect(mocks.revoke).toHaveBeenCalledTimes(2);
+    expect(mocks.revoke.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.disconnectFacebookPages.mock.invocationCallOrder[0]!,
+    );
+    expect(await response.json()).toEqual({
+      disconnected: true,
+      revocation: 'confirmed',
+      disconnectedPages: 2,
+    });
+    expect(mocks.disconnectFacebookPages).toHaveBeenCalledWith({ userId });
+    expect(mocks.disconnect).not.toHaveBeenCalled();
+  });
+
+  it('désactive localement toutes les Pages même si un grant Meta ne peut pas être révoqué', async () => {
+    enableFacebook();
+    const firstGrant = JSON.stringify({
+      accessToken: 'offline-page-token',
+      userAccessToken: 'offline-user-token-a',
+      expiresAt: '2026-11-14T01:00:00.000Z',
+    });
+    const secondGrant = JSON.stringify({
+      accessToken: 'offline-page-token-two',
+      userAccessToken: 'offline-user-token-b',
+      expiresAt: '2026-11-14T01:00:00.000Z',
+    });
+    mocks.readCredential.mockResolvedValue({ provider: 'facebook', tokenSecret: firstGrant });
+    mocks.readFacebookCredentials.mockResolvedValue([firstGrant, secondGrant]);
+    mocks.revoke.mockRejectedValueOnce(new Error('offline provider failure'));
+    mocks.revoke.mockResolvedValueOnce(undefined);
+
     const response = await disconnectOAuth(
       new Request(`https://local.test/api/social-accounts/oauth/disconnect/${accountId}`, {
         method: 'POST',
@@ -248,11 +302,27 @@ describe('Routes OAuth sociales', () => {
     );
     expect(await response.json()).toEqual({
       disconnected: true,
-      revocation: 'confirmed',
+      revocation: 'unconfirmed',
       disconnectedPages: 2,
     });
+    expect(mocks.revoke).toHaveBeenCalledTimes(2);
     expect(mocks.disconnectFacebookPages).toHaveBeenCalledWith({ userId });
-    expect(mocks.disconnect).not.toHaveBeenCalled();
+  });
+
+  it('renvoie le conflit de quota Facebook sans le présenter comme une panne', async () => {
+    enableFacebook();
+    mocks.saveFacebookPageSelection.mockRejectedValue(
+      new HttpError(409, 'La limite de 3 comptes du plan Solo est atteinte.'),
+    );
+    const response = await updateFacebookPages(new Request(`${facebookOrigin}/api/social-accounts/oauth/facebook/pages`, {
+      method: 'POST',
+      headers: { Origin: facebookOrigin, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pageIds: ['123456789'] }),
+    }));
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: 'La limite de 3 comptes du plan Solo est atteinte.',
+    });
   });
 
   it('refuse le démarrage sans activation globale et propre au fournisseur', async () => {

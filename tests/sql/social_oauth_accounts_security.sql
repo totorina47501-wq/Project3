@@ -120,7 +120,9 @@ do $$ begin
     or has_function_privilege('authenticated','public.stage_facebook_page_selection(uuid,uuid,text,jsonb)','EXECUTE')
     or has_function_privilege('authenticated','public.read_facebook_page_selection(uuid,uuid)','EXECUTE')
     or has_function_privilege('authenticated','public.save_facebook_page_selection(uuid,uuid,text[])','EXECUTE')
+    or has_function_privilege('authenticated','public.read_facebook_oauth_credentials(uuid)','EXECUTE')
     or has_function_privilege('authenticated','public.disconnect_facebook_oauth_accounts(uuid)','EXECUTE')
+    or has_function_privilege('authenticated','public.expire_facebook_page_selections()','EXECUTE')
     or has_table_privilege('authenticated','public.social_facebook_page_selections','SELECT')
     or has_column_privilege('authenticated','public.social_accounts','access_token_vault_id','SELECT')
     or has_column_privilege('authenticated','public.social_accounts','access_token_vault_id','UPDATE')
@@ -131,6 +133,14 @@ do $$ begin
   end if;
   if not has_function_privilege('authenticated','public.expire_social_oauth_accounts(uuid)','EXECUTE') then
     raise exception 'Owner expiry maintenance is unavailable';
+  end if;
+  if not exists(
+    select 1 from cron.job
+    where jobname='social-facebook-page-selection-cleanup'
+      and schedule='*/5 * * * *'
+      and command='select public.expire_facebook_page_selections();'
+  ) then
+    raise exception 'Facebook temporary Vault cleanup was not scheduled';
   end if;
   if has_function_privilege('anon','public.expire_social_oauth_accounts(uuid)','EXECUTE')
     or not has_function_privilege('service_role','public.expire_social_oauth_accounts(uuid)','EXECUTE') then
@@ -312,7 +322,7 @@ do $$ declare selected_count integer; begin
       '20000000-0000-0000-0000-000000000003',
       '30000000-0000-0000-0000-000000000003',array['9002','9003','9004']::text[]);
     raise exception 'Multi-Page selection bypassed Solo quota' using errcode='XX000';
-  exception when raise_exception then null; end;
+  exception when sqlstate 'MC001' then null; end;
 end $$;
 reset role;
 do $$ begin
@@ -325,6 +335,35 @@ do $$ begin
     raise exception 'Quota failure partially persisted selected Pages';
   end if;
 end $$;
+
+set local role service_role;
+do $$ declare credentials jsonb; distinct_grants integer; begin
+  perform public.stage_facebook_page_selection(
+    '20000000-0000-0000-0000-000000000003',
+    '30000000-0000-0000-0000-000000000013',
+    jsonb_build_object(
+      'accessToken','offline-facebook-other-user',
+      'userAccessToken','offline-facebook-other-user',
+      'expiresAt',(clock_timestamp()+interval '1 hour')::text,
+      'pages',jsonb_build_array(
+        jsonb_build_object('id','9010','name','Other Grant Page','accessToken','offline-other-page')
+      )
+    )::text,
+    '[{"id":"9010","name":"Other Grant Page"}]'::jsonb
+  );
+  credentials:=public.read_facebook_oauth_credentials(
+    '20000000-0000-0000-0000-000000000003');
+  select count(distinct value::jsonb->>'userAccessToken') into distinct_grants
+  from jsonb_array_elements_text(credentials) as value;
+  if jsonb_array_length(credentials)<>4 or distinct_grants<>2 then
+    raise exception 'Facebook disconnect credentials did not include each saved and staged grant';
+  end if;
+  if public.read_facebook_oauth_credentials(
+    '20000000-0000-0000-0000-000000000002')<>'[]'::jsonb then
+    raise exception 'Facebook credentials disclosed across tenants';
+  end if;
+end $$;
+reset role;
 
 set local role service_role;
 do $$ declare selected_count integer; begin
@@ -345,7 +384,7 @@ do $$ begin
 end $$;
 
 set local role service_role;
-do $$ declare selection jsonb; begin
+do $$ declare selection jsonb; expired_count integer; begin
   perform public.stage_facebook_page_selection(
     '20000000-0000-0000-0000-000000000002',
     '30000000-0000-0000-0000-000000000002',
@@ -359,21 +398,42 @@ do $$ declare selection jsonb; begin
     )::text,
     '[{"id":"9101","name":"Temporary Page"}]'::jsonb
   );
+  perform public.stage_facebook_page_selection(
+    '20000000-0000-0000-0000-000000000002',
+    '30000000-0000-0000-0000-000000000012',
+    jsonb_build_object(
+      'accessToken','offline-facebook-live-user',
+      'userAccessToken','offline-facebook-live-user',
+      'expiresAt',(clock_timestamp()+interval '1 hour')::text,
+      'pages',jsonb_build_array(
+        jsonb_build_object('id','9102','name','Live Page','accessToken','offline-live-page')
+      )
+    )::text,
+    '[{"id":"9102","name":"Live Page"}]'::jsonb
+  );
   update public.social_facebook_page_selections
   set expires_at=clock_timestamp()-interval '1 second'
   where user_id='20000000-0000-0000-0000-000000000002'
     and session_id='30000000-0000-0000-0000-000000000002';
+  expired_count:=public.expire_facebook_page_selections();
   selection:=public.read_facebook_page_selection(
     '20000000-0000-0000-0000-000000000002',
-    '30000000-0000-0000-0000-000000000002');
-  if selection is not null then raise exception 'Expired Facebook selection was returned'; end if;
+    '30000000-0000-0000-0000-000000000012');
+  if expired_count<>1 or selection is null then
+    raise exception 'Facebook selection cleanup did not remove only expired entries';
+  end if;
 end $$;
 reset role;
 do $$ begin
   if exists(select 1 from public.social_facebook_page_selections
-      where user_id='20000000-0000-0000-0000-000000000002')
+      where user_id='20000000-0000-0000-0000-000000000002'
+        and session_id='30000000-0000-0000-0000-000000000002')
     or exists(select 1 from vault.secrets where secret like '%offline-facebook-expiring-user%') then
     raise exception 'Expired Facebook selection or Vault secret was retained';
+  end if;
+  if not exists(select 1 from vault.secrets
+      where secret like '%offline-facebook-live-user%') then
+    raise exception 'Cleanup removed a live Facebook selection secret';
   end if;
 end $$;
 
