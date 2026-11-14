@@ -81,6 +81,7 @@
     "BILLING_ENABLED": "false",
     "STRIPE_WEBHOOK_ENABLED": "false",
     "STRIPE_MODE": "live",
+    "STRIPE_LIVE_BUYER_SCOPE": "general_public",
     "STRIPE_PRICE_SOLO": "price_1UaKLwCdRRAa9LkpiXUiv0wc",
     "STRIPE_PRICE_PRO": "price_1UaKLyCdRRAa9Lkp5daPFLZK",
     "STRIPE_PRICE_STUDIO": "price_1UaKM0CdRRAa9Lkptx9oZCS8",
