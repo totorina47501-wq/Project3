@@ -3,6 +3,10 @@
 
 ### Recette IA texte autonome sans TinyFish — un seul appel (14/11/2026)
 
+**Ouverture QA autorisée après correction YAML :** la PR de déclenchement suivante vise uniquement ce document pour activer la recette déjà fusionnée dans le workflow validé. Aucune autre création d'utilisateur, aucun autre test ni changement de fournisseur n'est autorisé par cette documentation.
+
+
+
 **Demande d'exécution unique :** ouverture de la PR de recette depuis la branche interne `qa/execute-production-ai-once-20261114`, aucune modification de code applicatif. Le résultat réel et la neutralisation du compte éphémère seront enregistrés dans l'issue #16 après contrôle.
 
 Le navigateur TinyFish ne dispose pas d'une session authentifiée, et son quota est épuisé. Le compte technique historique a été désactivé le 5 novembre. Ne réactiver **aucun compte existant**.
