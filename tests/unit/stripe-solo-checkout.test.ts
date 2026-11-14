@@ -1,16 +1,24 @@
 import { afterEach,beforeEach,expect,it,vi } from 'vitest';
-const mocks=vi.hoisted(()=>({user:vi.fn(),admin:vi.fn(),stripe:vi.fn(),customer:vi.fn(),session:vi.fn(),subscriptionsList:vi.fn(),sessionsList:vi.fn()}));
+const mocks=vi.hoisted(()=>({user:vi.fn(),admin:vi.fn(),stripe:vi.fn(),customer:vi.fn(),session:vi.fn(),retrievePrice:vi.fn(),subscriptionsList:vi.fn(),sessionsList:vi.fn(),forceLiveMode:false}));
 vi.mock('server-only',()=>({}));
 vi.mock('../../lib/security/auth',async original=>({...await original<typeof import('../../lib/security/auth')>(),requireUser:mocks.user}));
 vi.mock('../../lib/supabase/admin',()=>({createAdminSupabase:mocks.admin}));
 vi.mock('../../lib/billing/stripe',()=>({getStripe:mocks.stripe}));
+vi.mock('../../lib/billing/config',async importOriginal=>{
+ const actual=await importOriginal<typeof import('../../lib/billing/config')>();
+ return {...actual,billingGate:(env:Parameters<typeof actual.billingGate>[0],purpose?:Parameters<typeof actual.billingGate>[1])=>
+  mocks.forceLiveMode
+   ? {enabled:true,mode:'live' as const,reason:'isolated test branch',priceSolo:env.STRIPE_PRICE_SOLO,pricePro:env.STRIPE_PRICE_PRO,priceStudio:env.STRIPE_PRICE_STUDIO}
+   : actual.billingGate(env,purpose)};
+});
 import { POST } from '../../app/api/stripe/checkout/route';
 const actor='10000000-0000-4000-8000-000000000001';
 let existingSubscription: {stripe_subscription_id:string;status:string}|null=null;
 let lookupFailure=false;
-const request=()=>new Request('https://mentioncheck.test/api/stripe/checkout',{method:'POST',headers:{origin:'https://mentioncheck.test','content-type':'application/json'},body:JSON.stringify({plan:'solo'})});
+const request=(plan:'solo'|'pro'|'studio'='solo',origin='https://mentioncheck.test')=>new Request(origin+'/api/stripe/checkout',{method:'POST',headers:{origin,'content-type':'application/json'},body:JSON.stringify({plan})});
 beforeEach(()=>{
  vi.clearAllMocks();
+ mocks.forceLiveMode=false;
  existingSubscription=null;lookupFailure=false;
  for(const [key,value] of Object.entries({BILLING_ENABLED:'true',STRIPE_MODE:'test',STRIPE_SECRET_KEY:'sk_test_fixture',STRIPE_WEBHOOK_SECRET:'whsec_fixture',STRIPE_PRICE_PRO:'price_PRO',STRIPE_PRICE_STUDIO:'price_STUDIO',STRIPE_PRICE_SOLO:''}))vi.stubEnv(key,value);
  mocks.user.mockResolvedValue({user:{id:actor,email:'fixture@example.test'}});
@@ -22,8 +30,9 @@ beforeEach(()=>{
   throw new Error('Unexpected table');
  }});
  mocks.customer.mockResolvedValue({id:'cus_fixture'});mocks.session.mockResolvedValue({url:'https://checkout.stripe.test/fixture'});
+ mocks.retrievePrice.mockResolvedValue({livemode:true,active:true,currency:'eur',unit_amount:900,recurring:{interval:'month'},tax_behavior:'inclusive'});
  mocks.subscriptionsList.mockResolvedValue({data:[]});mocks.sessionsList.mockResolvedValue({data:[]});
- mocks.stripe.mockReturnValue({customers:{create:mocks.customer},subscriptions:{list:mocks.subscriptionsList},checkout:{sessions:{create:mocks.session,list:mocks.sessionsList}}});
+ mocks.stripe.mockReturnValue({prices:{retrieve:mocks.retrievePrice},customers:{create:mocks.customer},subscriptions:{list:mocks.subscriptionsList},checkout:{sessions:{create:mocks.session,list:mocks.sessionsList}}});
 });
 afterEach(()=>vi.unstubAllEnvs());
 it('refuse Solo sans tarif avant tout accès SDK ou création de client',async()=>{
@@ -59,9 +68,30 @@ it('refuse le domaine workers.dev pour un checkout live même avec origine same-
  expect(mocks.admin).not.toHaveBeenCalled();
  expect(mocks.stripe).not.toHaveBeenCalled();
 });
-it('utilise le prix Solo configuré et l’identité serveur dans une session simulée',async()=>{
- vi.stubEnv('STRIPE_PRICE_SOLO','price_SOLO');expect((await POST(request())).status).toBe(200);
- expect(mocks.session).toHaveBeenCalledWith(expect.objectContaining({line_items:[{price:'price_SOLO',quantity:1}],metadata:{user_id:actor,selected_plan:'solo'}}),expect.objectContaining({idempotencyKey:expect.stringContaining('mentioncheck_checkout_')}));
+it.each([
+ ['solo','price_SOLO'],
+ ['pro','price_PRO'],
+ ['studio','price_STUDIO'],
+] as const)('utilise le prix Sandbox configuré et l’identité serveur pour %s',async(plan,price)=>{
+ vi.stubEnv('STRIPE_PRICE_SOLO','price_SOLO');
+ expect((await POST(request(plan))).status).toBe(200);
+ expect(mocks.session).toHaveBeenCalledWith(expect.objectContaining({
+  line_items:[{price,quantity:1}],
+  metadata:{user_id:actor,selected_plan:plan},
+  subscription_data:{metadata:{user_id:actor,plan}},
+ }),expect.objectContaining({idempotencyKey:expect.stringContaining('mentioncheck_checkout_')}));
+ expect(mocks.session.mock.calls[0]?.[0]).not.toHaveProperty('consent_collection');
+});
+it('exige le consentement aux CGV pour le Checkout Live après contrôle du tarif',async()=>{
+ vi.stubEnv('STRIPE_PRICE_SOLO','price_SOLO');
+ mocks.forceLiveMode=true;
+ vi.stubEnv('NEXT_PUBLIC_APP_URL','https://mentioncheck.app');
+ const response=await POST(request('solo','https://mentioncheck.app'));
+ expect(response.status,await response.clone().text()).toBe(200);
+ expect(mocks.retrievePrice).toHaveBeenCalledWith('price_SOLO');
+ expect(mocks.session).toHaveBeenCalledWith(expect.objectContaining({
+  consent_collection:{terms_of_service:'required'}
+ }),expect.any(Object));
 });
 it('masque les détails du fournisseur si la création de session échoue',async()=>{
  vi.stubEnv('STRIPE_PRICE_SOLO','price_SOLO');

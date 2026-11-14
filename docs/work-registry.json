@@ -781,10 +781,13 @@
     },
     {
       "id": "stripe-sandbox-consumer-e2e",
-      "status": "pending",
+      "status": "in_progress",
       "scope": "Mission P0 Copilot strictement distincte de #16 : certifier les parcours consommateurs Stripe Sandbox existants (Checkout Solo/Pro/Studio, confirmation durable, webhook signé, anti-doublon, factures, portail de résiliation/remboursement et déclassement des droits), avec fixtures/testcards et sans paiement réel, appel IA payant, mutation Cloudflare Live, migration Solo ni activation commercialisation.",
       "environment": "sandbox/staging",
-      "evidence": []
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/pull/149",
+        "https://github.com/totorina47501-wq/Project3/issues/16"
+      ]
     }
   ]
 }

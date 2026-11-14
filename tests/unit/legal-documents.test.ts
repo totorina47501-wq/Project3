@@ -18,6 +18,9 @@ describe('Documents juridiques MentionCheck en prépublication', () => {
     expect(html).toContain('Les abonnements Solo, Pro et Studio sont mensuels et reconduits automatiquement');
     expect(html).toContain('depuis son compte, rubrique Paramètres');
     expect(html).toContain('quatorze jours après la notification');
+    expect(html).toContain('Une confirmation durable de la commande et des conditions doit être transmise au client.');
+    expect(html).toContain('la seule existence d&#x27;un webhook ne vaut pas preuve de remise de cette confirmation.');
+    expect(html).toContain('Aucune renonciation automatique au droit de rétractation n&#x27;est imposée.');
     expect(html).toContain('aucun médiateur effectivement conventionné');
     expect(html).toContain('avant toute vente aux consommateurs');
     expect(html).toContain('situé hors de France');
