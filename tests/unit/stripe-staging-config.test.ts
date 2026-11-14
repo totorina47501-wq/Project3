@@ -38,6 +38,7 @@ describe('MentionCheck Stripe Sandbox — isolation', () => {
     const production = readConfig('wrangler.jsonc');
     expect(production.name).toBe('mentioncheck');
     expect(production.vars.STRIPE_MODE).toBe('live');
+    expect(production.vars.STRIPE_LIVE_BUYER_SCOPE).toBe('general_public');
     expect(production.vars.STRIPE_PRICE_SOLO).toBe('price_1UaKLwCdRRAa9LkpiXUiv0wc');
     expect(production.vars.STRIPE_PRICE_PRO).toBe('price_1UaKLyCdRRAa9Lkp5daPFLZK');
     expect(production.vars.STRIPE_PRICE_STUDIO).toBe('price_1UaKM0CdRRAa9Lkptx9oZCS8');
@@ -45,12 +46,17 @@ describe('MentionCheck Stripe Sandbox — isolation', () => {
     expect(production.vars.STRIPE_WEBHOOK_ENABLED).toBe('false');
     expect(production.vars.STRIPE_LIVE_APPROVED).toBe('false');
     expect(billingGate(production.vars).enabled).toBe(false);
+    // Sélectionner les particuliers ne doit jamais lever les revues et la pause IA.
+    expect(billingGate({...production.vars,
+      STRIPE_SECRET_KEY:'sk_live_fixture',STRIPE_WEBHOOK_SECRET:'whsec_fixture'
+    }).enabled).toBe(false);
     expect(billingGate(production.vars, 'webhook').enabled).toBe(false);
     expect(JSON.stringify(production.vars)).not.toMatch(/sk_(test|live)_|whsec_/);
     expect(JSON.stringify(production.vars)).not.toContain('price_1UaAGVCZ5rRirUf6Mwl2S9LU');
     // La Preview QA du Worker production reste strictement en sandbox et sans facturation.
     expect(production.previews?.vars?.BILLING_ENABLED).toBe('false');
     expect(production.previews?.vars?.STRIPE_MODE).toBe('test');
+    expect(production.previews?.vars).not.toHaveProperty('STRIPE_LIVE_BUYER_SCOPE');
     expect(Object.keys(production.previews?.vars ?? {}).some(key => key.startsWith('STRIPE_PRICE_'))).toBe(false);
   });
 });
