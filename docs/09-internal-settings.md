@@ -204,8 +204,9 @@ scraping, import média ou publication n’est implémenté.
 |---|---|
 | Échange simulé hors ligne, state/PKCE/callback/anti-replay, contrôles d’accès et tests SQL locaux | **PASS** (suite locale seulement ; le stub SQL ne teste pas le chiffrement Vault natif). |
 | Expiration OAuth : acteur nul refusé, autre propriétaire refusé, propriétaire et service_role autorisés | **PASS** local après migration corrective ; application staging en attente de revue. |
-| Identifiants/app review/callbacks et permissions des quatre plateformes | **BLOCKED** (non fournis/non vérifiés). |
-| E2E staging avec comptes jetables | **BLOCKED** (des tentatives antérieures n’ont pas persisté de compte OAuth ; le parcours complet après le dernier correctif reste à prouver). |
+| Identifiants/app review/callbacks et permissions des cinq réseaux | **BLOCKED** (non fournis/non vérifiés). |
+| E2E Playwright hors ligne avec fournisseurs simulés | **PASS** (2 parcours locaux ; aucune requête Meta réelle ni persistance fournisseur). |
+| E2E staging avec comptes jetables | **BLOCKED** (le parcours fournisseur avec persistance réelle reste à prouver). |
 | Activation en production, migration distante et recette de production | **BLOCKED** (non effectuées et interdites par ce lot). |
 
 Avant une activation ultérieure, il faut activer `pg_cron` dans la base de test
