@@ -1,4 +1,4 @@
-// CTA uniquement pour le bac à sable Stripe.
+// CTA bloqué par billingGate tant que les conditions Stripe Live ne sont pas attestées.
 'use client';
 import { useState } from 'react';
 export function PricingCheckout({plan,mode='test'}: {plan:'solo'|'pro'|'studio';mode?:'test'|'live'}) {
@@ -27,7 +27,7 @@ export function PricingCheckout({plan,mode='test'}: {plan:'solo'|'pro'|'studio';
       className="w-full rounded-xl bg-accent px-4 py-3 font-bold text-white disabled:opacity-50">
       {pending?'Ouverture…':mode==='live'?'Souscrire maintenant':'Essayer le paiement Stripe test'}
     </button>
-    {mode==='live'&&<p className="text-xs text-slate-600">Abonnement mensuel reconduit automatiquement. Consultez les <a href="/legal/cgu" className="underline">conditions d’abonnement</a> avant de payer.</p>}
+    {mode==='live'&&<p className="text-xs text-slate-600">Abonnement mensuel à reconduction automatique. Résiliation depuis Paramètres / Facturation ou auprès du support si l’accès est impossible. Droit de rétractation des consommateurs selon les conditions légales, en principe 14 jours. Consultez les <a href="/legal/cgu" className="underline">CGV, le formulaire de rétractation et les remboursements</a> avant de payer. Le consentement aux conditions est demandé lors du paiement sécurisé Stripe.</p>}
     {message&&<p role="alert" className="text-sm text-red-700">{message}</p>}
   </div>;
 }
