@@ -8,8 +8,9 @@ import { openaiReadiness } from '@/lib/openai/config';
 
 export const dynamic = 'force-dynamic';
 export function generateMetadata(): Metadata {
+  const scope = process.env.STRIPE_LIVE_BUYER_SCOPE;
   const live = billingGate(process.env).mode === 'live' &&
-    process.env.STRIPE_LIVE_BUYER_SCOPE === 'verified_b2b_fr';
+    (scope === 'verified_b2b_fr' || scope === 'general_public');
   return {
     title: live ? 'Tarifs et abonnements — MentionCheck' : 'Tarifs indicatifs — MentionCheck',
     description: live ? 'Comparez les abonnements MentionCheck : Solo, Pro et Studio.'
@@ -36,7 +37,9 @@ const faq = (live:boolean) => [
 
 export default function PricingPage() {
   const stripe = billingGate(process.env);
-  const live = stripe.mode === 'live' && process.env.STRIPE_LIVE_BUYER_SCOPE === 'verified_b2b_fr';
+  const buyerScope = process.env.STRIPE_LIVE_BUYER_SCOPE;
+  const live = stripe.mode === 'live' &&
+    (buyerScope === 'general_public' || buyerScope === 'verified_b2b_fr');
   const checkoutEnabled = stripe.enabled && (stripe.mode === 'test' || live);
   const ai = openaiReadiness(process.env);
   return <main className="mx-auto min-h-screen max-w-6xl px-4 py-8 text-slate-900 sm:px-6 sm:py-12">
@@ -49,7 +52,7 @@ export default function PricingPage() {
         {live ? 'Choisissez la formule adaptée à votre activité.' : 'Comparez nos formules avant l’ouverture des abonnements.'}
       </p>
       {!live && <p className="mt-4 text-sm font-medium text-amber-800">Tarifs indicatifs : aucune offre payante n’est actuellement commercialisée.</p>}
-      {live && <p className="mt-4 text-sm font-medium text-indigo-800">Souscription réservée aux professionnels français préalablement vérifiés pour un usage relevant de leur activité principale. Les achats personnels et les clients non vérifiés sont exclus.</p>}
+      {live && buyerScope === 'verified_b2b_fr' && <p className="mt-4 text-sm font-medium text-indigo-800">Souscription réservée aux professionnels français préalablement vérifiés pour un usage relevant de leur activité principale. Les achats personnels et les clients non vérifiés sont exclus.</p>}
       <p className="mt-4 text-sm text-slate-700">Les forfaits payants sont mensuels, reconduits automatiquement et résiliables depuis Paramètres / Facturation ou via le contact officiel en cas de difficulté. Les consommateurs disposent, selon les conditions légales applicables, d’un droit de rétractation de 14 jours. <Link href="/legal/cgu" className="font-semibold text-indigo-800 underline">Consulter les conditions, la résiliation et le formulaire de rétractation</Link>.</p>
       {!ai.textEnabled && <p role="status" className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
         Les fonctionnalités d’analyse et de réécriture IA sont temporairement indisponibles. Les quotas indiquent les droits prévus lors de leur activation.

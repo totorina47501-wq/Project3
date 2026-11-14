@@ -48,7 +48,7 @@ it('présente les limites réellement accordées, dont cinq sièges Studio propr
  expect(markup).not.toMatch(/illimité|brand safety certifié/i);
 });
 
-it('ne propose le Checkout Live qu’avec l’opt-in professionnel et un affichage explicite',()=>{
+it('propose le Checkout Live en mode B2B ou public explicite, jamais sans portée définie',()=>{
  const keys={
   BILLING_ENABLED:'true',STRIPE_MODE:'live',STRIPE_SECRET_KEY:'sk_live_fixture',
   STRIPE_WEBHOOK_SECRET:'whsec_fixture',STRIPE_PRICE_SOLO:'price_SOLO',
@@ -65,4 +65,8 @@ it('ne propose le Checkout Live qu’avec l’opt-in professionnel et un afficha
  const page=renderToStaticMarkup(PricingPage());
  expect(page).toContain('Paiement test solo');
  expect(page).toContain('professionnels français préalablement vérifiés');
+ vi.stubEnv('STRIPE_LIVE_BUYER_SCOPE','general_public');
+ const publicPage=renderToStaticMarkup(PricingPage());
+ expect(publicPage).toContain('Paiement test solo');
+ expect(publicPage).not.toContain('Souscription réservée aux professionnels français');
 });

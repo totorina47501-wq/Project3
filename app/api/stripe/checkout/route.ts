@@ -16,17 +16,20 @@ export async function POST(request: Request) {
     if (request.headers.get('origin') !== requestOrigin ||
         (gate.mode === 'live' && requestOrigin !== process.env.NEXT_PUBLIC_APP_URL))
       throw new HttpError(403, 'Origine non autorisée.');
-    // Sans dispositif de médiation B2C conventionné, une vente Live ne peut
-    // concerner que des entreprises françaises vérifiées, sur opt-in explicite.
-    // Ce contrôle est distinct de la validation fiscale/CGV/E2E de billingGate.
+    // Portée commerciale explicite, sans contrôle d'entreprise sur les
+    // particuliers. Le paiement Live reste soumis à billingGate (prestations IA
+    // disponibles, CGV, fiscalité, E2E, prix et webhook).
+    const buyerScope = process.env.STRIPE_LIVE_BUYER_SCOPE;
     if (gate.mode === 'live' &&
-        process.env.STRIPE_LIVE_BUYER_SCOPE !== 'verified_b2b_fr') {
-      throw new HttpError(503, 'Le Checkout Live est réservé aux professionnels vérifiés.');
+        buyerScope !== 'general_public' &&
+        buyerScope !== 'verified_b2b_fr') {
+      throw new HttpError(503, 'L’ouverture des abonnements Live n’est pas configurée.');
     }
     const { user } = await requireUser();
-    // Supabase auth.getUser() fournit des app_metadata administrées côté
-    // serveur. Ne jamais accepter une simple case ou un user_metadata client.
+    // Ne vérifier la qualité professionnelle que pour le périmètre B2B.
+    // Dans tous les cas l'utilisateur doit rester authentifié.
     if (gate.mode === 'live' &&
+        buyerScope === 'verified_b2b_fr' &&
         !isVerifiedFrenchProfessionalBuyer(user.app_metadata)) {
       throw new HttpError(403, 'Souscription réservée aux professionnels vérifiés.');
     }

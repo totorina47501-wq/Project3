@@ -18,6 +18,14 @@ immatriculation, et ne constitue ni un contrat approuvé ni un avis juridique.
 
 Cette note est un relevé interne des informations déclarées, pas une attestation d'identité, de numéro d'immatriculation ou de conformité juridique. Elle ne remplace pas le dossier opérateur privé.
 
+## Nouvelle instruction opérateur — proposer aussi les abonnements aux particuliers (14 novembre 2026)
+
+L'exploitant souhaite ouvrir **Solo, Pro et Studio aux particuliers**, sans leur demander de fournir un SIREN, un SIRET, une entreprise ou une justification d'activité professionnelle. Cette instruction **remplace la limitation de clientèle B2B** documentée ci-dessous ; elle ne vaut pas attestation de conformité des paiements, de livraison des prestations ou de médiation.
+
+Un parcours `STRIPE_LIVE_BUYER_SCOPE=general_public` est préparé dans le code : si la facturation Live est **déjà réellement autorisée par `billingGate`**, tout utilisateur connecté peut demander une session Stripe sans contrôle d'entreprise. La portée `verified_b2b_fr` reste disponible sans changement de son contrôle administrateur. En l'absence de portée reconnue, ou lorsque `billingGate` refuse le mode Live, le Checkout et les boutons payants restent fermés.
+
+**L'ouverture effective des ventes B2C n'est pas certifiée à la date de cette note** : l'éditeur n'a pas encore désigné de médiateur de la consommation effectif, les CGV restent en prépublication, les prestations IA payantes sont désactivées en production et les parcours de paiement/confirmation/remboursement doivent être attestés. Aucun faux drapeau `STRIPE_LIVE_TERMS_REVIEW`, `STRIPE_LIVE_TAX_REVIEW` ou `STRIPE_LIVE_E2E_REVIEW` n'a été activé ; pas de débit client, pas de mutation Stripe Live. La présente option supprime **uniquement le filtrage d'identité professionnelle des acheteurs particuliers**, pas les vérifications de signature, d'abonnement, d'origine, de prix ni la protection contre les doublons.
+
 ## Décision opérateur — lancement sans convention de médiation (14 novembre 2026)
 
 L'exploitant demande explicitement de **poursuivre sans adhésion à un médiateur**. Cette instruction permet les travaux préparatoires, les tests hors production et l'étude d'une **offre exclusivement destinée aux acheteurs professionnels**, mais **n'efface pas l'obligation de médiation des ventes aux consommateurs** (Code de la consommation, article L612-1). Il est interdit d'attester `STRIPE_LIVE_TERMS_REVIEW=approved` pour des ventes B2C, ou de supprimer silencieusement les droits à la médiation des CGV.
