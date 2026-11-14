@@ -648,6 +648,26 @@
         "Lors du GO commercial ultérieur, activer les deux dates de promotion en transaction unique, vérifier le rattachement Stripe et les prestations IA, puis vérifier les paiements ; ne pas créer de faux abonnements.",
         "PRA : restauration native PostgreSQL/Auth et 13/13 agrégats SQL concordants ; Storage 13/13 copies et 832860 octets vérifiés dans les métadonnées ; 13/13 SHA-256 identiques sur les archives Production/PRA fournies (5 originaux + 8 dérivés). Seule la provenance fournisseur indépendante de ces ZIP n'est pas attestée ; garder PRA global PARTIAL, ne pas refaire comparaison/transfert. Autres gates Auth, RGPD et release ouverts."
       ]
+    },
+    {
+      "id": "mobile-app",
+      "name": "Application mobile Android/iOS (Expo shell)",
+      "status": "partial",
+      "anchor": "apps/mobile/App.tsx",
+      "test": "tests/unit/mobile-allowlist.test.ts",
+      "doc": "docs/65-mobile-mvp-001.md",
+      "aliases": [
+        "mobile",
+        "android",
+        "ios",
+        "expo"
+      ],
+      "routes": [],
+      "migrations": [],
+      "next": [
+        "MVP shell Expo implemente avec allowlist d'origines et navigation vers les parcours web existants.",
+        "Publication stores, signatures AAB/IPA et recettes appareils reels restent hors de ce lot et necessitent GO explicite."
+      ]
     }
   ],
   "operations": [
@@ -772,11 +792,12 @@
     },
     {
       "id": "mobile-001",
-      "status": "pending",
-      "scope": "Issue #140 : application Android/iOS, démarrage Codex autorisé le 13/11/2026. Inventaire puis MVP réutilisant le backend, sans bloquer la release web, sans dépense API IA, service payant ni publication stores.",
+      "status": "in_progress",
+      "scope": "Issue #140 : MVP mobile Expo Android/iOS en cours (shell securise + navigation + registre/tests locaux) sans publication stores ni activation de services payants.",
       "environment": "development",
       "evidence": [
-        "https://github.com/totorina47501-wq/Project3/issues/140"
+        "https://github.com/totorina47501-wq/Project3/issues/140",
+        "https://github.com/totorina47501-wq/Project3/pull/142"
       ]
     },
     {
