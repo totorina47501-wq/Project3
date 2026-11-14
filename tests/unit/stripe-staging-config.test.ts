@@ -46,6 +46,10 @@ describe('MentionCheck Stripe Sandbox — isolation', () => {
     expect(production.vars.STRIPE_WEBHOOK_ENABLED).toBe('false');
     expect(production.vars.STRIPE_LIVE_APPROVED).toBe('false');
     expect(billingGate(production.vars).enabled).toBe(false);
+    // Sélectionner les particuliers ne doit jamais lever les revues et la pause IA.
+    expect(billingGate({...production.vars,
+      STRIPE_SECRET_KEY:'sk_live_fixture',STRIPE_WEBHOOK_SECRET:'whsec_fixture'
+    }).enabled).toBe(false);
     expect(billingGate(production.vars, 'webhook').enabled).toBe(false);
     expect(JSON.stringify(production.vars)).not.toMatch(/sk_(test|live)_|whsec_/);
     expect(JSON.stringify(production.vars)).not.toContain('price_1UaAGVCZ5rRirUf6Mwl2S9LU');
