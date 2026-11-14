@@ -3,6 +3,8 @@
 
 ### Recette IA texte autonome sans TinyFish — un seul appel (14/11/2026)
 
+**Demande d'exécution unique :** ouverture de la PR de recette depuis la branche interne `qa/execute-production-ai-once-20261114`, aucune modification de code applicatif. Le résultat réel et la neutralisation du compte éphémère seront enregistrés dans l'issue #16 après contrôle.
+
 Le navigateur TinyFish ne dispose pas d'une session authentifiée, et son quota est épuisé. Le compte technique historique a été désactivé le 5 novembre. Ne réactiver **aucun compte existant**.
 
 Le lot `scripts/recette/production-ai-single-e2e.mjs` et le workflow `mentioncheck-ai-production-single-qa.yml` préparent une recette de bout en bout au travers des **routes existantes** `/api/auth/register`, `/api/auth/login` et `/api/check`. La branche `main` est seule autorisée et le commit de fusion doit commencer par `ops(ai): run one-shot production text QA`.
