@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updated": "2026-11-13",
+  "updated": "2026-11-14",
   "scope": "Code de la branche, non preuve de déploiement ni de commercialisation.",
   "features": [
     {
@@ -643,10 +643,9 @@
         "supabase/migrations/20261111103000_legacy_solo_prelaunch_bridge.sql"
       ],
       "next": [
-        "Code, SQL et tests préparés ; aucun octroi dans ce lot. Migration staging puis production coordonnée, sélection et activation seulement lors du GO public certifié.",
-        "PROMO_SOLO_ENABLED reste false tant que la nouvelle table n'est pas présente et les tests d'accès authentifiés ne sont pas passés.",
-        "PR #128 : bridge pré-GO activation_pending pour 2 profils historiques, Solo 30/5/20 sans lancer le compteur 30 jours ; preuve SQL PGlite, application staging nécessaire, aucune mutation production.",
-        "Trois migrations quotas/promotion/bridge sont déjà installées sur staging, aucune en Production. 2 profils Solo historiques sans abonnement Stripe actif ; transition atomique et GO séparé nécessaires pour préserver leurs droits sans démarrer prématurément les 30 jours. Correctif UI pré-GO et workflow RGPD au commit 1850998, remarques Codex résolues, tests unitaires/SQL/Playwright réussis ; statut global CI encore à confirmer.",
+        "14 novembre 2026 : les trois migrations Solo et les deux droits pré-GO ont été installés ensemble en PRODUCTION (22 migrations au total). Les droits des deux Solo sont activation_pending, starts_at/expires_at NULL, les 30 jours ne sont pas lancés et Stripe Live reste OFF. Ne surtout pas réappliquer ces migrations.",
+        "Promotion toujours non commercialement activée : PROMO_SOLO_ENABLED=false doit être conservé tant que les tests Auth/quotas sur production et la décision de GO distincte ne sont pas attestés ; conserver la protection de la nouvelle table avec RLS sans policy cliente.",
+        "Lors du GO commercial ultérieur, activer les deux dates de promotion en transaction unique, vérifier le rattachement Stripe et les prestations IA, puis vérifier les paiements ; ne pas créer de faux abonnements.",
         "PRA : restauration native PostgreSQL/Auth et 13/13 agrégats SQL concordants ; Storage 13/13 copies et 832860 octets vérifiés dans les métadonnées ; 13/13 SHA-256 identiques sur les archives Production/PRA fournies (5 originaux + 8 dérivés). Seule la provenance fournisseur indépendante de ces ZIP n'est pas attestée ; garder PRA global PARTIAL, ne pas refaire comparaison/transfert. Autres gates Auth, RGPD et release ouverts."
       ]
     }
@@ -736,10 +735,12 @@
     },
     {
       "id": "solo-prod-cutover",
-      "status": "pending",
-      "scope": "Bascule atomique quotas/bridge des deux Solo historiques différée. Répétition PGlite du lot et rollback PASS ; répétition clone réel/historique Supabase non attestées, aucune migration production",
+      "status": "in_progress",
+      "scope": "14/11/2026 : 3 migrations de quotas/promotion/bridge appliquées ATOMIQUEMENT en Production ; 2 droits Solo activation_pending sans dates, 2 profils conservés, 0 abonnement Stripe. Répétition PRA réelle BEGIN/ROLLBACK PASS ; installation pré-GO DONE. GO commercial, date des 30 jours et activation PROMO_SOLO_ENABLED encore différés.",
       "environment": "production",
-      "evidence": []
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/issues/16#issuecomment-6878076215"
+      ]
     },
     {
       "id": "oauth-provider-review",
