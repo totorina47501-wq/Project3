@@ -33,7 +33,7 @@ async function main() {
   const manualMain=process.env.GITHUB_REF===expected &&
     process.env.GITHUB_EVENT_NAME==='push';
   const firstPartyQaPr=process.env.GITHUB_EVENT_NAME==='pull_request' &&
-    process.env.GITHUB_HEAD_REF==='qa/trigger-production-ai-once-20261114' &&
+    process.env.GITHUB_HEAD_REF==='qa/execute-production-ai-once-20261114' &&
     process.env.GITHUB_BASE_REF==='main';
   assert.ok(manualMain || firstPartyQaPr,'Production QA not authorized for this ref');
   assert.equal(process.env.PRODUCTION_QA_MODE,'one-shot-text-only');
