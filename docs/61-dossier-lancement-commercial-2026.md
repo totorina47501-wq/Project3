@@ -18,17 +18,32 @@ immatriculation, et ne constitue ni un contrat approuvé ni un avis juridique.
 
 Cette note est un relevé interne des informations déclarées, pas une attestation d'identité, de numéro d'immatriculation ou de conformité juridique. Elle ne remplace pas le dossier opérateur privé.
 
+## Actualisation CGV et fiscalité — 14 novembre 2026
+
+**Travail réalisé, sans recherche externe sur l'immatriculation :**
+- Page `/legal/cgu` complétée : reconduction mensuelle automatique, information précontractuelle, gestion de la résiliation depuis Paramètres/Facturation avec recours au support, rétractation de principe à 14 jours pour les consommateurs, remboursement suivant les conditions légales, absence de renonciation automatique, garantie légale de conformité des services numériques et confirmation contractuelle sur support durable.
+- Page `/tarifs` et CTA Stripe alignés : prix mensuels nets déclarés 9 € / 19 € / 49 €, renouvellement, résiliation et lien vers le formulaire de rétractation, sans laisser croire à une ouverture commerciale effective.
+- Identité et coordonnées déclarées : Rassoul Ali / Ali Rassoul, Aliaicorp, 4 rue de la Boule, 75002 Paris, `contact@aliaicorp.fr`, SIREN `899 123 459`, SIRET `899 123 459 00013` (aucune certification administrative revendiquée).
+- Fiscalité : franchise en base de TVA déclarée et tarifs nets pour les opérations où elle s'applique ; **aucune attestation d'éligibilité fiscale ni des ventes transfrontalières**. La configuration des prix Stripe Live est `tax_behavior=inclusive` ; ce réglage, à lui seul, ne prouve pas le traitement fiscal ni la conformité des factures.
+
+**Actions contractuelles restant indispensables avant les premières ventes B2C :**
+1. **Médiation de la consommation** : choisir un médiateur compétent, conclure la convention correspondante et renseigner son **nom, adresse, site Internet** dans les CGV. Aucun organisme n'est inventé et aucune convention n'est attestée.
+2. **Revue fiscale / territorialité** : confirmer le régime applicable à la vente en France et arrêter le traitement des clients situés hors de France (notamment services numériques B2C dans l'UE, clients B2B, éventuelle TVA à destination), le mode facturation Stripe et les mentions des factures ; ne pas supposer qu'un tarif `inclusive` résout ces obligations.
+3. **Parcours et preuves** : vérifier en conditions fournisseur le lien de résiliation en ligne, l'accusé de réception, la confirmation contractuelle durable et le remboursement/retrait avant de lever `STRIPE_LIVE_TERMS_REVIEW` et `STRIPE_LIVE_TAX_REVIEW`.
+
+Les CGV restent en **prépublication / noindex**, sans affirmation de validation professionnelle ou conventionnelle. Ces travaux ne doivent pas activer Stripe Live ni modifier les abonnements et comptes historiques.
+
 ## 1. Informations éditeur à fournir (jamais inventer)
 
 | Champ | À fournir et vérifier |
 | --- | --- |
-| Identité | [NOM_ET_PRÉNOM_ENTREPRENEUR_INDIVIDUEL] ou raison sociale réelle |
-| Statut | [FORME_JURIDIQUE_VALIDÉE] — micro-entreprise / EI uniquement si immatriculée |
-| SIREN / SIRET | [IDENTIFIANT_OFFICIEL] et immatriculation RNE/RCS selon activité |
-| Adresse | [ADRESSE_PROFESSIONNELLE_PUBLIABLE] |
-| Directeur de publication | [NOM] |
-| Courriel et SAV | [CONTACT_EMAIL_SUIVI] |
-| Contact RGPD | [EMAIL_RGPD_SUIVI] |
+| Identité | Rassoul Ali (présenté « Ali Rassoul »), entrepreneur individuel déclaré ; non vérifié par registre externe |
+| Statut | Micro-entreprise / entrepreneur individuel, régime déclaré par l'exploitant, éligibilité administrative et fiscale non attestée |
+| SIREN / SIRET | 899 123 459 / 899 123 459 00013, identifiants communiqués par l'exploitant, sans validation administrative externe |
+| Adresse | 4, rue de la Boule, 75002 Paris, France — déclarée comme siège professionnel à publier |
+| Directeur de publication | Ali Rassoul, selon déclaration de l'exploitant |
+| Courriel et SAV | contact@aliaicorp.fr, accessibilité et réception des messages à tester |
+| Contact RGPD | contact@aliaicorp.fr, destinataire de la politique existante |
 | Hébergeur | Cloudflare, dénomination, adresse et téléphone **à vérifier et publier** |
 | Sous-traitants | Supabase, Cloudflare, Stripe, OpenAI si IA activée ; DPA et géographies à vérifier |
 
@@ -75,19 +90,19 @@ automatique. Fournir un formulaire de rétractation et une voie de dépôt
 claire ; déterminer si une rétractation totale/partielle est due selon
 l'exécution commencée et l'accord du client. Vérification juridique requise.
 
-**Réclamation / remboursement** : [EMAIL_SUPPORT] ; procédure de
+**Réclamation / remboursement** : contact@aliaicorp.fr ; procédure de
 réclamation et délai de réponse à définir. Pour les consommateurs,
 fournir les coordonnées du médiateur de la consommation désigné,
 une fois le contrat correspondant conclu.
 
-**Disponibilité** : [SLA_ET_LIMITES_VALIDÉS]. Ne pas promettre de
+**Disponibilité** : aucun niveau de service contractuel chiffré n'est annoncé. Ne pas promettre de
 service IA continu avant réactivation et tests de débit/quotas.
 Toute fermeture, suspension ou modification de l'offre doit être
 prévue dans les CGV finales, selon les droits contractuels applicables.
 
 ## 3. Texte de formulaire de rétractation — PROJET
 
-À l'attention de : [IDENTITÉ_ET_EMAIL_DE_L'ÉDITEUR]
+À l'attention de : Ali Rassoul (Aliaicorp), contact@aliaicorp.fr
 
 Je vous notifie ma rétractation du contrat d'abonnement MentionCheck
 souscrit le [DATE] ; référence : [NUMÉRO_DE_COMMANDE].
