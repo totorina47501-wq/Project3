@@ -4,6 +4,7 @@ import { requireUser, HttpError, publicError } from '@/lib/security/auth';
 import { createAdminSupabase } from '@/lib/supabase/admin';
 import { billingGate, paidPriceId } from '@/lib/billing/config';
 import { getStripe } from '@/lib/billing/stripe';
+import { isVerifiedFrenchProfessionalBuyer } from '@/lib/billing/business-eligibility';
 
 export const runtime = 'nodejs';
 const schema = z.object({ plan: z.enum(['solo','pro','studio']) }).strict();
@@ -15,7 +16,20 @@ export async function POST(request: Request) {
     if (request.headers.get('origin') !== requestOrigin ||
         (gate.mode === 'live' && requestOrigin !== process.env.NEXT_PUBLIC_APP_URL))
       throw new HttpError(403, 'Origine non autorisée.');
+    // Sans dispositif de médiation B2C conventionné, une vente Live ne peut
+    // concerner que des entreprises françaises vérifiées, sur opt-in explicite.
+    // Ce contrôle est distinct de la validation fiscale/CGV/E2E de billingGate.
+    if (gate.mode === 'live' &&
+        process.env.STRIPE_LIVE_BUYER_SCOPE !== 'verified_b2b_fr') {
+      throw new HttpError(503, 'Le Checkout Live est réservé aux professionnels vérifiés.');
+    }
     const { user } = await requireUser();
+    // Supabase auth.getUser() fournit des app_metadata administrées côté
+    // serveur. Ne jamais accepter une simple case ou un user_metadata client.
+    if (gate.mode === 'live' &&
+        !isVerifiedFrenchProfessionalBuyer(user.app_metadata)) {
+      throw new HttpError(403, 'Souscription réservée aux professionnels vérifiés.');
+    }
     let body: unknown;
     try { body = await request.json(); }
     catch { throw new HttpError(400, 'JSON incorrect.'); }
