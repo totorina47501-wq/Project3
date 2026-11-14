@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updated": "2026-11-14",
+  "updated": "2026-11-15",
   "scope": "Code de la branche, non preuve de déploiement ni de commercialisation.",
   "features": [
     {
@@ -798,6 +798,24 @@
       "evidence": [
         "https://github.com/totorina47501-wq/Project3/pull/149",
         "https://github.com/totorina47501-wq/Project3/issues/16"
+      ]
+    },
+    {
+      "id": "mia-creator-safepublish-mvp",
+      "status": "pending",
+      "scope": "Issue #165 Codex P1 : coach IA Creator pour débutants/Solo (niche, script, accroche, légende, CTA) et passage explicite par le contrôle SafePublish déjà existant, réutiliser Mia, réécritures, moteur de vérification, auth et quotas. Mode IA OFF sans appel fournisseur. Aucune vidéo IA, tarification, nouvelle infrastructure, Stripe ou production.",
+      "environment": "development",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/issues/165"
+      ]
+    },
+    {
+      "id": "creator-first-brand-deal-kit",
+      "status": "pending",
+      "scope": "Issue #166 Copilot P1 : premier partenariat créateur, kit média personnalisable, brouillon de prospection, checklist brief/contrat fondée sur sources si disponibles ; réutiliser registre brand_deals, PDF/export et protections RLS, modèles déterministes sans coût IA. Pas d'envoi automatique, promesse juridique, OCR/vidéo, Stripe ou production. Préserver propriété de #165.",
+      "environment": "development",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/issues/166"
       ]
     }
   ]
