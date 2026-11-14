@@ -1,0 +1,34 @@
+name: MentionCheck AI Production — One-shot authenticated text QA
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mentioncheck-ai-production-single-qa.yml'
+      - 'scripts/recette/production-ai-single-e2e.mjs'
+      - 'scripts/recette/production-ai-single-e2e.test.mjs'
+permissions:
+  contents: read
+concurrency:
+  group: mentioncheck-prod-ai-one-shot-qa
+  cancel-in-progress: false
+jobs:
+  text-qa:
+    if: >-
+      github.repository == 'totorina47501-wq/Project3' &&
+      github.ref == 'refs/heads/main' &&
+      startsWith(github.event.head_commit.message, 'ops(ai): run one-shot production text QA')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      PRODUCTION_QA_MODE: one-shot-text-only
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Préflight : un seul appel et aucune donnée réelle
+        run: node --test scripts/recette/production-ai-single-e2e.test.mjs
+      - name: Créer un compte technique éphémère et exécuter UNE analyse IA
+        run: node scripts/recette/production-ai-single-e2e.mjs

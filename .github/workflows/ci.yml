@@ -41,6 +41,8 @@ jobs:
         run: node scripts/work-inventory.mjs check && node --test scripts/work-inventory.test.mjs
       - name: Activation IA production — préflight et préservation des secrets (sans fournisseur)
         run: node --test scripts/recette/production-ai-activate.test.mjs
+      - name: Recette texte IA production — contrats hors ligne, zéro appel fournisseur
+        run: node --test scripts/recette/production-ai-single-e2e.test.mjs
       - name: Frontières Cloudflare staging et Preview (sans réseau)
         run: |
           node scripts/recette/check-cloudflare-staging-boundary.mjs

@@ -1,6 +1,20 @@
 # MentionCheck — réactivation IA payante contrôlée
 **État au 14 novembre 2026 : activation texte et vision autorisée par l'exploitant et proposée dans le code de production ; propagation réelle Cloudflare et fonctionnement modèle non encore attestés.**
 
+### Recette IA texte autonome sans TinyFish — un seul appel (14/11/2026)
+
+Le navigateur TinyFish ne dispose pas d'une session authentifiée, et son quota est épuisé. Le compte technique historique a été désactivé le 5 novembre. Ne réactiver **aucun compte existant**.
+
+Le lot `scripts/recette/production-ai-single-e2e.mjs` et le workflow `mentioncheck-ai-production-single-qa.yml` préparent une recette de bout en bout au travers des **routes existantes** `/api/auth/register`, `/api/auth/login` et `/api/check`. La branche `main` est seule autorisée et le commit de fusion doit commencer par `ops(ai): run one-shot production text QA`.
+
+1. Le runner GitHub crée un mot de passe fort avec `randomBytes` **uniquement en mémoire** et une adresse de recette unique de la forme `mentioncheckcorp+mcqa-…@gmail.com`. Le compte suit le flux d'inscription normal avec `Origin=https://mentioncheck.app`, sans admin API inventée, cookie emprunté ou contournement de l'authentification.
+2. À l'émission du marqueur `QA_SIGNUP_ACCEPTED_CONFIRM_IN_SUPABASE`, l'opérateur technique confirme dans Supabase **la seule nouvelle adresse portant ce préfixe**, créée dans les 10 dernières minutes, après vérification stricte de cardinalité = 1. Cette confirmation par canal admin ne modifie aucun des comptes historiques ; `app_metadata.validation_fixture=true` est posé **uniquement** sur le nouveau compte.
+3. Le runner se connecte avec son mot de passe éphémère, vérifie l'accès privé `/api/mia/conversations`, puis effectue **une seule** requête `POST /api/check`, `execution=ai`, légende entièrement fictive, sans média. Il collecte seulement `analysisMode`, validité du score, nombre d'alertes et de réécritures, sans journaux de données ou identifiants, et n'effectue **aucun retry OpenAI**.
+4. L'opérateur lit en SQL uniquement les nouvelles métriques `ai_analyses` et `verifications` du compte `validation_fixture`, compare aux compteurs de référence, vérifie coût/quota et bannit le compte éphémère. **Ne pas supprimer ni modifier les deux comptes historiques**. Les identifiants du compte QA ne sont jamais enregistrés dans GitHub ni exposés dans les logs.
+5. Si l'inscription, la confirmation, le cookie ou les contrôles échouent, le test s'arrête sans paiement et sans contourner le login. Aucun test image/Mia ou second appel n'est lancé dans ce lot.
+
+**Coût et portée :** une analyse IA explicite est facturable par OpenAI ; le budget projet fournisseur de 25 USD/mois est une cible **non vérifiée**. Les scripts bornent à une seule analyse sur du contenu fictif mais n'imposent pas de hard cap monétaire. Pas de paiement Stripe, pas de droit d'abonnement forcé, pas de migration, pas de fournisseur navigateur supplémentaire. Conserver le coupe-circuit `OPENAI_PAUSED`.
+
 ### Exécution Cloudflare ciblée après fusion (14/11/2026)
 
 La **PR de paramètres IA #155** a été fusionnée (commit `4e7948d9bb9f30be94a462a91e68f8d462ea2c8f`, CI verte), mais le diagnostic API Cloudflare lu après fusion affichait encore `OPENAI_PAUSED=true`, `OPENAI_TEXT_ENABLED=false`, `OPENAI_VISION_ENABLED=false`. Il a confirmé la **présence du nom** du secret `OPENAI_API_KEY`.
