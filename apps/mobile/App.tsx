@@ -12,6 +12,9 @@ import {
   View,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
+// v14.0.1 WebView has a broken P=undefined default in index.d.ts on Linux CI.
+// Explicit <object> avoids WebViewProps & undefined => never, keeping Expo's pinned version.
+
 import {
   buildMentioncheckUrl,
   DEFAULT_ALLOWED_ORIGINS,
@@ -49,7 +52,7 @@ export default function App() {
   const [networkError, setNetworkError] = useState(false);
   const [webViewKey, setWebViewKey] = useState(0);
   const [canGoBack, setCanGoBack] = useState(false);
-  const webViewRef = useRef<WebView>(null);
+  const webViewRef = useRef<WebView<object>>(null);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -102,11 +105,11 @@ export default function App() {
             <Text style={styles.loadingText}>Chargement en cours...</Text>
           </View>
         ) : null}
-        <WebView
+        <WebView<object>
           key={webViewKey}
           ref={webViewRef}
           source={{ uri: targetUrl }}
-          originWhitelist={allowedOrigins}
+          originWhitelist={[...allowedOrigins]}
           sharedCookiesEnabled
           thirdPartyCookiesEnabled={false}
           allowsBackForwardNavigationGestures
