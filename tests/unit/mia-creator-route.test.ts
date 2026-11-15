@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   origin: vi.fn(),
   auth: vi.fn(),
   admin: vi.fn(),
+  ledgerInsert: vi.fn(),
   rate: vi.fn(),
   quota: vi.fn(),
   refund: vi.fn(),
@@ -66,9 +67,10 @@ beforeEach(() => {
             : { data: null, error: null },
         }),
       }),
-      insert: async () => ({ error: null }),
+      insert: mocks.ledgerInsert,
     }),
   });
+  mocks.ledgerInsert.mockResolvedValue({ error: null });
   mocks.quota.mockResolvedValue('2026-11-01');
   mocks.generate.mockResolvedValue({
     hooks: ['A', 'B', 'C'],
@@ -125,6 +127,11 @@ it('retourne un brouillon structuré SafePublish quand les entrées sont valides
   expect(data.safePublish.limits).toEqual(['limite']);
   expect(mocks.quota).toHaveBeenCalledWith('10000000-0000-4000-8000-000000000001', 'mia');
   expect(mocks.generate).toHaveBeenCalledOnce();
+  expect(mocks.ledgerInsert).toHaveBeenCalledWith(expect.objectContaining({
+    stage: 'assistant', // Contraintes ai_analyses_stage_check et ai_usage_link_required.
+    verification_id: null,
+    raw_response: expect.objectContaining({ source: 'mia_creator' }),
+  }));
   expect(mocks.refund).not.toHaveBeenCalled();
 });
 

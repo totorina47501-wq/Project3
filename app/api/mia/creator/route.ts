@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     const { error: usageError } = await admin.from('ai_analyses').insert({
       user_id: user.id,
       verification_id: null,
-      stage: 'creator_coach',
+      stage: 'assistant',
       model_used: draft.usage.model,
       prompt_tokens: draft.usage.promptTokens,
       completion_tokens: draft.usage.completionTokens,
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
       await createAdminSupabase().from('ai_analyses').insert({
         user_id: userId,
         verification_id: null,
-        stage: 'creator_coach',
+        stage: 'assistant',
         model_used: error.usage.model,
         prompt_tokens: error.usage.promptTokens,
         completion_tokens: error.usage.completionTokens,
