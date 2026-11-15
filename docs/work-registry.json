@@ -884,6 +884,15 @@
         "https://github.com/totorina47501-wq/Project3/actions/runs/43735781023",
         "https://github.com/totorina47501-wq/Project3/runs/132878718932"
       ]
+    },
+    {
+      "id": "mcp-remote-studio",
+      "status": "pending",
+      "scope": "MCP-001 issue #162, lancement développement explicitement autorisé le 15/11/2026, MVP Streamable HTTP privé avec contrôle texte rules_only et lecture des vérifications Studio via API/RPC existants, OAuth délégué à scopes étroits et isolation workspace. Prendre en compte nouveautés Creator/Media Kit/RAG/30 jours dans le catalogue proposé sans les exposer tant que droits, routes et coûts non validés. Une PR Codex unique; implémentation et tests hors ligne, staging seulement après preuves; aucune activation OpenAI payante, Stripe Live, fournisseur payant, migration ou déploiement production. Dépendances #16 et #148 restent en pause et demeurent des conditions du GO commercial MCP.",
+      "environment": "development",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/issues/162"
+      ]
     }
   ]
 }
