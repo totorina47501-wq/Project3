@@ -136,9 +136,9 @@ describe('MCP distant Studio', () => {
   });
 
   it.each([
-    ['absence d’audience resource', undefined],
-    ['audience d’une autre ressource', 'https://example.invalid/api/mcp'],
-  ])('refuse le bearer signé : %s', async (_name, resource) => {
+    ['absence d’audience resource', undefined, 401],
+    ['audience d’une autre ressource', 'https://example.invalid/api/mcp', 400],
+  ])('refuse le bearer signé : %s', async (_name, resource, expectedStatus) => {
     const bearer = await token(['checks:read'], { resource });
     const response = await mcpPost(modernRequest('tools/list', {
       jsonrpc: '2.0',
@@ -146,7 +146,7 @@ describe('MCP distant Studio', () => {
       method: 'tools/list',
       params: {},
     }, bearer));
-    expect([401, 403]).toContain(response.status);
+    expect(response.status).toBe(expectedStatus);
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
 
