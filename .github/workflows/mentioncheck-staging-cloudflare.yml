@@ -41,19 +41,19 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.MENTIONCHECK_STAGING_SUPABASE_ANON_KEY }}
       SUPABASE_SERVICE_KEY: ${{ secrets.MENTIONCHECK_STAGING_SUPABASE_SERVICE_KEY }}
     steps:
-      - name: Checkout CI-green brand-deals PR #168 candidate
+      - name: Checkout combined Mia Creator + Media Kit main SHA
         uses: actions/checkout@v4
         with:
-          ref: 028a05fbee530e073996613883ee38020a700491
+          ref: 59f4a63dcabb069d7986695a00acfd4df4447646
           persist-credentials: false
-      - name: Verify exact approved PR #168 source SHA
+      - name: Verify exact combined main source SHA
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "028a05fbee530e073996613883ee38020a700491"
-          remote_pr="$(curl --fail --silent --show-error --max-time 20 -H 'Accept: application/vnd.github+json' https://api.github.com/repos/totorina47501-wq/Project3/pulls/168 | node -e 'let data="";process.stdin.on("data",x=>data+=x);process.stdin.on("end",()=>console.log(JSON.parse(data).head.sha))')"
-          test "$remote_pr" = "028a05fbee530e073996613883ee38020a700491" || { echo "::error::PR #168 changed; staging release blocked"; exit 1; }
-          echo 'STAGING_BRANDS_PR168_SOURCE_PINNED'
+          test "$(git rev-parse HEAD)" = "59f4a63dcabb069d7986695a00acfd4df4447646"
+          remote_main="$(curl --fail --silent --show-error --max-time 20 -H 'Accept: application/vnd.github+json' https://api.github.com/repos/totorina47501-wq/Project3/commits/main | node -e 'let data="";process.stdin.on("data",x=>data+=x);process.stdin.on("end",()=>console.log(JSON.parse(data).sha))')"
+          test "$remote_main" = "59f4a63dcabb069d7986695a00acfd4df4447646" || { echo "::error::main advanced; staging release blocked"; exit 1; }
+          echo 'STAGING_CREATOR_AND_BRANDS_MAIN_SHA_PINNED'
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
@@ -150,6 +150,14 @@ jobs:
           curl --fail --silent --show-error --max-time 25 "${stage}/legal/cgu" -o /dev/null
           curl --fail --silent --show-error --max-time 25 "${stage}/legal/confidentialite" -o /dev/null
           echo 'STAGING_LEGAL_PRELAUNCH_VISIBLE_AND_PAYMENT_GUARDS_OFF'
+          for path in /dashboard/mia/creator /dashboard/brand-deals; do
+            code="$(curl --silent --show-error --max-time 25 --output /dev/null --write-out '%{http_code}' "${stage}${path}")"
+            if [[ "$code" != 200 && "$code" != 302 && "$code" != 303 && "$code" != 307 && "$code" != 308 ]]; then
+              echo "::error::creator route error: ${path} => ${code}"
+              exit 1
+            fi
+            echo "STAGING_CREATOR_PRIVATE_ROUTE_REACHABLE ${path} HTTP ${code}"
+          done
       - name: Auth A/B + collaborations RPC legacy, stockage, nettoyage fixture sur staging
         if: inputs.mode == 'publish' || github.event_name == 'push'
         env:
