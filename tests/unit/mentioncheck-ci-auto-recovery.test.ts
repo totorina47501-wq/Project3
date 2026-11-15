@@ -41,7 +41,11 @@ describe('MentionCheck CI auto-recovery — gates anti-doublons',()=>{
     expect(source).toContain('attempts.length>=2');
     expect(source).toContain("prefix+pr.head.sha+' -->'");
     expect(source).toContain('@copilot Corrige');
-    expect(source).toContain('github.rest.issues.createComment');
+    expect(source).toContain('COPILOT_REPAIR_TOKEN');
+    expect(source).toContain('https://api.github.com/repos/');
+    expect(source).toContain('method:\'POST\'');
+    expect(source).toContain('github-token: ${{ github.token }}');
+    expect(source).not.toContain('github-token: ${{ secrets.COPILOT_DISPATCH_TOKEN');
     expect(source).not.toContain('github.rest.pulls.merge');
   });
 });
