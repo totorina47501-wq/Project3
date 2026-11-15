@@ -43,6 +43,10 @@ export default async function DashboardPage() {
         </article>
       </div>
       <section aria-label="Outils MentionCheck" className="grid gap-4 sm:grid-cols-2">
+        <Link href="/dashboard/mia/creator" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 hover:border-emerald-400">
+          <h2 className="font-heading text-xl font-bold text-primary">Mia Creator</h2>
+          <p className="mt-2 text-sm text-slate-700">Prépare accroches, script, légende et CTA, puis lance SafePublish.</p>
+        </Link>
         <Link href="/dashboard/mia" className="rounded-2xl border border-indigo-200 bg-indigo-50 p-6 hover:border-indigo-400">
           <h2 className="font-heading text-xl font-bold text-primary">Parler avec Mia</h2>
           <p className="mt-2 text-sm text-slate-700">Questions sur les mentions et les règles juridiques référencées.</p>

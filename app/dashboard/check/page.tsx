@@ -2,6 +2,7 @@
 'use client';
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { createBrowserSupabase } from '@/lib/supabase/browser';
 import { ComplianceScore } from '@/components/ComplianceScore';
 import { ViolationList } from '@/components/ViolationList';
@@ -121,6 +122,7 @@ async function uploadImage(file: File, signal: AbortSignal) {
 }
 
 export default function CheckPage() {
+  const searchParams = useSearchParams();
   const [caption, setCaption] = useState('');
   const [platform, setPlatform] = useState<Platform>('instagram');
   const [execution, setExecution] = useState<'rules_only' | 'ai'>('rules_only');
@@ -133,6 +135,23 @@ export default function CheckPage() {
   const [requestedExecution, setRequestedExecution] = useState<'rules_only' | 'ai'>('rules_only');
   const pending = useRef<AbortController | null>(null);
   useEffect(() => () => { pending.current?.abort(); }, []);
+
+  useEffect(() => {
+    const initialCaption = searchParams.get('caption');
+    const initialPlatform = searchParams.get('platform');
+    const initialExecution = searchParams.get('execution');
+    if (!caption && initialCaption && initialCaption.length <= 10000) {
+      setCaption(initialCaption);
+    }
+    if (initialPlatform && platformNames.some((item) => item.value === initialPlatform)) {
+      setPlatform(initialPlatform as Platform);
+    }
+    if (initialExecution === 'ai' || initialExecution === 'rules_only') {
+      setExecution(initialExecution);
+    }
+  // Initialisation depuis URL (transfert SafePublish), sans réécriture continue du formulaire.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
