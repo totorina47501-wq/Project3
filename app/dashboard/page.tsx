@@ -47,6 +47,10 @@ export default async function DashboardPage() {
           <h2 className="font-heading text-xl font-bold text-primary">Mia Creator</h2>
           <p className="mt-2 text-sm text-slate-700">Prépare accroches, script, légende et CTA, puis lance SafePublish.</p>
         </Link>
+        <Link href="/dashboard/creator-challenge" className="rounded-2xl border border-violet-200 bg-violet-50 p-6 hover:border-violet-400">
+          <h2 className="font-heading text-xl font-bold text-primary">Mon programme créateur — 30 jours</h2>
+          <p className="mt-2 text-sm text-slate-700">Un parcours guidé pour trouver des idées, publier avec soin et préparer un media kit.</p>
+        </Link>
         <Link href="/dashboard/mia" className="rounded-2xl border border-indigo-200 bg-indigo-50 p-6 hover:border-indigo-400">
           <h2 className="font-heading text-xl font-bold text-primary">Parler avec Mia</h2>
           <p className="mt-2 text-sm text-slate-700">Questions sur les mentions et les règles juridiques référencées.</p>

@@ -4,6 +4,28 @@
 
 ## Fonctionnalités
 
+### Programme créateur de 30 jours
+
+La page privée `/dashboard/creator-challenge` propose 30 micro-missions
+déterministes en quatre semaines : identité/niche, idées et scripts, publication
+responsable, puis media kit et approche d'une marque. Les choix sont limités à
+des catégories prédéfinies de niche, plateforme et objectif ; ils adaptent les
+consignes sans générer ni publier de contenu. Des liens ouvrent Mia Creator,
+Check en mode `rules_only` ou le parcours collaboration/media kit existant.
+Mia Creator ne fait aucun appel tant que la personne n'ouvre pas cette page et
+ne demande pas explicitement une génération.
+
+La progression et ces choix sont stockés uniquement dans le `localStorage` du
+navigateur sous une clé dérivée d'un hash de l'identifiant de compte. Le JSON
+ne contient que l'état commencé, les jours cochés et les choix prédéfinis ; il
+n'inclut ni texte libre, coordonnées, identifiant brut, traceur ni synchronisation
+serveur. Le bouton de réinitialisation efface les données de ce compte sur cet
+appareil. Le hash sert uniquement à isoler les comptes et ne permet pas de
+récupérer directement l'identifiant. Si le stockage navigateur est désactivé,
+le parcours reste utilisable pendant la session, sans promesse de sauvegarde.
+Les missions ne garantissent ni abonnés, revenus, conformité juridique ou
+résultat commercial.
+
 Mia : page /dashboard/mia avec dialogues privés, historique, suppression,
 références juridiques consultées et contexte d'une vérification personnelle.
 Les réponses ne remplacent jamais un avis juridique.
