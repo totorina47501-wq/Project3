@@ -904,6 +904,24 @@
       "evidence": [
         "https://github.com/totorina47501-wq/Project3/issues/137"
       ]
+    },
+    {
+      "id": "creator-challenge-a11y-offline",
+      "status": "pending",
+      "environment": "development",
+      "scope": "Issue #181, Copilot P1 : tests et ajustements minimaux du parcours CreatorChallenge 30 jours, focus clavier/ARIA, localStorage indisponible, séparation comptes A/B et responsive, sans refaire PR #172, sans backend, aucun appel IA payant, CGV/société/Stripe/prod/OAuth/migration; chemins exclusifs du chantier media-kit et des Codex #177/#179/#180.",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/issues/181"
+      ]
+    },
+    {
+      "id": "media-kit-quality-offline",
+      "status": "pending",
+      "environment": "development",
+      "scope": "Issue #182, Copilot P1 : tests et ajustements minimaux de BrandDeals media kit PDF (validation, états erreur réseau, confidentialité brief local, clavier/focus), sans refaire PR #168, sans CGV/avis juridique/Stripe, RLS, migrations, OpenAI payant, production ni fichiers des Codex et CreatorChallenge.",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/issues/182"
+      ]
     }
   ]
 }
