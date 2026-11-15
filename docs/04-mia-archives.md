@@ -22,8 +22,10 @@ certificat ou garantie contre une sanction. Les droits et quotas du compte
 restent affichés dans Paramètres via la configuration serveur existante ; à
 partir de 80 % d’une limite connue, un lien informatif mène aux tarifs. Si la
 facturation n’est pas activée, le message ne promet ni achat ni déblocage.
-L’application distante de base, le déploiement Cloudflare et une recette E2E
-authentifiée distante ne sont pas attestés par les tests locaux.
+La CI complète de la PR #175 est passée sur le SHA `8c86ae37b78334e29552c6279b9fe3859b2d3895`.
+Workers Builds a terminé le preview de la branche, pas un déploiement production.
+Les tests E2E utilisent des fixtures locales ; aucune base distante n’a été
+migrée, aucun service externe appelé et aucune recette authentifiée distante réalisée.
 
 ### Programme créateur de 30 jours
 
