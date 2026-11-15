@@ -49,6 +49,16 @@ le parcours reste utilisable pendant la session, sans promesse de sauvegarde.
 Les missions ne garantissent ni abonnés, revenus, conformité juridique ou
 résultat commercial.
 
+Preuve QA locale du 15 novembre 2026 : `npm run test:e2e -- --project=chromium
+tests/e2e/creator-challenge.spec.ts` passe (3/3) avec les acteurs synthétiques et
+la fixture locale. Elle couvre les labels et annonces, le focus clavier visible,
+320 px (et 360/390 px), l’état vide, la progression, le refus puis la
+confirmation de réinitialisation, l’isolation de deux comptes et le refus
+d’accès au stockage. `npm test -- tests/unit/creator-challenge.test.ts` passe
+(4/4), ainsi que `npx eslint tests/e2e/creator-challenge.spec.ts
+--max-warnings=0` et `npm run typecheck`. Ces résultats ne simulent ni appareil
+physique ni staging ; aucune base distante ou service externe n’a été utilisé.
+
 Mia : page /dashboard/mia avec dialogues privés, historique, suppression,
 références juridiques consultées et contexte d'une vérification personnelle.
 Les réponses ne remplacent jamais un avis juridique.
