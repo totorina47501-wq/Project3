@@ -13,6 +13,9 @@ describe('Production release evidence never bypasses approval',()=>{
   });
   it('requires completed Workers Build on exact commit and HTTPS smoke',()=>{
     expect(workflow).toContain('Workers Builds: mentioncheck');
+    expect(workflow).toContain("link.hostname==='dash.cloudflare.com'");
+    expect(workflow).toContain("/workers/services/view/mentioncheck/production/builds/");
+    expect(workflow).toContain("!link.pathname.includes('/previews/')");
     expect(workflow).toContain('workers.conclusion!==\'success\'');
     expect(workflow).toContain('curl --fail --location');
     expect(workflow).toContain("https://mentioncheck.app$path");
