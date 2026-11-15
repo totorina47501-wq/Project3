@@ -4,6 +4,7 @@ import { requireUser, HttpError, publicError } from '@/lib/security/auth';
 import { createAdminSupabase } from '@/lib/supabase/admin';
 import { billingGate, paidPriceId } from '@/lib/billing/config';
 import { getStripe } from '@/lib/billing/stripe';
+import { isVerifiedFrenchProfessionalBuyer } from '@/lib/billing/business-eligibility';
 
 export const runtime = 'nodejs';
 const schema = z.object({ plan: z.enum(['solo','pro','studio']) }).strict();
@@ -15,7 +16,23 @@ export async function POST(request: Request) {
     if (request.headers.get('origin') !== requestOrigin ||
         (gate.mode === 'live' && requestOrigin !== process.env.NEXT_PUBLIC_APP_URL))
       throw new HttpError(403, 'Origine non autorisée.');
+    // Portée commerciale explicite, sans contrôle d'entreprise sur les
+    // particuliers. Le paiement Live reste soumis à billingGate (prestations IA
+    // disponibles, CGV, fiscalité, E2E, prix et webhook).
+    const buyerScope = process.env.STRIPE_LIVE_BUYER_SCOPE;
+    if (gate.mode === 'live' &&
+        buyerScope !== 'general_public' &&
+        buyerScope !== 'verified_b2b_fr') {
+      throw new HttpError(503, 'L’ouverture des abonnements Live n’est pas configurée.');
+    }
     const { user } = await requireUser();
+    // Ne vérifier la qualité professionnelle que pour le périmètre B2B.
+    // Dans tous les cas l'utilisateur doit rester authentifié.
+    if (gate.mode === 'live' &&
+        buyerScope === 'verified_b2b_fr' &&
+        !isVerifiedFrenchProfessionalBuyer(user.app_metadata)) {
+      throw new HttpError(403, 'Souscription réservée aux professionnels vérifiés.');
+    }
     let body: unknown;
     try { body = await request.json(); }
     catch { throw new HttpError(400, 'JSON incorrect.'); }

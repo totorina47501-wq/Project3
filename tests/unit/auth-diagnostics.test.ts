@@ -9,6 +9,8 @@ describe('Diagnostic sécurisé de la connexion', () => {
   it('différencie mot de passe, limitation et panne externe', () => {
     expect(categorizeAuthError({ code:'invalid_credentials',status:400 }))
       .toBe('invalid_credentials');
+    expect(categorizeAuthError({ code:'email_not_confirmed',status:400 }))
+      .toBe('email_not_confirmed');
     expect(categorizeAuthError({ status:429 })).toBe('rate_limited');
     expect(categorizeAuthError({ status:503 })).toBe('provider_unavailable');
   });

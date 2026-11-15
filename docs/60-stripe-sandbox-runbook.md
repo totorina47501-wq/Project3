@@ -104,6 +104,36 @@ Les tests unitaires ne prouvent pas la réception de webhooks sur Cloudflare ni
 l'état d'une base distante. Enregistrer ces preuves séparément une fois la recette
 effectivement passée. La préparation du catalogue n'est pas une recette E2E.
 
+## Recette consommateurs — état local du 14 novembre 2026
+
+Cette livraison complète les preuves unitaires locales sans exécuter de
+transaction fournisseur. Les tests utilisent des clients Stripe simulés et des
+identités `example.test`/UUID synthétiques ; ils ne contactent ni Stripe, ni
+Supabase distant, ni OpenAI. Aucun compte n'a été créé ou supprimé, aucun
+événement signé n'a été envoyé à staging, aucune facture ou session distante
+n'a été créée, et aucun remboursement n'a été demandé.
+
+| Parcours | Résultat et preuve | Limite restante |
+| --- | --- | --- |
+| Checkout Solo, Pro et Studio | **PASS local / simulé** : un prix de test configuré et l'identité serveur sont transmis pour chaque offre ; `tests/unit/stripe-solo-checkout.test.ts`, `tests/unit/stripe-staging-config.test.ts`. | Aucune session réelle Sandbox finalisée ; 3DS, paiement réussi/refusé et facture fournisseur non exercés. |
+| CGV et consentement | **PASS local** : la page Tarifs rend le lien CGV avant paiement (`tests/unit/pricing-solo.test.ts`) ; un test isolé du chemin Live confirme le paramètre `terms_of_service=required` (`tests/unit/stripe-solo-checkout.test.ts`). Ce test remplace uniquement le mode retourné par le garde-fou et ne simule ni ne valide aucune approbation Live. La page CGV reste une prépublication. | Aucun consentement Live n'a été recueilli ; ne pas assimiler le test de code à une revue contractuelle ou à une approbation Live. |
+| Événements et attribution des droits | **PASS fixture locale** : `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, changement de forfait et fin de période ; `tests/unit/stripe-webhook.test.ts` et `tests/unit/billing-events.test.ts`. | La vérification cryptographique est fournie par Stripe SDK ; les fixtures locales ne prouvent pas la réception d'un événement Sandbox signé chez le Worker ni l'état distant des droits. |
+| Signature, environnement et répétition | **PASS fixture locale** : refus d'une signature rejetée avant accès DB, refus `livemode=true` en mode test, idempotence déjà traitée et HTTP 503 d'un reçu `processing` pour provoquer une reprise (`tests/unit/stripe-webhook.test.ts`). Synchronisation atomique SQL et événements anciens : `tests/sql/billing_sync_security.sql`. | Aucune concurrence réseau réelle ni rejeu de webhook signé n'a été exécuté. |
+| Échec, expiration, annulation et déclassement | **PASS logique locale** : statuts non facturables, date d'expiration et absence de résurrection d'une souscription annulée (`tests/unit/billing-events.test.ts`, `tests/sql/billing_sync_security.sql`). | Le portail Sandbox n'a pas été utilisé pour programmer une résiliation ou confirmer le déclassement en staging. |
+| Abonnement double et portail | **PASS local** : Checkout refuse une souscription ou session ouverte ; portail authentifié rendu dans Paramètres et retour vers `/dashboard/settings` (`tests/unit/stripe-solo-checkout.test.ts`, `tests/unit/stripe-portal.test.ts`, `tests/unit/billing-portal-render.test.ts`). | L'URL fournisseur de portail et son parcours de modification/résiliation restent à exercer dans le Sandbox. |
+| Confirmation contractuelle durable | **BLOCKED** : le modèle `subscription-confirmed` est uniquement rendu/prévisualisé (`lib/email/templates.ts`, `tests/unit/email-product-templates.test.ts`). Aucun transport transactionnel ni déclenchement de livraison depuis le webhook n'est raccordé ; le code ne prouve donc pas la remise au client. | Nécessite un transport et une recette de livraison approuvés par l'opérateur. Aucun email n'a été envoyé. |
+| Factures, TVA, remboursements et rétractation | **PARTIAL / BLOCKED fournisseur** : CGV prépublication et tests vérifient le droit de rétractation, l'absence de renonciation automatique et les modalités de remboursement (`tests/unit/legal-documents.test.ts`). | Aucune facture Sandbox n'a été créée ou lue pour contrôler l'identité, le prix final, la périodicité ou les taxes. Aucun remboursement ou parcours de rétractation n'a été exécuté ; aucune conformité fiscale n'est attestée. |
+| Production / coûts | **AUCUNE OPÉRATION** : pas d'accès ou de requête à Stripe Live, Supabase Production, Cloudflare Production ou OpenAI. Les flags de production existants restent fermés. | Toute activation commerciale reste soumise aux revues et prérequis opérateur déjà consignés dans `docs/61-dossier-lancement-commercial-2026.md`, `docs/63-launch-decisions-20261110.md` et l'issue [#16](https://github.com/totorina47501-wq/Project3/issues/16). |
+
+La recette staging existante `scripts/recette/stripe-checkout-authenticated.mjs`
+ne remplace pas ces contrôles d'événements ni la finalisation par carte. Elle
+crée des sessions Sandbox non finalisées, et l'exécution distante reste
+**bloquée pour cette livraison** faute d'une action opérateur explicitement
+autorisée et vérifiable dans le présent environnement. Le statut du registre
+reste `in_progress` pour empêcher un dispatch en doublon ; le code et la
+couverture locale ne doivent pas être présentés comme une certification réseau
+complète ni comme un GO commercial.
+
 ## Points à sécuriser avant un lancement commercial
 
 - Structure juridique et identité éditrice (aucune structure créée à ce jour),

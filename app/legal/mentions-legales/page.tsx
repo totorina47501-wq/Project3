@@ -6,18 +6,26 @@ export const metadata: Metadata = {
   title: 'Mentions légales — MentionCheck',
   description: 'Informations sur l’éditeur et les prestataires techniques de MentionCheck.',
   alternates: { canonical: '/legal/mentions-legales' },
+  robots: { index: false, follow: false },
 };
 
 export default function MentionsLegales() {
   return <main className="mx-auto max-w-3xl space-y-6 px-5 py-12 leading-relaxed text-slate-800">
     <Link href="/" className="text-sm font-semibold text-indigo-700 underline">Accueil</Link>
     <h1 className="font-heading text-4xl font-bold">Mentions légales</h1>
+    <p role="note" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
+      Prépublication : service en phase de préparation commerciale. Les abonnements payants ne sont pas ouverts.
+    </p>
     <section className="space-y-3">
       <h2 className="font-heading text-2xl font-bold">Éditeur</h2>
       <p><strong>Éditeur :</strong> {BRAND.legalName} ({BRAND.tradeName})</p>
       <p><strong>Adresse :</strong> {BRAND.legalAddress}</p>
-      <p><strong>SIRET :</strong> {BRAND.siret}</p>
-      <p><strong>TVA :</strong> {BRAND.vatNotice}</p>
+      {BRAND.registrationVerified
+        ? <p><strong>SIRET :</strong> {BRAND.siret}</p>
+        : <p><strong>Immatriculation :</strong> en cours de vérification avant toute ouverture commerciale.</p>}
+      {BRAND.taxRegimeVerified
+        ? <p><strong>TVA :</strong> {BRAND.vatNotice}</p>
+        : <p><strong>Régime fiscal :</strong> à confirmer avant toute facturation.</p>}
       <p><strong>Contact :</strong>{' '}
         <a href={`mailto:${BRAND.contactEmail}`} className="text-indigo-700 underline">{BRAND.contactEmail}</a>
         {' — '}<a href="tel:+33675814948" className="text-indigo-700 underline">{BRAND.contactPhone}</a>

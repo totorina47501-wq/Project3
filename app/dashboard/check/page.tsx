@@ -1,7 +1,9 @@
 // Chemin : app/dashboard/check/page.tsx
 'use client';
 
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { createBrowserSupabase } from '@/lib/supabase/browser';
 import { ComplianceScore } from '@/components/ComplianceScore';
 import { ViolationList } from '@/components/ViolationList';
@@ -121,9 +123,13 @@ async function uploadImage(file: File, signal: AbortSignal) {
 }
 
 export default function CheckPage() {
+  const searchParams = useSearchParams();
+  const guided = searchParams.get('guided') === '1';
   const [caption, setCaption] = useState('');
   const [platform, setPlatform] = useState<Platform>('instagram');
   const [execution, setExecution] = useState<'rules_only' | 'ai'>('rules_only');
+  const [guidedConfirmation, setGuidedConfirmation] = useState(false);
+  const [publicationCase, setPublicationCase] = useState('sponsored');
   const [image, setImage] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [stages, setStages] = useState<Partial<Record<Stage, StageStatus>>>({});
@@ -134,26 +140,64 @@ export default function CheckPage() {
   const pending = useRef<AbortController | null>(null);
   useEffect(() => () => { pending.current?.abort(); }, []);
 
+  useEffect(() => {
+    const initialCaption = searchParams.get('caption');
+    const initialPlatform = searchParams.get('platform');
+    const initialExecution = searchParams.get('execution');
+    if (!guided && !caption && initialCaption && initialCaption.length <= 10000) {
+      setCaption(initialCaption);
+    }
+    if (initialPlatform && platformNames.some((item) => item.value === initialPlatform)) {
+      setPlatform(initialPlatform as Platform);
+    }
+    if (guided) {
+      setExecution('rules_only');
+    } else if (initialExecution === 'ai' || initialExecution === 'rules_only') {
+      setExecution(initialExecution);
+    }
+  // Initialisation depuis URL (transfert SafePublish), sans réécriture continue du formulaire.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guided, searchParams]);
+
+  async function importCaption(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setError('');
+    setNotice('');
+    try {
+      if (file.size > 40_000) throw new Error('Choisis un fichier texte de 10 000 caractères maximum.');
+      const imported = await file.text();
+      if (imported.length > 10_000) throw new Error('La légende dépasse la limite de 10 000 caractères.');
+      setCaption(imported);
+      setNotice('Légende importée dans ce formulaire uniquement. Elle ne sera envoyée qu’après ta confirmation.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Impossible de lire ce fichier texte.');
+    } finally {
+      event.target.value = '';
+    }
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending.current || !caption.trim()) return;
+    if (pending.current || !caption.trim() || (guided && !guidedConfirmation)) return;
+    const selectedExecution = guided ? 'rules_only' : execution;
     const controller = new AbortController();
     pending.current = controller;
-    setRequestedExecution(execution);
+    setRequestedExecution(selectedExecution);
     setLoading(true);
     setStages({});
     setResult(null);
     setError('');
     setNotice('');
     try {
-      const path = execution === 'ai' && image ? await uploadImage(image, controller.signal) : undefined;
+      const path = selectedExecution === 'ai' && image ? await uploadImage(image, controller.signal) : undefined;
       controller.signal.throwIfAborted();
       const response = await fetch('/api/check', {
         signal: controller.signal,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          caption, platform, execution, mediaUrl: path, mediaType: path ? 'image' : 'none',
+          caption, platform, execution: selectedExecution, mediaUrl: path, mediaType: path ? 'image' : 'none',
         }),
       });
       if (!response.ok) {
@@ -262,7 +306,29 @@ export default function CheckPage() {
         <h1 className="mt-2 font-heading text-4xl font-bold text-primary">Check ma publication</h1>
         <p className="mt-3 text-slate-600">Colle une légende et, si tu veux, ajoute une image. Mia repère les signaux à corriger avant publication.</p>
       </div>
+      {guided && <section aria-labelledby="guided-check-title" className="space-y-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 sm:p-5">
+        <h2 id="guided-check-title" className="font-heading text-xl font-bold text-primary">Ta première vérification en 3 étapes</h2>
+        <ol className="list-inside list-decimal space-y-1 text-sm text-slate-700">
+          <li>Choisis le contexte de ta publication.</li>
+          <li>Rédige une légende ou importe un fichier texte.</li>
+          <li>Confirme le lancement du contrôle automatique sans IA.</li>
+        </ol>
+        <p className="text-sm text-slate-700">SafePublish repère certains signaux dans le texte. Ce contrôle ne constitue ni un avis juridique, ni une certification, ni une garantie contre une sanction.</p>
+        <Link href="/dashboard/check" className="inline-flex min-h-11 items-center font-semibold text-indigo-800 underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">
+          Revenir au formulaire normal
+        </Link>
+      </section>}
       <form onSubmit={submit} aria-busy={loading} className="space-y-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        {guided && <label className="block font-semibold">
+          Étape 1 — Cas de publication
+          <select disabled={loading} aria-label="Cas de publication" value={publicationCase}
+            onChange={(event) => setPublicationCase(event.target.value)}
+            className="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-4 py-3">
+            <option value="sponsored">Post sponsorisé</option>
+            <option value="gift">Cadeau ou partenariat</option>
+            <option value="ordinary">Contenu ordinaire</option>
+          </select>
+        </label>}
         <label className="block font-semibold">
           Plateforme
           <select disabled={loading} value={platform} onChange={(event) => setPlatform(event.target.value as Platform)}
@@ -270,7 +336,7 @@ export default function CheckPage() {
             {platformNames.map((item) => <option key={item.value} value={item.value}>{item.name}</option>)}
           </select>
         </label>
-        <fieldset disabled={loading} className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+        {!guided && <fieldset disabled={loading} className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
           <legend className="px-2 font-semibold">Mode de vérification</legend>
           <label className="flex items-start gap-3 text-sm">
             <input type="radio" name="execution" value="rules_only" checked={execution === 'rules_only'}
@@ -286,14 +352,20 @@ export default function CheckPage() {
               <span className="mt-1 block text-slate-600">N&apos;active pas cette option pendant les tests sans budget IA.</span>
             </span>
           </label>
-        </fieldset>
+        </fieldset>}
         <label className="block font-semibold">
-          Légende sponsorisée
+          {guided ? 'Étape 2 — Légende à vérifier' : 'Légende sponsorisée'}
           <textarea disabled={loading} required minLength={1} maxLength={10000} value={caption}
             onChange={(event) => setCaption(event.target.value)}
             placeholder="Voici mon dernier produit préféré…"
             className="mt-2 block min-h-48 w-full rounded-xl border border-slate-300 p-4 font-normal outline-none focus:border-accent" />
         </label>
+        {guided && <label className="block text-sm font-semibold">
+          Importer une légende texte (facultatif, .txt)
+          <input disabled={loading} type="file" accept=".txt,text/plain" onChange={(event) => void importCaption(event)}
+            className="mt-2 block min-h-11 w-full text-sm font-normal text-slate-600 file:mr-3 file:min-h-11 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:font-semibold" />
+          <span className="mt-1 block text-xs font-normal text-slate-500">Jusqu’à 10 000 caractères. Le texte reste dans ce formulaire et n’est transmis qu’au lancement confirmé.</span>
+        </label>}
         {execution === 'ai' && <label className="block font-semibold">
           Visuel (facultatif)
           <input disabled={loading} type="file" accept="image/jpeg,image/png,image/webp"
@@ -303,13 +375,21 @@ export default function CheckPage() {
             JPEG, PNG ou WebP, 8 Mo max. Les vidéos et carrousels arrivent prochainement.
           </span>
         </label>}
-        {execution === 'rules_only' && <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900">
+        {guided && <p className="rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-slate-700">
+          Étape 3 — Ce parcours utilise uniquement les règles automatiques existantes. Aucun appel IA ni crédit OpenAI ne sera utilisé.
+        </p>}
+        {execution === 'rules_only' && !guided && <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900">
           Aucun appel GPT-4o / Whisper ne sera effectué dans ce mode. Tu peux vérifier la légende
           sans consommer de crédit OpenAI.
         </p>}
-        <button disabled={loading || !caption.trim()} type="submit"
+        {guided && <label className="flex min-h-11 items-start gap-3 rounded-xl border border-slate-200 p-3 text-sm">
+          <input type="checkbox" required checked={guidedConfirmation} onChange={(event) => setGuidedConfirmation(event.target.checked)}
+            className="mt-1 h-5 w-5 shrink-0 accent-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500" />
+          <span>Je confirme le lancement du contrôle automatique sans IA et comprends qu’il ne remplace pas un avis juridique.</span>
+        </label>}
+        <button disabled={loading || !caption.trim() || (guided && !guidedConfirmation)} type="submit"
           className="w-full rounded-xl bg-accent px-6 py-3.5 font-bold text-white shadow-md hover:bg-indigo-700 disabled:opacity-50">
-          {loading ? 'Vérification…' : execution === 'ai' ? 'Analyser avec Mia (crédits IA)' : 'Vérifier sans IA'}
+          {loading ? 'Vérification…' : guided ? 'Confirmer et lancer le contrôle sans IA' : execution === 'ai' ? 'Analyser avec Mia (crédits IA)' : 'Vérifier sans IA'}
         </button>
         {loading && <button type="button" onClick={() => {
           pending.current?.abort();

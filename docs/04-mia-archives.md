@@ -4,9 +4,63 @@
 
 ## Fonctionnalités
 
+### Première vérification guidée
+
+Le cockpit propose le parcours « Faire ma première vérification » lorsqu’aucun
+contrôle n’est encore enregistré. Il réutilise `/dashboard/check` et son
+exécution `rules_only` existante : choix du contexte de publication, saisie ou
+import `.txt` d’une légende limitée à 10 000 caractères, puis confirmation
+explicite avant l’envoi à la route existante. Le contexte est pédagogique et
+n’est pas transmis au moteur. Aucun exemple n’est inséré ni envoyé
+automatiquement ; le brouillon reste en mémoire du formulaire et n’est pas
+stocké dans le navigateur ou sur le serveur.
+
+Le contrôle utilise uniquement les règles automatiques existantes et ne
+consomme pas de quota de vérification IA. Les alertes et limites du résultat
+SafePublish demeurent celles de `/dashboard/check` : aucun avis juridique,
+certificat ou garantie contre une sanction. Les droits et quotas du compte
+restent affichés dans Paramètres via la configuration serveur existante ; à
+partir de 80 % d’une limite connue, un lien informatif mène aux tarifs. Si la
+facturation n’est pas activée, le message ne promet ni achat ni déblocage.
+La CI complète de la PR #175 est passée sur le SHA `8c86ae37b78334e29552c6279b9fe3859b2d3895`.
+Workers Builds a terminé le preview de la branche, pas un déploiement production.
+Les tests E2E utilisent des fixtures locales ; aucune base distante n’a été
+migrée, aucun service externe appelé et aucune recette authentifiée distante réalisée.
+
+### Programme créateur de 30 jours
+
+La page privée `/dashboard/creator-challenge` propose 30 micro-missions
+déterministes en quatre semaines : identité/niche, idées et scripts, publication
+responsable, puis media kit et approche d'une marque. Les choix sont limités à
+des catégories prédéfinies de niche, plateforme et objectif ; ils adaptent les
+consignes sans générer ni publier de contenu. Des liens ouvrent Mia Creator,
+Check en mode `rules_only` ou le parcours collaboration/media kit existant.
+Mia Creator ne fait aucun appel tant que la personne n'ouvre pas cette page et
+ne demande pas explicitement une génération.
+
+La progression et ces choix sont stockés uniquement dans le `localStorage` du
+navigateur sous une clé dérivée d'un hash de l'identifiant de compte. Le JSON
+ne contient que l'état commencé, les jours cochés et les choix prédéfinis ; il
+n'inclut ni texte libre, coordonnées, identifiant brut, traceur ni synchronisation
+serveur. Le bouton de réinitialisation efface les données de ce compte sur cet
+appareil. Le hash sert uniquement à isoler les comptes et ne permet pas de
+récupérer directement l'identifiant. Si le stockage navigateur est désactivé,
+le parcours reste utilisable pendant la session, sans promesse de sauvegarde.
+Les missions ne garantissent ni abonnés, revenus, conformité juridique ou
+résultat commercial.
+
 Mia : page /dashboard/mia avec dialogues privés, historique, suppression,
 références juridiques consultées et contexte d'une vérification personnelle.
 Les réponses ne remplacent jamais un avis juridique.
+
+Mia Creator : page /dashboard/mia/creator pour débutants et Solo. Entrées
+niche, plateforme (Instagram/TikTok/YouTube), objectif, sujet et partenariat
+oui/non. Sortie structurée modifiable (accroches, script 30-60 s, légende, CTA)
+et étape SafePublish guidée vers le contrôle existant `/dashboard/check`
+(`rules_only` prérempli), sans nouveau moteur juridique ni second score.
+La route `POST /api/mia/creator` applique auth, same-origin, rate limit, quota
+`mia`, fail-closed (`OPENAI_PAUSED`, clé absente, quota atteint) et journalise
+uniquement des métriques minimisées.
 
 RAG documentaire v1 : cinq synthèses du seed, classement lexical côté serveur.
 Les références affichées sont filtrées sur Legifrance et economie.gouv.fr.
@@ -65,7 +119,8 @@ interne. Un second appel conserve l'archive initiale. Toute modification d'une
 ligne archivée ou de ses liens est refusée ; les RPC ne suppriment que des
 brouillons. L'effacement administratif du compte reste un chantier RGPD séparé.
 
-Le format canonique v1 est un tableau JSON : version, identifiant de
+Les archives historiques utilisent le format canonique v1, un tableau JSON :
+version, identifiant de
 collaboration, propriétaire, marque, début, fin, chemin de contrat, création
 UTC, archivage UTC, puis les vérifications triées par UUID. Chaque vérification
 contient UUID, plateforme, statut, texte original, texte accepté, empreinte et
@@ -75,8 +130,29 @@ virgules ; dates UTC au format milliseconde. Le snapshot couvre ces valeurs,
 aucune signature électronique qualifiée et aucun certificat juridique ne sont
 émis. Les archives historiques sans snapshot restent affichables et signalées.
 
+La migration `20261115101752_creator_brand_deal_details.sql` ajoute à la table
+existante `brand_deals` les détails structurés d'une proposition de créateur
+(activité, plateforme, format, livrables, durée, budget déclaré, droits,
+exclusivité et message éditable). Aucun second registre n'est créé. Les
+nouvelles archives v2 incluent ces détails dans leur snapshot ; les v1 restent
+valides. La route et le RPC existants conservent les contrôles de session,
+d'origine et de propriété. Cette migration est versionnée dans Git mais n'est
+pas une preuve d'application distante.
+
+Le parcours « Ma première collaboration » fournit une checklist statique de
+brief/contrat, sans interprétation automatique, appel IA, source juridique
+inventée ni envoi de message. Le media kit est composé uniquement des valeurs
+saisies et sélectionnées par le créateur, puis exporté par le générateur PDF
+existant. Aucun chiffre d'audience, de portée, de performance, partenariat ou
+attestation n'est généré. Les liens de kit doivent être HTTPS ; les coordonnées
+et chaque rubrique peuvent être exclues du PDF.
+
 Les routes `/api/brand-deals`, `/api/brand-deals/[id]`,
 `/api/brand-deals/[id]/archive` et `/api/brand-deals/export` sont privées.
+Le `POST` existant sur `/api/brand-deals/export` réauthentifie et vérifie
+l'origine, limite le JSON du media kit à 16 Kio et génère le PDF sans conserver
+les champs saisis. Le `GET` conserve les exports JSON/CSV/PDF historiques des
+métadonnées du registre ; ils excluent `creator_details`.
 Les exports JSON/CSV/PDF portent sur les métadonnées du registre filtré,
 limité à 500 collaborations ; un résultat tronqué est refusé explicitement,
 jamais présenté comme complet. Le CSV protège contre les formules de tableur.

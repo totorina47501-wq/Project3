@@ -1,0 +1,40 @@
+name: MentionCheck AI Production — One-shot authenticated text QA
+on:
+  pull_request:
+    types: [opened]
+    branches: [main]
+    paths:
+      - '.github/workflows/mentioncheck-ai-production-single-qa.yml'
+      - 'scripts/recette/production-ai-single-e2e.mjs'
+      - 'scripts/recette/production-ai-single-e2e.test.mjs'
+      - 'docs/62-ai-reactivation-20261110.md'
+permissions:
+  contents: read
+concurrency:
+  group: mentioncheck-prod-ai-one-shot-qa
+  cancel-in-progress: false
+jobs:
+  text-qa:
+    # Recette du 14/11/2026 terminée (#43641142721) ; ne jamais relancer automatiquement.
+    if: >-
+      false &&
+      github.repository == 'totorina47501-wq/Project3' &&
+      github.event_name == 'pull_request' &&
+      github.event.action == 'opened' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'qa/execute-production-ai-once-20261114'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      PRODUCTION_QA_MODE: one-shot-text-only
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Vérifier avant le test sans données réelles
+        run: node --test scripts/recette/production-ai-single-e2e.test.mjs
+      - name: Créer un compte technique éphémère et exécuter UNE analyse IA
+        run: node scripts/recette/production-ai-single-e2e.mjs

@@ -7,24 +7,33 @@ import { BRAND } from '../../lib/branding';
 describe('Branding légal public', () => {
   it('aligne le nom légal déclaré et le domaine canonique', () => {
     expect(BRAND.legalName).toBe('Ali Rassoul');
-    expect(BRAND.tradeName).toBe('aliaicorp');
-    expect(BRAND.siret).toBe('À venir');
+    expect(BRAND.tradeName).toBe('Aliaicorp');
+    expect(BRAND.siret).toBe('899 123 459 00013');
+    expect(BRAND.registrationVerified).toBe(false);
+    expect(BRAND.taxRegimeVerified).toBe(false);
     expect(BRAND.domain).toBe('mentioncheck.app');
   });
 
   it('publie les mentions légales avec le canonical exact', () => {
-    expect(metadata.robots).toBeUndefined();
+    expect(metadata.robots).toEqual({ index: false, follow: false });
     expect(metadata.alternates?.canonical).toBe('/legal/mentions-legales');
   });
 
   it('n expose pas de fausses mentions légales', () => {
     const html = renderToStaticMarkup(createElement(MentionsLegalesPage));
     expect(html).toContain('Ali Rassoul');
-    expect(html).toContain('aliaicorp');
+    expect(html).not.toContain(BRAND.siret);
+    expect(html).toContain('Immatriculation');
+    expect(html).toContain('en cours de vérification');
+    expect(html).toContain('Régime fiscal');
+    expect(html).toContain('à confirmer avant toute facturation');
+    expect(html).toContain('Aliaicorp');
     expect(html).toContain('100 avenue Gambetta');
-    expect(html).toContain('mentioncheckcorp@gmail.com');
+    expect(html).toContain('47500 Fumel');
+    expect(html).not.toContain('4, rue de la Boule');
+    expect(html).toContain('contact@aliaicorp.fr');
     expect(html).toContain('0675814948');
-    expect(html).toContain('293 B du CGI');
+    expect(html).not.toContain(BRAND.vatNotice);
     expect(html).toContain('Cloudflare, Inc.');
     expect(html).toContain('Supabase');
     expect(html).not.toContain('93214476900019');

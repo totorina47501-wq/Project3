@@ -24,8 +24,9 @@ export default async function DashboardPage() {
           <h1 className="mt-2 font-heading text-4xl font-bold text-primary">Tableau de bord</h1>
           <p className="mt-2 text-slate-600">Mia t&apos;aide à publier des collaborations plus transparentes.</p>
         </div>
-        <Link href="/dashboard/check" className="rounded-xl bg-accent px-6 py-3 font-bold text-white shadow-md hover:bg-indigo-700">
-          Check ma publication
+        <Link href={!error && checks?.length === 0 ? '/dashboard/check?guided=1' : '/dashboard/check'}
+          className="rounded-xl bg-accent px-6 py-3 font-bold text-white shadow-md hover:bg-indigo-700">
+          {!error && checks?.length === 0 ? 'Faire ma première vérification' : 'Check ma publication'}
         </Link>
       </div>
       {error && <div role="alert" className="space-y-2 rounded-xl bg-red-50 p-4 text-red-800">
@@ -43,6 +44,14 @@ export default async function DashboardPage() {
         </article>
       </div>
       <section aria-label="Outils MentionCheck" className="grid gap-4 sm:grid-cols-2">
+        <Link href="/dashboard/mia/creator" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 hover:border-emerald-400">
+          <h2 className="font-heading text-xl font-bold text-primary">Mia Creator</h2>
+          <p className="mt-2 text-sm text-slate-700">Prépare accroches, script, légende et CTA, puis lance SafePublish.</p>
+        </Link>
+        <Link href="/dashboard/creator-challenge" className="rounded-2xl border border-violet-200 bg-violet-50 p-6 hover:border-violet-400">
+          <h2 className="font-heading text-xl font-bold text-primary">Mon programme créateur — 30 jours</h2>
+          <p className="mt-2 text-sm text-slate-700">Un parcours guidé pour trouver des idées, publier avec soin et préparer un media kit.</p>
+        </Link>
         <Link href="/dashboard/mia" className="rounded-2xl border border-indigo-200 bg-indigo-50 p-6 hover:border-indigo-400">
           <h2 className="font-heading text-xl font-bold text-primary">Parler avec Mia</h2>
           <p className="mt-2 text-sm text-slate-700">Questions sur les mentions et les règles juridiques référencées.</p>
@@ -65,7 +74,19 @@ export default async function DashboardPage() {
               </li>
             ))}
           </ul>
-        ) : <p className="mt-4 text-slate-600">Aucune vérification. Lance ton premier check !</p>}
+        ) : <p className="mt-4 text-slate-600">Aucune vérification pour le moment. Utilise « Faire ma première vérification » pour choisir un cas, rédiger ou importer une légende et lancer un premier contrôle sans IA.</p>}
+      </section>
+      <section aria-labelledby="dashboard-rights-title" className="rounded-2xl border border-slate-200 bg-white p-6">
+        <h2 id="dashboard-rights-title" className="font-heading text-xl font-bold">Droits et limites</h2>
+        <p className="mt-2 text-sm text-slate-600">Consulte les quotas réellement associés à ton compte dans les paramètres. La page des offres précise si les abonnements sont indicatifs ou disponibles.</p>
+        <div className="mt-4 flex flex-wrap gap-4">
+          <Link href="/dashboard/settings" className="font-semibold text-accent underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">
+            Voir mes quotas et mes droits
+          </Link>
+          <Link href="/tarifs" className="font-semibold text-accent underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">
+            Comparer les offres
+          </Link>
+        </div>
       </section>
     </div>
   );

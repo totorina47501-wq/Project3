@@ -161,6 +161,40 @@ describe('Webhooks Stripe isolés du fournisseur', () => {
     expect((await POST(request())).status).toBe(400);
     expect(mocks.admin).not.toHaveBeenCalled();
   });
+  it('refuse une signature invalide avant toute lecture ou écriture en base', async () => {
+    mocks.construct.mockImplementation(() => { throw new Error('invalid signature fixture'); });
+    const response = await POST(request());
+    expect(response.status).toBe(400);
+    expect(mocks.admin).not.toHaveBeenCalled();
+    expect(writes).toEqual([]);
+    expect(JSON.stringify(await response.json())).not.toContain('invalid signature fixture');
+  });
+  it('fait réessayer un événement déjà en cours au lieu de le traiter deux fois', async () => {
+    receiptStatus = 'processing';
+    const response = await POST(request());
+    expect(response.status).toBe(503);
+    expect(mocks.retrieve).not.toHaveBeenCalled();
+    expect(writes).toEqual([]);
+  });
+  it('conserve le plan actif jusqu’à la fin de période et synchronise un changement de forfait', async () => {
+    const updated = {
+      ...source(),
+      cancel_at_period_end: true,
+      items: { data: [{ price: { id: 'price_PRO' }, current_period_end: 1_800_000_000 }] },
+    };
+    mocks.construct.mockReturnValue({
+      created:1_700_000_010,id:'evt_plan_change_at_period_end',livemode:false,
+      type:'customer.subscription.updated',data:{object:updated},
+    });
+    mocks.retrieve.mockResolvedValue(updated);
+    expect((await POST(request())).status).toBe(200);
+    expect(writes.find(write => write.table === 'atomic_rpc')).toMatchObject({
+      values:{
+        p_plan:'pro',p_status:'active',
+        p_period_end:new Date(1_800_000_000_000).toISOString(),
+      },
+    });
+  });
   it('ne réexécute pas un reçu déjà traité et ne contacte aucun fournisseur sans activation', async () => {
     receiptStatus = 'processed';
     expect((await POST(request())).status).toBe(200);

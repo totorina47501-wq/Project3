@@ -27,6 +27,10 @@ it('présente les trois prix indicatifs et les états sans paiement quand Stripe
  expect(markup.match(/Abonnement bientôt disponible/g)).toHaveLength(3);
  expect(markup).toContain('Gratuit — 0 € / mois');
  expect(markup).toContain('sans carte bancaire ni abonnement Stripe');
+ expect(markup).toContain('TVA non applicable, art. 293 B du CGI');
+ expect(markup).toContain('forfaits payants sont mensuels, reconduits automatiquement');
+ expect(markup).toContain('formulaire de rétractation');
+ expect(markup).toContain('href="/legal/cgu"');
  expect(markup).not.toContain('Paiement test');
 });
 it('présente les limites réellement accordées, dont cinq sièges Studio propriétaire compris',()=>{
@@ -42,4 +46,27 @@ it('présente les limites réellement accordées, dont cinq sièges Studio propr
  expect(markup).toContain('API sans IA : 2 000 contrôles/mois par espace');
  expect(markup).toContain('href="/developpeurs"');
  expect(markup).not.toMatch(/illimité|brand safety certifié/i);
+});
+
+it('propose le Checkout Live en mode B2B ou public explicite, jamais sans portée définie',()=>{
+ const keys={
+  BILLING_ENABLED:'true',STRIPE_MODE:'live',STRIPE_SECRET_KEY:'sk_live_fixture',
+  STRIPE_WEBHOOK_SECRET:'whsec_fixture',STRIPE_PRICE_SOLO:'price_SOLO',
+  STRIPE_PRICE_PRO:'price_PRO',STRIPE_PRICE_STUDIO:'price_STUDIO',
+  STRIPE_LIVE_APPROVED:'true',STRIPE_LIVE_LEGAL_REGISTRATION:'123456789',
+  STRIPE_LIVE_TAX_REVIEW:'approved',STRIPE_LIVE_TERMS_REVIEW:'approved',
+  STRIPE_LIVE_E2E_REVIEW:'passed',OPENAI_PAUSED:'false',
+  OPENAI_TEXT_ENABLED:'true',OPENAI_VISION_ENABLED:'true',
+  OPENAI_API_KEY:'sk-proj-fixture',NEXT_PUBLIC_APP_URL:'https://mentioncheck.app',
+ };
+ for(const [key,value] of Object.entries(keys))vi.stubEnv(key,value);
+ expect(renderToStaticMarkup(PricingPage())).not.toContain('Paiement test solo');
+ vi.stubEnv('STRIPE_LIVE_BUYER_SCOPE','verified_b2b_fr');
+ const page=renderToStaticMarkup(PricingPage());
+ expect(page).toContain('Paiement test solo');
+ expect(page).toContain('professionnels français préalablement vérifiés');
+ vi.stubEnv('STRIPE_LIVE_BUYER_SCOPE','general_public');
+ const publicPage=renderToStaticMarkup(PricingPage());
+ expect(publicPage).toContain('Paiement test solo');
+ expect(publicPage).not.toContain('Souscription réservée aux professionnels français');
 });

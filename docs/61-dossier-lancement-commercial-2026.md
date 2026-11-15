@@ -1,23 +1,126 @@
 # MentionCheck — dossier de pré-lancement commercial
 État : **PROJET — NE PAS PUBLIER / NE PAS ACTIVER STRIPE LIVE**
+## Actualisation prioritaire — 14 novembre 2026, après confirmation de l'exploitant
+
+L'exploitant indique **ne pas avoir encore constitué de véritable entreprise**.
+En conséquence, les identifiants SIREN/SIRET déjà communiqués et le régime de
+franchise en base de TVA figurant dans des notes précédentes **ne constituent
+pas une preuve d'immatriculation ni une autorisation de facturation**. Les
+mentions légales et les documents prépublication ne doivent plus exposer le
+SIRET non attesté comme celui d'un professionnel déjà immatriculé ni présenter
+un régime de TVA comme applicable. Aucun numéro de substitution n'est inventé.
+
+Le nom du responsable du traitement, les coordonnées publiques déclarées,
+l'information sur les fournisseurs (Cloudflare/Supabase) et les droits des
+utilisateurs restent disponibles. Les CGV et la politique de confidentialité
+restent en **prépublication / noindex**. Le lancement Stripe Live reste fermé,
+avec médiation B2C et validation fiscale/juridique à compléter après création de
+la structure. Ne pas effacer des données Supabase, rejouer les migrations Solo
+ou créer de nouveaux prix Stripe : le chantier est limité à la vérité des
+mentions précommerciales et aux tests de non-régression.
+
+**Travaux indépendants toujours autorisés** : recette Stripe TEST #148
+(paiement réellement terminé + webhook signé + droits, sans Live),
+certification technique #16 (sécurité Auth/RLS, RGPD, CI, sauvegardes et
+réversibilité sans répétition des preuves), OAuth social différé, contrôle
+des pages Auth déjà déployées, vérification de l'accessibilité et suivi
+des agents. Le médiateur CM2C peut être étudié, mais **aucune convention
+n'est signée** tant que l'adhésion n'est pas réellement finalisée.
+
 Date de préparation : 10 novembre 2026. France, régime de franchise en base
 de TVA **envisagé**, sous réserve d'éligibilité et de confirmation fiscale.
 
-Ce fichier sert à finaliser les pièces réelles avant publication. Il ne
-prouve aucune immatriculation, n'identifie pas l'exploitant et ne constitue
-ni un contrat approuvé ni un avis juridique.
+Ce fichier sert à finaliser les pièces réelles avant publication. Il mentionne
+l'identité et les identifiants déclarés par l'exploitant, sans prouver son
+immatriculation, et ne constitue ni un contrat approuvé ni un avis juridique.
+
+### Confirmation d'identité du 14 novembre 2026 — déclaration de l'exploitant
+
+- **Identité de l'entrepreneur individuel : Rassoul Ali** (présentée « Ali Rassoul » dans la source publique `lib/branding.ts` et les mentions légales ; il s'agit de la même personne). « Jean Dupont » n'est pas l'exploitant et ne doit être repris dans aucun document.
+- **Nom commercial déclaré : Aliaicorp** (source publique alignée : `Aliaicorp`). Statut micro-entreprise / EI déclaré, sans attestation d'immatriculation annexée au dossier.
+- **SIREN déclaré par l'exploitant : `899 123 459` ; SIRET corrigé communiqué : `899 123 459 00013`.** Ces identifiants sont repris tels que fournis par l'exploitant, sans vérification administrative sur Internet ni attestation d'immatriculation jointe. Le SIRET antérieurement communiqué (`899 123 459 00017`) est remplacé et ne doit plus être utilisé. Le SIRET figure dans la source des mentions légales de cette PR avec la qualification « déclaré » ; cette déclaration ne prouve pas sa validité administrative et ne suffit pas, à elle seule, à attester les autres conditions légales, fiscales et fonctionnelles de l'activation Stripe Live.
+- **Coordonnées professionnelles confirmées le 14 novembre 2026 par l'exploitant :** 100 avenue Gambetta, 47500 Fumel, France ; `contact@aliaicorp.fr`. L'adresse de Paris communiquée antérieurement est remplacée dans la source publique. Le numéro de téléphone déjà déclaré est conservé. Aucune vérification administrative externe n'a été demandée ni effectuée.
+- **Fiscalité :** franchise en base déclarée ; tarifs nets communiqués : Solo 9 €/mois, Pro 19 €/mois, Studio 49 €/mois, sans TVA ajoutée au paiement. Mention affichée : « TVA non applicable, art. 293 B du CGI ». Cela ne vaut pas revue fiscale du champ d'application, notamment pour les ventes B2C/B2B hors de France.
+- **CGV :** validation finale non encore fournie ; conserver le statut brouillon. Ne pas activer Stripe Live, ne créer ni encaissement ni abonnement sur la seule déclaration d'identité.
+
+Cette note est un relevé interne des informations déclarées, pas une attestation d'identité, de numéro d'immatriculation ou de conformité juridique. Elle ne remplace pas le dossier opérateur privé.
+
+## Nouvelle instruction opérateur — proposer aussi les abonnements aux particuliers (14 novembre 2026)
+
+L'exploitant souhaite ouvrir **Solo, Pro et Studio aux particuliers**, sans leur demander de fournir un SIREN, un SIRET, une entreprise ou une justification d'activité professionnelle. Cette instruction **remplace la limitation de clientèle B2B** documentée ci-dessous ; elle ne vaut pas attestation de conformité des paiements, de livraison des prestations ou de médiation.
+
+Un parcours `STRIPE_LIVE_BUYER_SCOPE=general_public` est préparé dans le code : si la facturation Live est **déjà réellement autorisée par `billingGate`**, tout utilisateur connecté peut demander une session Stripe sans contrôle d'entreprise. La portée `verified_b2b_fr` reste disponible sans changement de son contrôle administrateur. En l'absence de portée reconnue, ou lorsque `billingGate` refuse le mode Live, le Checkout et les boutons payants restent fermés.
+
+**L'ouverture effective des ventes B2C n'est pas certifiée à la date de cette note** : l'éditeur n'a pas encore désigné de médiateur de la consommation effectif, les CGV restent en prépublication, les prestations IA payantes sont désactivées en production et les parcours de paiement/confirmation/remboursement doivent être attestés. Aucun faux drapeau `STRIPE_LIVE_TERMS_REVIEW`, `STRIPE_LIVE_TAX_REVIEW` ou `STRIPE_LIVE_E2E_REVIEW` n'a été activé ; pas de débit client, pas de mutation Stripe Live. La présente option supprime **uniquement le filtrage d'identité professionnelle des acheteurs particuliers**, pas les vérifications de signature, d'abonnement, d'origine, de prix ni la protection contre les doublons.
+
+## Décision opérateur — lancement sans convention de médiation (14 novembre 2026)
+
+L'exploitant demande explicitement de **poursuivre sans adhésion à un médiateur**. Cette instruction permet les travaux préparatoires, les tests hors production et l'étude d'une **offre exclusivement destinée aux acheteurs professionnels**, mais **n'efface pas l'obligation de médiation des ventes aux consommateurs** (Code de la consommation, article L612-1). Il est interdit d'attester `STRIPE_LIVE_TERMS_REVIEW=approved` pour des ventes B2C, ou de supprimer silencieusement les droits à la médiation des CGV.
+
+**Option commerciale conditionnelle : lancement limité aux clients professionnels réellement éligibles (B2B)** :
+- Avant le paiement, recueillir l'identification vérifiable de l'entreprise cliente (raison sociale, identifiant professionnel selon pays, adresse de facturation) et documenter la finalité **professionnelle** de l'achat. Ne pas accepter une simple case « je suis professionnel » comme preuve suffisante ; contrôler spécialement les petites entreprises lorsque le contrat est hors de leur activité principale et peut relever de protections du Code de la consommation.
+- Configurer une restriction **côté serveur** de l'accès Checkout Live aux comptes dont la qualité professionnelle et le lien de la prestation à leur activité ont été vérifiés. Un affichage « réservé aux professionnels » dans la page Tarifs n'est pas un contrôle d'accès. Les abonnements Solo/Pro/Studio ne doivent pas être proposés indistinctement à des consommateurs.
+- Prévoir des conditions et factures destinées aux professionnels, vérifier territorialité/TVA, gestion des justificatifs, conséquences des droits particuliers des très petites entreprises, ainsi que confirmation durable/résiliation ; soumettre cette option à une revue juridique/fiscale spécifique et à une recette Stripe **Sandbox**.
+- Conserver **l'intégralité des flags Live fermés** et les CGV en prépublication tant que le contrôle d'éligibilité côté serveur, la fiscalité, la livraison réelle des services IA et le parcours paiement/webhook n'ont pas été attestés. Aucune donnée client ou abonnement réel ne doit être modifié pour déclarer cette option ouverte.
+
+Un **premier garde-fou logiciel B2B est préparé dans la PR de sécurité dédiée**, sans validation juridique, sans qualification automatisée des entreprises, et sans ouverture commerciale :
+- Le Checkout Live refuse par défaut les demandes si `STRIPE_LIVE_BUYER_SCOPE` n'a pas la valeur exacte `verified_b2b_fr`. Les prix et boutons Live sont cachés de la page Tarifs en l'absence de cet opt-in. Les sessions **Stripe TEST** ne changent pas.
+- Même avec cet opt-in, seul `auth.getUser().user.app_metadata.mentioncheck_b2b` peut autoriser une demande Live ; les `user_metadata` modifiables par le client ne valent jamais validation. Ce champ doit être écrit **exclusivement** par un administrateur autorisé, après contrôle hors ligne du dossier, avec les propriétés `verified=true`, `country="FR"`, `purchase_purpose="core_professional_activity"`, `reviewed_by="operator"`, `legal_name` non vide, `registration_id` français sur 9 ou 14 chiffres et `reviewed_at` ISO de moins de 90 jours. La forme de l'identifiant seule ne prouve **pas** son authenticité.
+- La revue opérateur doit déterminer la réalité de la relation professionnelle et des droits spécifiques des petits professionnels, conserver des preuves adaptées au RGPD, et **n'approuver aucune fiche sans vérification**. Aucun outil d'auto-approbation n'est ajouté et aucun client réel n'est marqué « verified ».
+- Ce verrou est uniquement une condition nécessaire : les autres portes `BILLING_ENABLED`, `STRIPE_LIVE_APPROVED`, `STRIPE_LIVE_TAX_REVIEW`, `STRIPE_LIVE_TERMS_REVIEW`, `STRIPE_LIVE_E2E_REVIEW` et les capacités IA restent obligatoires. Les flags sont toujours OFF dans le Worker.
+- Les **clients consommateurs restent exclus du Checkout** ; le maintien des CGV B2C en prépublication interdit de présenter l'option B2B comme un lancement grand public. À terme, l'ouverture B2C demandera son propre contrôle de médiation effective.
+
+Ce correctif de sécurité ne constitue **pas un GO B2B** : le paiement réel, les factures, la qualification des professionnels et les garanties fiscales/contractuelles sont toujours à attester. Il n'écrit aucun dossier Auth et n'effectue aucune transaction.
+
+**Sources officielles :**
+- [Article L612-1 — médiation pour les consommateurs](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000032224805)
+- [FAQ officielle : litiges entre professionnels exclus de la médiation de la consommation](https://www.economie.gouv.fr/mediation-conso/foire-aux-questions)
+- [Service-Public — médiation et certaines petites entreprises](https://entreprendre.service-public.gouv.fr/vosdroits/F33338)
+- [Article liminaire — distinctions consommateur, non-professionnel et professionnel](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000049464063)
+
+## Médiation de la consommation — option préparée (14 novembre 2026)
+
+**Option à examiner : CM2C (Centre de Médiation de la Consommation des Conciliateurs de justice)**, présent dans la [liste officielle CECMC](https://www.economie.gouv.fr/mediation-conso/vous-etes-un-professionnel/choisir-un-mediateur-de-la-consommation/mediateurs-references). Son [barème public](https://www.cm2c.net/tarifs.php) indique, au contrôle du 14 novembre 2026, **48 € pour trois ans** jusqu'à 10 salariés, payables en une fois, et **36 € pour une médiation à distance**. [Inscription professionnelle](https://www.cm2c.net/inscription-professionnel.php).
+
+**À ne pas considérer comme convention déjà conclue :** vérifier d'abord auprès de CM2C qu'il accepte explicitement les litiges de **prestations de services numériques/SaaS d'abonnement B2C**, et confirmer le coût total, la durée, les frais au dossier et les modalités de convention. L'exploitant doit accepter le contrat et tout paiement. La DGCCRF rappelle qu'un médiateur doit être effectivement choisi et conventionné avant publication de ses coordonnées sur le site et les CGV : [guide officiel](https://www.economie.gouv.fr/mediation-conso/vous-etes-un-professionnel/choisir-un-mediateur-de-la-consommation). Après obtention de la convention, renseigner **le nom exact, l'adresse et le site du médiateur** dans les CGV et les mentions requises. **Ne pas inscrire « médiateur CM2C désigné » avant cela.**
+
+### Lot agent commercial — sans encaissement
+
+Mission unique `stripe-sandbox-consumer-e2e` inscrite dans `docs/work-registry.json` pour préparer la recette Stripe **Sandbox** et les preuves des parcours B2C (confirmation sur support durable, portail résiliation, rétractation, remboursements, échecs de paiement, droits payants et retour au plan gratuit). Réutiliser les scripts/tests actuels et le code de facturation ; **aucune migration Solo**, aucune souscription Live, aucun basculement de drapeaux Cloudflare ni appel OpenAI facturable. Les validations fiscales, la convention de médiation et les dépenses restent hors de portée de l'agent, avec décision opérateur séparée.
+
+## Actualisation CGV et fiscalité — 14 novembre 2026
+
+**Travail réalisé, sans recherche externe sur l'immatriculation :**
+- Page `/legal/cgu` complétée : reconduction mensuelle automatique, information précontractuelle, gestion de la résiliation depuis Paramètres/Facturation avec recours au support, rétractation de principe à 14 jours pour les consommateurs, remboursement suivant les conditions légales, absence de renonciation automatique, garantie légale de conformité des services numériques et confirmation contractuelle sur support durable.
+- Page `/tarifs` et CTA Stripe alignés : prix mensuels nets déclarés 9 € / 19 € / 49 €, renouvellement, résiliation et lien vers le formulaire de rétractation, sans laisser croire à une ouverture commerciale effective.
+- Identité et coordonnées déclarées : Rassoul Ali / Ali Rassoul, Aliaicorp, 100 avenue Gambetta, 47500 Fumel, `contact@aliaicorp.fr`, SIREN `899 123 459`, SIRET `899 123 459 00013` (aucune certification administrative revendiquée).
+- Fiscalité : franchise en base de TVA déclarée et tarifs nets pour les opérations où elle s'applique ; **aucune attestation d'éligibilité fiscale ni des ventes transfrontalières**. La configuration des prix Stripe Live est `tax_behavior=inclusive` ; ce réglage, à lui seul, ne prouve pas le traitement fiscal ni la conformité des factures.
+
+**Préflight Stripe Live en lecture seule du 14 novembre 2026 (sans écriture fournisseur) :**
+- Compte Stripe français `business_type=individual`, encaissements/virements autorisés, aucune exigence `currently_due` retournée.
+- **Adresse cohérente selon la dernière déclaration de l'exploitant :** Stripe Account (adresse de l'individu et de l'entreprise) et Stripe Tax `head_office` présentent **100 avenue Gambetta, 47500 Fumel**, désormais l'adresse retenue dans les mentions légales. Il ne subsiste donc plus d'écart d'adresse entre ces sources au dernier contrôle, sans que cela atteste une immatriculation ou une vérification fiscale administrative.
+- Stripe Tax : `status=active`, `registrations=[]`, `defaults.tax_behavior=null` ; les trois tarifs Live restent `tax_behavior=inclusive`. **Le fait que Stripe Tax soit disponible n'atteste ni TVA facturée, ni conformité de franchise**, et le Checkout de l'app ne demande pas actuellement de calcul automatique de TVA.
+- Profil Stripe : site vitrine de l'entreprise encore renseigné sur `mentioncheck.toto-rina47501.workers.dev` au lieu de `https://mentioncheck.app` ; adresse email de support du profil absente. À rapprocher des coordonnées légales publiées avant la commercialisation.
+- Portail Stripe Live : configuration active et par défaut, `subscription_cancel.enabled=true`, `mode=at_period_end`, `proration_behavior=none`, historique des factures activé ; **le parcours de résiliation depuis MentionCheck et la confirmation au client restent à tester en réel**.
+
+**Actions contractuelles restant indispensables avant les premières ventes B2C :**
+1. **Médiation de la consommation** : choisir un médiateur compétent, conclure la convention correspondante et renseigner son **nom, adresse, site Internet** dans les CGV. Aucun organisme n'est inventé et aucune convention n'est attestée.
+2. **Revue fiscale / territorialité** : confirmer le régime applicable à la vente en France et arrêter le traitement des clients situés hors de France (notamment services numériques B2C dans l'UE, clients B2B, éventuelle TVA à destination), le mode facturation Stripe et les mentions des factures ; ne pas supposer qu'un tarif `inclusive` résout ces obligations.
+3. **Parcours et preuves** : vérifier en conditions fournisseur le lien de résiliation en ligne, l'accusé de réception, la confirmation contractuelle durable et le remboursement/retrait avant de lever `STRIPE_LIVE_TERMS_REVIEW` et `STRIPE_LIVE_TAX_REVIEW`.
+
+Les CGV restent en **prépublication / noindex**, sans affirmation de validation professionnelle ou conventionnelle. Ces travaux ne doivent pas activer Stripe Live ni modifier les abonnements et comptes historiques.
 
 ## 1. Informations éditeur à fournir (jamais inventer)
 
 | Champ | À fournir et vérifier |
 | --- | --- |
-| Identité | [NOM_ET_PRÉNOM_ENTREPRENEUR_INDIVIDUEL] ou raison sociale réelle |
-| Statut | [FORME_JURIDIQUE_VALIDÉE] — micro-entreprise / EI uniquement si immatriculée |
-| SIREN / SIRET | [IDENTIFIANT_OFFICIEL] et immatriculation RNE/RCS selon activité |
-| Adresse | [ADRESSE_PROFESSIONNELLE_PUBLIABLE] |
-| Directeur de publication | [NOM] |
-| Courriel et SAV | [CONTACT_EMAIL_SUIVI] |
-| Contact RGPD | [EMAIL_RGPD_SUIVI] |
+| Identité | Rassoul Ali (présenté « Ali Rassoul »), entrepreneur individuel déclaré ; non vérifié par registre externe |
+| Statut | Micro-entreprise / entrepreneur individuel, régime déclaré par l'exploitant, éligibilité administrative et fiscale non attestée |
+| SIREN / SIRET | 899 123 459 / 899 123 459 00013, identifiants communiqués par l'exploitant, sans validation administrative externe |
+| Adresse | 100 avenue Gambetta, 47500 Fumel, France — déclarée comme siège professionnel à publier |
+| Directeur de publication | Ali Rassoul, selon déclaration de l'exploitant |
+| Courriel et SAV | contact@aliaicorp.fr, accessibilité et réception des messages à tester |
+| Contact RGPD | contact@aliaicorp.fr, destinataire de la politique existante |
 | Hébergeur | Cloudflare, dénomination, adresse et téléphone **à vérifier et publier** |
 | Sous-traitants | Supabase, Cloudflare, Stripe, OpenAI si IA activée ; DPA et géographies à vérifier |
 
@@ -64,19 +167,19 @@ automatique. Fournir un formulaire de rétractation et une voie de dépôt
 claire ; déterminer si une rétractation totale/partielle est due selon
 l'exécution commencée et l'accord du client. Vérification juridique requise.
 
-**Réclamation / remboursement** : [EMAIL_SUPPORT] ; procédure de
+**Réclamation / remboursement** : contact@aliaicorp.fr ; procédure de
 réclamation et délai de réponse à définir. Pour les consommateurs,
 fournir les coordonnées du médiateur de la consommation désigné,
 une fois le contrat correspondant conclu.
 
-**Disponibilité** : [SLA_ET_LIMITES_VALIDÉS]. Ne pas promettre de
+**Disponibilité** : aucun niveau de service contractuel chiffré n'est annoncé. Ne pas promettre de
 service IA continu avant réactivation et tests de débit/quotas.
 Toute fermeture, suspension ou modification de l'offre doit être
 prévue dans les CGV finales, selon les droits contractuels applicables.
 
 ## 3. Texte de formulaire de rétractation — PROJET
 
-À l'attention de : [IDENTITÉ_ET_EMAIL_DE_L'ÉDITEUR]
+À l'attention de : Ali Rassoul (Aliaicorp), contact@aliaicorp.fr
 
 Je vous notifie ma rétractation du contrat d'abonnement MentionCheck
 souscrit le [DATE] ; référence : [NUMÉRO_DE_COMMANDE].
@@ -109,13 +212,24 @@ totale des fichiers chez tous les prestataires n'est pas encore prouvée.
 
 Sous une **franchise en base de TVA réellement applicable**, les
 prestations françaises concernées ne donnent pas lieu à perception de TVA.
-La facture doit porter la mention de non-application. Depuis
-le **1er septembre 2026**, la référence privilégiée est :
-**« TVA non applicable, art. L. 223 et s. du CIBS »**.
-La référence historique à l'article 293 B du CGI reste tolérée jusqu'au
-**31 décembre 2027**. Un libellé « prix TTC » dans un catalogue
-technique Stripe (`tax_behavior=inclusive`) ne prouve en aucun cas
-qu'une TVA est effectivement due ou collectée.
+La facture doit porter la mention de non-application : au **14 novembre
+2026**, l'administration fiscale indique notamment **« TVA non applicable,
+art. 293 B du CGI »** pour les entreprises bénéficiant effectivement de
+la franchise en base. La recodification correspondante de la TVA dans
+le CIBS, initialement annoncée pour le 1er septembre 2026, a été reportée
+au **1er janvier 2027** par l'article 17 de l'ordonnance n° 2026-671 du
+27 juillet 2026 (modifiant l'article 49 de l'ordonnance n° 2025-1247).
+Ne pas présenter l'article 293 B comme simplement « toléré depuis
+septembre 2026 ». La prochaine date d'effet doit être revue lors de la
+préparation des factures postérieures à 2026. Le code ne certifie ni
+l'éligibilité de l'exploitant à la franchise ni son application aux ventes
+hors France. Un libellé « prix TTC » dans un catalogue technique Stripe
+(`tax_behavior=inclusive`) ne prouve en aucun cas qu'une TVA est
+effectivement due ou collectée.
+
+Sources officielles consultées le 14/11/2026 :
+- [Ordonnance n° 2026-671, article 17, report de la date](https://www.legifrance.gouv.fr/eli/ordonnance/2026/7/27/ECOE2610185R/jo/article_17)
+- [Impôts — obligations TVA du micro-entrepreneur](https://www.impots.gouv.fr/professionnel/questions/en-tant-que-micro-entrepreneur-puis-je-etre-redevable-de-la-tva)
 
 Ne pas activer Stripe Tax automatiquement ni créer de taxe ou de
 registration sans confirmer le pays de l'éditeur et les ventes

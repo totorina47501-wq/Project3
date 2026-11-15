@@ -8,15 +8,15 @@ export function missingAuthConfig(config: {
   return missing;
 }
 export type AuthErrorCategory =
-  'invalid_credentials' | 'rate_limited' | 'provider_unavailable' | 'configuration_error' | 'unknown';
+  'invalid_credentials' | 'email_not_confirmed' | 'rate_limited' | 'provider_unavailable' | 'configuration_error' | 'unknown';
 export function categorizeAuthError(error: unknown): AuthErrorCategory {
   if (!error || typeof error !== 'object') return 'unknown';
   const record = error as { status?: unknown; code?: unknown; name?: unknown };
   const code = typeof record.code === 'string' ? record.code : '';
   const status = typeof record.status === 'number' ? record.status : null;
   const name = typeof record.name === 'string' ? record.name : '';
-  if (code === 'invalid_credentials' || code === 'email_not_confirmed' ||
-      code === 'invalid_grant') return 'invalid_credentials';
+  if (code === 'email_not_confirmed') return 'email_not_confirmed';
+  if (code === 'invalid_credentials' || code === 'invalid_grant') return 'invalid_credentials';
   if (status === 429 || code === 'over_email_send_rate_limit' ||
       code === 'over_request_rate_limit') return 'rate_limited';
   if (status !== null && status >= 500) return 'provider_unavailable';

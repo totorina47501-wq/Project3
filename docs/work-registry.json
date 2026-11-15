@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updated": "2026-11-13",
+  "updated": "2026-11-15",
   "scope": "Code de la branche, non preuve de déploiement ni de commercialisation.",
   "features": [
     {
@@ -18,13 +18,18 @@
       "routes": [
         "app/api/auth/login/route.ts",
         "app/api/auth/logout/route.ts",
-        "app/api/auth/register/route.ts"
+        "app/api/auth/register/route.ts",
+        "app/api/auth/resend-confirmation/route.ts",
+        "app/api/auth/request-password-reset/route.ts",
+        "app/api/auth/recovery/route.ts",
+        "app/api/auth/update-password/route.ts"
       ],
       "migrations": [
         "supabase/migrations/202611032001_initial_schema.sql",
         "supabase/migrations/202611032002_rls_and_functions.sql"
       ],
       "next": [
+        "Récupération de mot de passe, erreurs email non confirmé, renvoi de confirmation et bascule de visibilité préparés dans PR #163 ; CI, déploiement et lien email réel non encore certifiés. Supabase doit autoriser https://mentioncheck.app/api/auth/recovery comme Redirect URL, sans modifier l'obligation de confirmation.",
         "Connexion réelle validée le 5 novembre 2026 sur le Worker via compte technique isolé, ensuite désactivé. Les parcours locaux restent couverts par Playwright ; voir docs/37-real-openai-validation.md.",
         "Checklist opératoire Auth Security Advisor (mots de passe compromis) documentée, sans activation automatique : docs/12-privacy-security.md.",
         "Contrôle Supabase Security Advisor Production du 11/11 après réglage opérateur : alerte auth_leaked_password_protection absente (protection activée) ; longueur minimale Supabase 12 et quatre familles de caractères exigées. Alignement du formulaire et de la validation serveur sur cette politique dans la PR #128 existante ; tests de non-régression requis avant fusion. Cinq WARN SECURITY DEFINER à conserver sous revue et à tester dynamiquement ; ne pas modifier les permissions sans analyse."
@@ -81,7 +86,11 @@
         "Sorties structurées strictes et coût conservé pour les réponses invalides ; propriété des métriques et RLS vérifiées.",
         "Adaptateur audio inchangé, désactivé par défaut et non raccordé au flux distant.",
         "Réactivation texte/vision explicite sur branche dédiée : audio, embeddings et médias IA automatiques restent interdits. Vérifier clé production et plafond strict API avant preuve de dépense ; docs/62-ai-reactivation-20261110.md.",
-        "Probe HTTP de production GET /api/health/ai : ne fait aucun appel payant, n'expose ni clé ni détails sensibles ; retourne configured uniquement si flags texte/vision et clé sont présents. Ne prouve pas la validité de la clé ni le succès d'un appel GPT-4o."
+        "Probe HTTP de production GET /api/health/ai : ne fait aucun appel payant, n'expose ni clé ni détails sensibles ; retourne configured uniquement si flags texte/vision et clé sont présents. Ne prouve pas la validité de la clé ni le succès d'un appel GPT-4o.",
+        "Activation IA 14/11/2026 autorisée et préparée : wrangler.jsonc du Worker production passe OPENAI_PAUSED=false, OPENAI_TEXT_ENABLED=true, OPENAI_VISION_ENABLED=true ; audio, embeddings et IA média restent OFF, staging et preview OFF, Stripe OFF. Ne pas déclarer disponible avant preuve Cloudflare runtime, plafond fournisseur OpenAI confirmé et test API réel contrôlé. Voir docs/62-ai-reactivation-20261110.md et issue #16.",
+        "Cloudflare Production conserve les flags IA fermés après fusion #155 (diagnostic read-only : secret OpenAI présent par nom, anciens flags actifs). Lot #156 : script et workflow PATCH **uniquement 3 flags texte/vision**, préflight version/secret/Stripe fermé, secret hérité, vérification post-écriture + probe sans coût. Activation effective, plafond fournisseur 25 USD et réponse modèle restent à attester. Aucune nouvelle migration ni activation Stripe.",
+        "14/11/2026 : activation distante IA production réellement prouvée par GitHub Actions #43634384732 (OPENAI_PAUSED=false, texte/vision=true, HTTP /api/health/ai=200). Quota TinyFish épuisé et aucun compte QA connecté. Nouveau lot unique one-shot via GitHub Actions et inscription Auth réelle : compte éphémère de recette généré exclusivement en mémoire, confirmation admin Supabase ciblée, UNE analyse texte facturable sans relance, journaux anonymes, ban du compte technique après usage. Jamais de checkout, image ni compte client. Plafond mensuel fournisseur OpenAI non vérifié ; contrôler un coût très faible de l'appel. Voir docs/62-ai-reactivation-20261110.md et issue #16.",
+        "14/11/2026 PASS IA texte réel : GitHub Actions #43641142721 login Auth 200, accès privé 200, POST /api/check execution=ai mediaType=none, SSE analysisMode=full, score valide, 1 flag, 0 warning. Supabase QA : 1 vérification completed, 1 métrique text, 309/54 tokens, coût estimé 0,00131250 USD, quota checks_used=1. Fixture bannie, sessions et refresh tokens révoqués, 2 comptes historiques inchangés. PR de déclenchement #160 refermée sans fusion. Workflow one-shot désormais verrouillé false && pour éviter une répétition facturable. Vision/Mia non éprouvés sur ce runtime ; hard cap 25 USD non confirmé. Preuves issue #16."
       ]
     },
     {
@@ -99,6 +108,7 @@
       ],
       "routes": [
         "app/api/mia/chat/route.ts",
+        "app/api/mia/creator/route.ts",
         "app/api/mia/conversations/route.ts",
         "app/api/mia/conversations/delete/route.ts",
         "app/api/internal/mia-index/route.ts",
@@ -113,7 +123,8 @@
         "Corpus distant déjà indexé 5/5 ; invalidation appliquée (version 20261104212312). Ne pas relancer une indexation initiale.",
         "Conversation réelle validée : citation Légifrance, embedding et réponse journalisés par compte ; question hors corpus sans citation. Surveiller le cron opt-in sans recréer le corpus ; voir docs/37-real-openai-validation.md.",
         "Un échec du journal embedding interrompt désormais la réponse au lieu d’être masqué par le repli lexical ; voir docs/39-technical-reliability.md.",
-        "Évaluation hors ligne des citations/refus, budgets, erreurs d’embedding et isolation A/B : docs/50-mia-rag-offline-evaluation.md ; aucun fournisseur ni réindexation."
+        "Évaluation hors ligne des citations/refus, budgets, erreurs d’embedding et isolation A/B : docs/50-mia-rag-offline-evaluation.md ; aucun fournisseur ni réindexation.",
+        "Mia Creator (coach contenu) ajoute une génération structurée niche/objectif/sujet + SafePublish guidé, en réutilisant quotas mia, rate limit, fail-closed OPENAI_PAUSED et moteur de règles existant sans nouveau score juridique."
       ]
     },
     {
@@ -284,8 +295,10 @@
         "Page /tarifs améliorée : cartes responsives, comparaison accessible, FAQ et positionnement Pro ; prix et quotas restent indicatifs, Stripe live désactivé.",
         "Gratuit 3/1/3 distinct de Solo payant 30/5/20 ; migration SQL et tests locaux sur PR #114, staging à certifier avant tout déploiement production.",
         "Staging : Checkout Solo/Pro/Studio authentifié + portail et vrais événements Stripe signés création/résiliation certifiés ; sans carte ni vente. Code live prêt derrière garde-fous légaux/fiscaux/IA ; paiement par carte test non certifié.",
-        "Dossier juridique de pré-lancement à compléter : docs/61-dossier-lancement-commercial-2026.md. TVA française : mention CIBS de septembre 2026, 293 B en tolérance jusqu'à fin 2027.",
-        "Lecture Stripe Live 11/11 : 3 produits et 3 prix mensuels existants (Solo 9, Pro 19, Studio 49 EUR), webhook unique enabled et portail actif mais URLs légales absentes ; garder BILLING_ENABLED=false et STRIPE_LIVE_APPROVED=false jusqu'au GO explicite."
+        "Dossier juridique de pré-lancement à compléter : docs/61-dossier-lancement-commercial-2026.md. TVA 2026 : la référence 293 B du CGI reste indiquée par impots.gouv.fr pour les assujettis éligibles ; report de la recodification TVA dans le CIBS au 1er janvier 2027 (ordonnance 2026-671, art. 17). Situation fiscale de l'exploitant et territorialité toujours non certifiées.",
+        "Lecture Stripe Live 11/11 : 3 produits et 3 prix mensuels existants (Solo 9, Pro 19, Studio 49 EUR), webhook unique enabled et portail actif mais URLs légales absentes ; garder BILLING_ENABLED=false et STRIPE_LIVE_APPROVED=false jusqu'au GO explicite.",
+        "Mode B2B français préparé côté code, non activé : STRIPE_LIVE_BUYER_SCOPE=verified_b2b_fr + app_metadata.mentioncheck_b2b administrée après revue opérateur, récente et attestant un achat dans l'activité principale. Aucune qualification automatique ni approbation Live, les consommateurs sont exclus du Checkout Live sans médiateur. Docs/61 et PR de sécurité dédiée ; essais Sandbox et fiscalité restent requis.",
+        "B2C/particuliers préparé sans vérification d'entreprise via STRIPE_LIVE_BUYER_SCOPE=general_public, uniquement pour des comptes authentifiés et si billingGate valide toutes ses conditions Live ; pas de médiateur conventionné, CGV prépublication, IA hors service et E2E incomplet : aucune autorisation de vente réelle ni bascule de flags de production. Conserver verified_b2b_fr indépendant."
       ]
     },
     {
@@ -469,9 +482,29 @@
         "app/api/brand-deals/[id]/archive/route.ts",
         "app/api/brand-deals/export/route.ts"
       ],
+      "migrations": [
+        "supabase/migrations/20261115101752_creator_brand_deal_details.sql"
+      ],
+      "next": [
+        "Kit média PDF et parcours déterministe disponibles dans le code ; application distante de la migration et recette authentifiée séparées. Aucun envoi, appel IA ou chiffre de performance généré."
+      ]
+    },
+    {
+      "id": "creator-30-day-onboarding",
+      "name": "Programme créateur débutant de 30 jours",
+      "status": "implemented_code",
+      "anchor": "lib/creator-challenge/model.ts",
+      "test": "tests/unit/creator-challenge.test.ts",
+      "doc": "docs/04-mia-archives.md",
+      "aliases": [
+        "creator challenge",
+        "programme créateur",
+        "30 jours"
+      ],
+      "routes": [],
       "migrations": [],
       "next": [
-        "Archivage et exports informatifs ; téléversement contrat signé tiers non activé."
+        "Parcours local déterministe avec progression navigateur par compte ; aucun fournisseur IA, stockage serveur ou publication automatique. CI, staging et déploiement restent à qualifier séparément."
       ]
     },
     {
@@ -643,10 +676,9 @@
         "supabase/migrations/20261111103000_legacy_solo_prelaunch_bridge.sql"
       ],
       "next": [
-        "Code, SQL et tests préparés ; aucun octroi dans ce lot. Migration staging puis production coordonnée, sélection et activation seulement lors du GO public certifié.",
-        "PROMO_SOLO_ENABLED reste false tant que la nouvelle table n'est pas présente et les tests d'accès authentifiés ne sont pas passés.",
-        "PR #128 : bridge pré-GO activation_pending pour 2 profils historiques, Solo 30/5/20 sans lancer le compteur 30 jours ; preuve SQL PGlite, application staging nécessaire, aucune mutation production.",
-        "Trois migrations quotas/promotion/bridge sont déjà installées sur staging, aucune en Production. 2 profils Solo historiques sans abonnement Stripe actif ; transition atomique et GO séparé nécessaires pour préserver leurs droits sans démarrer prématurément les 30 jours. Correctif UI pré-GO et workflow RGPD au commit 1850998, remarques Codex résolues, tests unitaires/SQL/Playwright réussis ; statut global CI encore à confirmer.",
+        "14 novembre 2026 : les trois migrations Solo et les deux droits pré-GO ont été installés ensemble en PRODUCTION (22 migrations au total). Les droits des deux Solo sont activation_pending, starts_at/expires_at NULL, les 30 jours ne sont pas lancés et Stripe Live reste OFF. Ne surtout pas réappliquer ces migrations.",
+        "Promotion toujours non commercialement activée : PROMO_SOLO_ENABLED=false doit être conservé tant que les tests Auth/quotas sur production et la décision de GO distincte ne sont pas attestés ; conserver la protection de la nouvelle table avec RLS sans policy cliente.",
+        "Lors du GO commercial ultérieur, activer les deux dates de promotion en transaction unique, vérifier le rattachement Stripe et les prestations IA, puis vérifier les paiements ; ne pas créer de faux abonnements.",
         "PRA : restauration native PostgreSQL/Auth et 13/13 agrégats SQL concordants ; Storage 13/13 copies et 832860 octets vérifiés dans les métadonnées ; 13/13 SHA-256 identiques sur les archives Production/PRA fournies (5 originaux + 8 dérivés). Seule la provenance fournisseur indépendante de ces ZIP n'est pas attestée ; garder PRA global PARTIAL, ne pas refaire comparaison/transfert. Autres gates Auth, RGPD et release ouverts."
       ]
     },
@@ -756,15 +788,17 @@
     },
     {
       "id": "solo-prod-cutover",
-      "status": "pending",
-      "scope": "Bascule atomique quotas/bridge des deux Solo historiques différée. Répétition PGlite du lot et rollback PASS ; répétition clone réel/historique Supabase non attestées, aucune migration production",
+      "status": "in_progress",
+      "scope": "14/11/2026 : 3 migrations de quotas/promotion/bridge appliquées ATOMIQUEMENT en Production ; 2 droits Solo activation_pending sans dates, 2 profils conservés, 0 abonnement Stripe. Répétition PRA réelle BEGIN/ROLLBACK PASS ; installation pré-GO DONE. GO commercial, date des 30 jours et activation PROMO_SOLO_ENABLED encore différés.",
       "environment": "production",
-      "evidence": []
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/issues/16#issuecomment-6878076215"
+      ]
     },
     {
       "id": "oauth-provider-review",
       "status": "in_progress",
-      "scope": "YouTube staging : connexion/persistance, reconnexions sans doublon, révocation et refus réels attestés. Expiration réelle et configuration Google publique restent à valider ; production fermée, PR #132 existante",
+      "scope": "YouTube staging : connexion/persistance, reconnexions sans doublon, révocation et refus réels attestés. Expiration réelle et configuration Google publique restent à valider ; production fermée, PR #132 existante PAUSE EXPLICITE 15/11/2026 : issue #124 ouverte, Copilot désaffecté, agent:approved retiré ; PR #141 brouillon préservée et production OAuth fermée ; reprise depuis la PR existante après clés/revues fournisseurs.",
       "environment": "staging",
       "evidence": [
         "https://github.com/totorina47501-wq/Project3/pull/132",
@@ -783,7 +817,7 @@
     {
       "id": "certification-six-gates",
       "status": "in_progress",
-      "scope": "Issue #16 et PR #128 uniquement; pas de seconde mission de certification",
+      "scope": "Issue #16 et PR #128 uniquement; pas de seconde mission de certification PAUSE EXPLICITE 15/11/2026 : issue #16 ouverte, Codex désaffecté, agent:codex retiré ; release:evidence-required conservé. Réactivation uniquement après contrôle des preuves et validation de la reprise, pas de certification fictive.",
       "environment": "staging-to-production",
       "evidence": [
         "https://github.com/totorina47501-wq/Project3/pull/128"
@@ -792,11 +826,63 @@
     {
       "id": "mobile-001",
       "status": "in_progress",
-      "scope": "Issue #140 : MVP mobile Expo Android/iOS en cours (shell securise + navigation + registre/tests locaux) sans publication stores ni activation de services payants.",
+      "scope": "Issue #140 : application Android/iOS, démarrage Codex autorisé le 13/11/2026. Inventaire puis MVP réutilisant le backend, sans bloquer la release web, sans dépense API IA, service payant ni publication stores. Développement mobile maintenu ACTIF 15/11/2026 sur issue #140 / PR brouillon #142, Codex reste attribué ; pas de soumission stores ni dépense fournisseur.",
       "environment": "development",
       "evidence": [
-        "https://github.com/totorina47501-wq/Project3/issues/140",
-        "https://github.com/totorina47501-wq/Project3/pull/142"
+        "https://github.com/totorina47501-wq/Project3/issues/140"
+      ]
+    },
+    {
+      "id": "stripe-sandbox-consumer-e2e",
+      "status": "in_progress",
+      "scope": "Mission P0 Copilot strictement distincte de #16 : certifier les parcours consommateurs Stripe Sandbox existants (Checkout Solo/Pro/Studio, confirmation durable, webhook signé, anti-doublon, factures, portail de résiliation/remboursement et déclassement des droits), avec fixtures/testcards et sans paiement réel, appel IA payant, mutation Cloudflare Live, migration Solo ni activation commercialisation. PAUSE EXPLICITE 15/11/2026 : issue #148 ouverte, Copilot désaffecté, agent:approved retiré ; recette TEST incomplète, protections Live inchangées. Réactivation sur le même work-id, sans nouveau ticket ou prix Stripe.",
+      "environment": "sandbox/staging",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/pull/149",
+        "https://github.com/totorina47501-wq/Project3/issues/16"
+      ]
+    },
+    {
+      "id": "mia-creator-safepublish-mvp",
+      "status": "in_progress",
+      "scope": "Issue #165 Codex P1 : coach IA Creator pour débutants/Solo (niche, script, accroche, légende, CTA) et passage explicite par le contrôle SafePublish déjà existant, réutiliser Mia, réécritures, moteur de vérification, auth et quotas. Mode IA OFF sans appel fournisseur. Aucune vidéo IA, tarification, nouvelle infrastructure, Stripe ou production.",
+      "environment": "development",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/issues/165"
+      ]
+    },
+    {
+      "id": "creator-first-brand-deal-kit",
+      "status": "in_progress",
+      "scope": "Issue #166 Copilot P1 : premier partenariat créateur, kit média personnalisable, brouillon de prospection, checklist brief/contrat fondée sur sources si disponibles ; réutiliser registre brand_deals, PDF/export et protections RLS, modèles déterministes sans coût IA. Pas d'envoi automatique, promesse juridique, OCR/vidéo, Stripe ou production. Préserver propriété de #165.",
+      "environment": "development",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/issues/166",
+        "https://github.com/totorina47501-wq/Project3/pull/168"
+      ]
+    },
+    {
+      "id": "creator-30-day-onboarding",
+      "status": "done",
+      "scope": "Issue #170 Copilot P1 : code du programme débutants/Solo 30 jours déterministe FR, navigation vers Mia Creator/SafePublish/Media Kit existants, suivi local par compte et validation locale. CI de la PR, staging, déploiement et recette production restent distincts et non attestés. Aucun fournisseur IA appelé, pas de nouveau stockage serveur, Stripe, OAuth, migration ni coût. Phase 1 indépendante de #16/#148/#124 en pause.",
+      "environment": "development",
+      "verifiedAt": "2026-11-15",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/issues/170",
+        "https://github.com/totorina47501-wq/Project3/pull/172"
+      ]
+    },
+    {
+      "id": "creator-first-check-activation",
+      "status": "done",
+      "scope": "Issue #173 : parcours premier check gratuit rules_only dans le cockpit/formulaire existants, états vides et orientation indicative fondée sur les droits/quota réels. Validation locale et CI complète PASS sur le SHA de la PR ; preview de branche Cloudflare PASS, sans déploiement production. Aucune migration, activation OpenAI/Stripe, collecte marketing, E2E distante ou base modifiée.",
+      "environment": "development",
+      "verifiedAt": "2026-11-15",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/issues/173",
+        "https://github.com/totorina47501-wq/Project3/pull/175",
+        "https://github.com/totorina47501-wq/Project3/actions/runs/43735781023",
+        "https://github.com/totorina47501-wq/Project3/runs/132878718932"
       ]
     }
   ]

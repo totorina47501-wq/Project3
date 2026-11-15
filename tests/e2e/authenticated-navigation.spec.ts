@@ -122,17 +122,20 @@ test('la navigation mobile authentifiée est accessible au clavier hors ligne', 
   await page.keyboard.press('Enter');
   await expect(secondaryMenuButton).toHaveAttribute('aria-expanded', 'true');
 
-  for (const name of ['Collaborations', 'Studio', 'Paramètres', 'Déconnexion']) {
+  // Mia Creator est la première entrée du menu secondaire : valider l'ordre clavier réel.
+  for (const name of ['Mia Creator', 'Programme 30 jours', 'Collaborations', 'Studio', 'Paramètres', 'Déconnexion']) {
     await page.keyboard.press('Tab');
     const target = secondaryNavigation.getByRole(name === 'Déconnexion' ? 'button' : 'link', { name, exact: true });
     await expect(target).toBeFocused();
-    if (name === 'Collaborations') await expect(target).toHaveCSS('outline-style', 'solid');
+    if (name === 'Mia Creator') await expect(target).toHaveCSS('outline-style', 'solid');
   }
   await page.keyboard.press('Escape');
   await expect(secondaryMenuButton).toHaveAttribute('aria-expanded', 'false');
   await expect(secondaryMenuButton).toBeFocused();
 
   for (const { name, path } of [
+    { name: 'Mia Creator', path: '/dashboard/mia/creator' },
+    { name: 'Programme 30 jours', path: '/dashboard/creator-challenge' },
     { name: 'Collaborations', path: '/dashboard/brand-deals' },
     { name: 'Studio', path: '/dashboard/studio' },
     { name: 'Paramètres', path: '/dashboard/settings' },

@@ -15,6 +15,8 @@ const links = [
 ];
 
 const secondaryLinks = [
+  { href: '/dashboard/mia/creator', title: 'Mia Creator' },
+  { href: '/dashboard/creator-challenge', title: 'Programme 30 jours' },
   { href: '/dashboard/brand-deals', title: 'Collaborations' },
   { href: '/dashboard/studio', title: 'Studio' },
   { href: '/dashboard/settings', title: 'Paramètres' },

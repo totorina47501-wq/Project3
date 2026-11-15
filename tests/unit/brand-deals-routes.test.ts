@@ -7,12 +7,12 @@ vi.mock('../../lib/security/auth',async importOriginal=>{
 import { GET,POST } from '../../app/api/brand-deals/route';
 import { PATCH,DELETE } from '../../app/api/brand-deals/[id]/route';
 import { POST as archive } from '../../app/api/brand-deals/[id]/archive/route';
-import { GET as exportRegistry } from '../../app/api/brand-deals/export/route';
+import { GET as exportRegistry,POST as exportMediaKit } from '../../app/api/brand-deals/export/route';
 import { HttpError } from '../../lib/security/auth';
 const id='3a83817f-dadc-478c-889e-2a3721525a76';
 const actor='4a83817f-dadc-478c-889e-2a3721525a76';
 const url='https://mentioncheck.test/api/brand-deals';
-const draft={brand_name:'Marque',start_date:'2026-11-04',end_date:null,contract_url:null,verification_ids:[id]};
+const draft={brand_name:'Marque',start_date:'2026-11-04',end_date:null,contract_url:null,creator_details:null,verification_ids:[id]};
 const request=(body:unknown,origin='https://mentioncheck.test')=>new Request(url,{method:'POST',headers:{origin,'content-type':'application/json'},body:JSON.stringify(body)});
 function query(result:unknown) {
   const chain={select:vi.fn(),eq:vi.fn(),is:vi.fn(),not:vi.fn(),ilike:vi.fn(),order:vi.fn(),range:vi.fn(),limit:vi.fn(),then:vi.fn()};
@@ -30,6 +30,7 @@ describe('API privée des collaborations',()=>{
     mocks.requireUser.mockRejectedValue(new HttpError(401,'Connecte-toi pour continuer.'));
     expect((await GET(new Request(url))).status).toBe(401);
     expect((await exportRegistry(new Request(url+'/export'))).status).toBe(401);
+    expect((await exportMediaKit(request({creator_name:'Camille'}))).status).toBe(401);
     expect(mocks.from).not.toHaveBeenCalled();
   });
   it('refuse une origine tierce sans écrire',async()=>{
@@ -42,10 +43,41 @@ describe('API privée des collaborations',()=>{
     expect((await POST(request({...draft,contract_url:'other/private.pdf'}))).status).toBe(400);
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
+  it('exporte le media kit derrière la session, l’origine et une limite de corps',async()=>{
+    const body=JSON.stringify({creator_name:'Camille',include_creator_name:true});
+    const response=await exportMediaKit(new Request(url+'/export',{
+      method:'POST',headers:{origin:'https://mentioncheck.test','content-type':'application/json'},body,
+    }));
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('application/pdf');
+    expect(Buffer.from(await response.arrayBuffer()).subarray(0,4).toString()).toBe('%PDF');
+    expect((await exportMediaKit(new Request(url+'/export',{
+      method:'POST',headers:{origin:'https://evil.test','content-type':'application/json'},body,
+    }))).status).toBe(403);
+    expect((await exportMediaKit(new Request(url+'/export',{
+      method:'POST',headers:{origin:'https://mentioncheck.test','content-type':'application/json','content-length':'16001'},body,
+    }))).status).toBe(413);
+    expect((await exportMediaKit(new Request(url+'/export',{
+      method:'POST',headers:{origin:'https://mentioncheck.test','content-type':'application/json'},body:' '.repeat(16001),
+    }))).status).toBe(413);
+  });
   it('laisse le RPC déterminer le propriétaire depuis la session',async()=>{
     expect((await POST(request(draft))).status).toBe(201);
     expect(mocks.rpc).toHaveBeenCalledWith('save_brand_deal',{
-      p_id:null,p_brand_name:'Marque',p_start_date:'2026-11-04',p_end_date:null,p_contract_url:null,p_verification_ids:[id],
+      p_id:null,p_brand_name:'Marque',p_start_date:'2026-11-04',p_end_date:null,p_contract_url:null,p_creator_details:null,p_verification_ids:[id],
+    });
+  });
+  it('refuse les détails de proposition inconnus ou trop volumineux avant le RPC',async()=>{
+    expect((await POST(request({...draft,creator_details:{niche:'x',unexpected:'field'}}))).status).toBe(400);
+    expect((await POST(request({...draft,creator_details:{proposal:'x'.repeat(2501)}}))).status).toBe(400);
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+  it('sauvegarde les détails créateur sur la collaboration personnelle existante',async()=>{
+    const creatorDetails={niche:'Cuisine',platform:'instagram',format:'Reel',deliverables:'Une publication',duration:'1 mois',budget:'100 €',reuse_rights:'À préciser',exclusivity:'Aucune',proposal:'Message modifiable'};
+    expect((await POST(request({...draft,creator_details:creatorDetails}))).status).toBe(201);
+    expect(mocks.rpc).toHaveBeenCalledWith('save_brand_deal',{
+      p_id:null,p_brand_name:'Marque',p_start_date:'2026-11-04',p_end_date:null,p_contract_url:null,
+      p_creator_details:creatorDetails,p_verification_ids:[id],
     });
   });
   it('filtre explicitement les lectures par propriétaire et indique le total réel',async()=>{

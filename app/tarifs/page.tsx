@@ -8,7 +8,9 @@ import { openaiReadiness } from '@/lib/openai/config';
 
 export const dynamic = 'force-dynamic';
 export function generateMetadata(): Metadata {
-  const live = billingGate(process.env).mode === 'live';
+  const scope = process.env.STRIPE_LIVE_BUYER_SCOPE;
+  const live = billingGate(process.env).mode === 'live' &&
+    (scope === 'verified_b2b_fr' || scope === 'general_public');
   return {
     title: live ? 'Tarifs et abonnements — MentionCheck' : 'Tarifs indicatifs — MentionCheck',
     description: live ? 'Comparez les abonnements MentionCheck : Solo, Pro et Studio.'
@@ -35,7 +37,10 @@ const faq = (live:boolean) => [
 
 export default function PricingPage() {
   const stripe = billingGate(process.env);
-  const live = stripe.mode === 'live';
+  const buyerScope = process.env.STRIPE_LIVE_BUYER_SCOPE;
+  const live = stripe.mode === 'live' &&
+    (buyerScope === 'general_public' || buyerScope === 'verified_b2b_fr');
+  const checkoutEnabled = stripe.enabled && (stripe.mode === 'test' || live);
   const ai = openaiReadiness(process.env);
   return <main className="mx-auto min-h-screen max-w-6xl px-4 py-8 text-slate-900 sm:px-6 sm:py-12">
     <Link href="/" className="font-heading text-lg font-bold text-slate-900">✓ {BRAND.publicName}</Link>
@@ -47,6 +52,8 @@ export default function PricingPage() {
         {live ? 'Choisissez la formule adaptée à votre activité.' : 'Comparez nos formules avant l’ouverture des abonnements.'}
       </p>
       {!live && <p className="mt-4 text-sm font-medium text-amber-800">Tarifs indicatifs : aucune offre payante n’est actuellement commercialisée.</p>}
+      {live && buyerScope === 'verified_b2b_fr' && <p className="mt-4 text-sm font-medium text-indigo-800">Souscription réservée aux professionnels français préalablement vérifiés pour un usage relevant de leur activité principale. Les achats personnels et les clients non vérifiés sont exclus.</p>}
+      <p className="mt-4 text-sm text-slate-700">Les forfaits payants sont mensuels, reconduits automatiquement et résiliables depuis Paramètres / Facturation ou via le contact officiel en cas de difficulté. Les consommateurs disposent, selon les conditions légales applicables, d’un droit de rétractation de 14 jours. <Link href="/legal/cgu" className="font-semibold text-indigo-800 underline">Consulter les conditions, la résiliation et le formulaire de rétractation</Link>.</p>
       {!ai.textEnabled && <p role="status" className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
         Les fonctionnalités d’analyse et de réécriture IA sont temporairement indisponibles. Les quotas indiquent les droits prévus lors de leur activation.
       </p>}
@@ -83,7 +90,7 @@ export default function PricingPage() {
           {plan.highlights.map(item => <li key={item} className="flex gap-2"><span aria-hidden="true" className="font-bold text-emerald-700">✓</span><span>{item}</span></li>)}
         </ul>
         <div className="mt-8">
-          {stripe.enabled && (plan.id !== 'solo' || Boolean(stripe.priceSolo)) ? <PricingCheckout plan={plan.id} mode={stripe.mode==='live'?'live':'test'} /> :
+          {checkoutEnabled && (plan.id !== 'solo' || Boolean(stripe.priceSolo)) ? <PricingCheckout plan={plan.id} mode={stripe.mode==='live'?'live':'test'} /> :
             <p className="rounded-xl bg-slate-100 px-4 py-3 text-center text-sm font-medium text-slate-700">
               Abonnement bientôt disponible
             </p>}
@@ -119,7 +126,8 @@ export default function PricingPage() {
       </details>)}</div>
     </section>
     <footer className="mt-12 border-t border-slate-200 pt-6 text-sm leading-6 text-slate-600">
-      <p>{live ? 'Prix mensuels finaux, reconduits automatiquement. Les conditions fiscales et de résiliation figurent dans les documents contractuels et les factures.' : 'Prix et quotas indicatifs, non contractuels. Conditions fiscales, fonctionnalités et limites à confirmer avant commercialisation.'}</p>
+      <p>{live ? 'Abonnements mensuels reconduits automatiquement, sans engagement annuel, résiliables selon les conditions contractuelles. Les informations précontractuelles et les droits des consommateurs figurent dans les CGV.' : 'Prix et quotas indicatifs, non contractuels. Conditions fiscales, fonctionnalités et limites à confirmer avant commercialisation.'}</p>
+      <p className="mt-2">Prix en euros nets selon le régime de franchise en base de TVA déclaré par l’éditeur : {BRAND.vatNotice}. Aucune TVA supplémentaire n’est ajoutée aux prix affichés dans les offres françaises concernées ; l’applicabilité de ce régime à d’autres situations reste à confirmer.</p>
       <p className="mt-2">Les vérifications automatiques constituent une aide à la préparation des publications, pas une garantie de conformité juridique.</p>
       <Link href="/" className="mt-4 inline-block font-semibold text-indigo-700 underline underline-offset-4">Retour à l’accueil</Link>
     </footer>
