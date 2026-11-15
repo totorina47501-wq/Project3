@@ -1,7 +1,8 @@
 import { StatusBar } from 'expo-status-bar';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  BackHandler,
   Linking,
   Pressable,
   SafeAreaView,
@@ -16,6 +17,7 @@ import {
   DEFAULT_ALLOWED_ORIGINS,
   normalizeBaseUrl,
   isAllowedMentioncheckUrl,
+  getSafeExternalUrl,
 } from './src/security/allowed-web-url';
 
 type MobileTab = {
@@ -39,14 +41,24 @@ export default function App() {
     () => normalizeBaseUrl(process.env.EXPO_PUBLIC_MENTIONCHECK_BASE_URL),
     [],
   );
-  const allowedOrigins = useMemo(
-    () => Array.from(new Set([...DEFAULT_ALLOWED_ORIGINS, baseOrigin])),
-    [baseOrigin],
-  );
+  const allowedOrigins = DEFAULT_ALLOWED_ORIGINS;
 
   const [activeTabId, setActiveTabId] = useState<string>(TABS[1].id);
   const [loading, setLoading] = useState(true);
-  const [blockedUrl, setBlockedUrl] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [networkError, setNetworkError] = useState(false);
+  const [webViewKey, setWebViewKey] = useState(0);
+  const [canGoBack, setCanGoBack] = useState(false);
+  const webViewRef = useRef<WebView>(null);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (!canGoBack) return false;
+      webViewRef.current?.goBack();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [canGoBack]);
 
   const activeTab = TABS.find((tab) => tab.id === activeTabId) ?? TABS[0];
   const targetUrl = buildMentioncheckUrl(baseOrigin, activeTab.path);
@@ -72,7 +84,7 @@ export default function App() {
             accessibilityLabel={`Ouvrir ${tab.label}`}
             style={[styles.tab, tab.id === activeTab.id ? styles.tabActive : null]}
             onPress={() => {
-              setBlockedUrl(null);
+              setNotice(null);
               setActiveTabId(tab.id);
             }}
           >
@@ -91,28 +103,60 @@ export default function App() {
           </View>
         ) : null}
         <WebView
+          key={webViewKey}
+          ref={webViewRef}
           source={{ uri: targetUrl }}
           originWhitelist={allowedOrigins}
           sharedCookiesEnabled
           thirdPartyCookiesEnabled={false}
           allowsBackForwardNavigationGestures
-          onLoadStart={() => setLoading(true)}
+          onLoadStart={() => {
+            setLoading(true);
+            setNetworkError(false);
+          }}
           onLoadEnd={() => setLoading(false)}
+          onError={() => {
+            setLoading(false);
+            setNetworkError(true);
+          }}
+          onNavigationStateChange={(state) => setCanGoBack(state.canGoBack)}
           onShouldStartLoadWithRequest={(request) => {
             if (!request.url) return false;
             if (isAllowedMentioncheckUrl(request.url, allowedOrigins)) {
               return true;
             }
-            setBlockedUrl(request.url);
-            void Linking.openURL(request.url);
+            const externalUrl = getSafeExternalUrl(request.url);
+            if (!externalUrl) {
+              setNotice('Lien non sécurisé bloqué.');
+              return false;
+            }
+            // Ne jamais afficher l'URL complète : elle peut contenir code OAuth ou token.
+            setNotice(`Lien externe : ${new URL(externalUrl).hostname}`);
+            void Linking.openURL(externalUrl).catch(() => {
+              setNotice('Ouverture du lien externe impossible.');
+            });
             return false;
           }}
         />
+        {networkError ? (
+          <View style={styles.warningBanner}>
+            <Text style={styles.warningText}>Connexion indisponible.</Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                setNetworkError(false);
+                setWebViewKey((value) => value + 1);
+              }}
+            >
+              <Text style={styles.footerLink}>Réessayer</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </View>
 
-      {blockedUrl ? (
+      {notice ? (
         <View style={styles.warningBanner}>
-          <Text style={styles.warningText}>Lien externe ouvert hors application: {blockedUrl}</Text>
+          <Text style={styles.warningText}>{notice}</Text>
         </View>
       ) : null}
 

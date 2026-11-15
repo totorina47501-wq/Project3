@@ -15,7 +15,15 @@ export function normalizeBaseUrl(
 
   try {
     const parsed = new URL(candidate);
-    if (parsed.protocol !== HTTPS_PROTOCOL) return fallback;
+    // Le paramètre EXPO_PUBLIC_ ne doit jamais élargir les domaines de confiance.
+    if (
+      parsed.protocol !== HTTPS_PROTOCOL ||
+      parsed.username ||
+      parsed.password ||
+      !DEFAULT_ALLOWED_ORIGINS.some((origin) => origin === parsed.origin)
+    ) {
+      return fallback;
+    }
     return parsed.origin;
   } catch {
     return fallback;
@@ -23,7 +31,7 @@ export function normalizeBaseUrl(
 }
 
 export function buildMentioncheckUrl(baseOrigin: string, path: string): string {
-  return new URL(path, `${baseOrigin}/`).toString();
+  return new URL(path, `${normalizeBaseUrl(baseOrigin)}/`).toString();
 }
 
 export function isAllowedMentioncheckUrl(
@@ -32,8 +40,26 @@ export function isAllowedMentioncheckUrl(
 ): boolean {
   try {
     const parsed = new URL(target);
-    return parsed.protocol === HTTPS_PROTOCOL && allowedOrigins.includes(parsed.origin);
+    return (
+      parsed.protocol === HTTPS_PROTOCOL &&
+      !parsed.username &&
+      !parsed.password &&
+      allowedOrigins.some((origin) => DEFAULT_ALLOWED_ORIGINS.includes(origin as typeof DEFAULT_ALLOWED_ORIGINS[number]) && origin === parsed.origin)
+    );
   } catch {
     return false;
+  }
+}
+
+// Une WebView ne doit jamais déléguer javascript:, intent:, file:, data: ou un lien avec identifiants à l'OS.
+export function getSafeExternalUrl(target: string): string | null {
+  try {
+    const parsed = new URL(target);
+    if (parsed.protocol !== HTTPS_PROTOCOL || parsed.username || parsed.password) {
+      return null;
+    }
+    return parsed.toString();
+  } catch {
+    return null;
   }
 }
