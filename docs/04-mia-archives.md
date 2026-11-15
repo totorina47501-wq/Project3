@@ -65,7 +65,8 @@ interne. Un second appel conserve l'archive initiale. Toute modification d'une
 ligne archivée ou de ses liens est refusée ; les RPC ne suppriment que des
 brouillons. L'effacement administratif du compte reste un chantier RGPD séparé.
 
-Le format canonique v1 est un tableau JSON : version, identifiant de
+Les archives historiques utilisent le format canonique v1, un tableau JSON :
+version, identifiant de
 collaboration, propriétaire, marque, début, fin, chemin de contrat, création
 UTC, archivage UTC, puis les vérifications triées par UUID. Chaque vérification
 contient UUID, plateforme, statut, texte original, texte accepté, empreinte et
@@ -75,8 +76,29 @@ virgules ; dates UTC au format milliseconde. Le snapshot couvre ces valeurs,
 aucune signature électronique qualifiée et aucun certificat juridique ne sont
 émis. Les archives historiques sans snapshot restent affichables et signalées.
 
+La migration `20261115101752_creator_brand_deal_details.sql` ajoute à la table
+existante `brand_deals` les détails structurés d'une proposition de créateur
+(activité, plateforme, format, livrables, durée, budget déclaré, droits,
+exclusivité et message éditable). Aucun second registre n'est créé. Les
+nouvelles archives v2 incluent ces détails dans leur snapshot ; les v1 restent
+valides. La route et le RPC existants conservent les contrôles de session,
+d'origine et de propriété. Cette migration est versionnée dans Git mais n'est
+pas une preuve d'application distante.
+
+Le parcours « Ma première collaboration » fournit une checklist statique de
+brief/contrat, sans interprétation automatique, appel IA, source juridique
+inventée ni envoi de message. Le media kit est composé uniquement des valeurs
+saisies et sélectionnées par le créateur, puis exporté par le générateur PDF
+existant. Aucun chiffre d'audience, de portée, de performance, partenariat ou
+attestation n'est généré. Les liens de kit doivent être HTTPS ; les coordonnées
+et chaque rubrique peuvent être exclues du PDF.
+
 Les routes `/api/brand-deals`, `/api/brand-deals/[id]`,
 `/api/brand-deals/[id]/archive` et `/api/brand-deals/export` sont privées.
+Le `POST` existant sur `/api/brand-deals/export` réauthentifie et vérifie
+l'origine, limite le JSON du media kit à 16 Kio et génère le PDF sans conserver
+les champs saisis. Le `GET` conserve les exports JSON/CSV/PDF historiques des
+métadonnées du registre ; ils excluent `creator_details`.
 Les exports JSON/CSV/PDF portent sur les métadonnées du registre filtré,
 limité à 500 collaborations ; un résultat tronqué est refusé explicitement,
 jamais présenté comme complet. Le CSV protège contre les formules de tableur.

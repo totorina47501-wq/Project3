@@ -27,7 +27,7 @@ Pour un test local, utiliser `supabase start`, puis `supabase db reset` qui appl
 | `verifications` | Contrôles multimodaux, score, explication, réécriture et SHA-256 | Lecture personnelle |
 | `ai_analyses` | Coûts, tokens, latence et payload brut | Lecture personnelle des métadonnées ; payload réservé au serveur |
 | `compliance_rules` | R1–R8 versionnées, source et nature | Lecture authentifiée |
-| `brand_deals` | Collaborations, contrat privé et empreinte | Lecture personnelle |
+| `brand_deals` | Collaborations, détails de proposition du créateur, contrat privé et empreinte | Lecture personnelle |
 | `assistant_conversations` | Conversation Mia et lien éventuel à une vérification | Lecture personnelle |
 | `subscriptions` | Synchronisation Stripe côté webhook | Lecture personnelle |
 | `law_documents` | Corpus officiel, synthèse et vecteurs 1536 | Accès backend uniquement |
@@ -89,6 +89,12 @@ Après avoir appliqué les migrations + le seed, exécuter `tests/sql/security_s
 - Bloc 6 : webhooks Stripe, contrôles atomiques de quotas côté API et vérifications des autorisations.
 - Bloc 7 : ingestion réelle du corpus officiel, embeddings et versionnage documentaire.
 - Bloc 8 : politiques de conservation des données et purge des objets externes.
+
+La migration `20261115101752_creator_brand_deal_details.sql` ajoute le champ
+JSONB `brand_deals.creator_details` à la table existante, avec validation de
+taille, de structure et de limites dans le RPC de sauvegarde. Les nouvelles
+archives v2 couvrent aussi ce champ. La migration est présente dans le dépôt ;
+son application distante doit être vérifiée séparément.
 
 
 ## Actualisation 2026-11-04

@@ -2,6 +2,7 @@
 // Export documentaire non certifié : la signature et l'horodatage probant
 // demandent des prestataires spécialisés distincts.
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
+import { creatorMediaKitSchema, type CreatorMediaKit } from '../brand-deals/model';
 
 export type ArchivePdfData = {
   id: string;
@@ -177,5 +178,79 @@ export async function buildRegistryPdf(records:RegistryPdfEntry[]):Promise<Uint8
   }
   const pages=document.getPages();
   pages.forEach((current,index)=>current.drawText('MentionCheck - Informatif - Page '+(index+1)+'/'+pages.length,{x:46,y:29,font:regular,size:9}));
+  return document.save();
+}
+
+export async function buildCreatorMediaKitPdf(input:CreatorMediaKit):Promise<Uint8Array> {
+  const data=creatorMediaKitSchema.parse(input);
+  const document=await PDFDocument.create();
+  document.setTitle('Media kit créateur');
+  document.setAuthor('MentionCheck');
+  document.setSubject('Présentation déclarative non certifiée');
+  const regular=await document.embedFont(StandardFonts.Helvetica);
+  const bold=await document.embedFont(StandardFonts.HelveticaBold);
+  const width=595.28,height=841.89,margin=46;
+  let page:PDFPage;
+  let y=0;
+  function newPage() {
+    page=document.addPage([width,height]);
+    y=height-margin;
+  }
+  function line(text:string,font:PDFFont=regular,size=10.5,leading=16) {
+    if(y-leading<58)newPage();
+    page.drawText(safeText(text),{x:margin,y,size,font,color:rgb(.13,.17,.26)});
+    y-=leading;
+  }
+  function paragraph(text:string) {
+    const allowed=width-margin*2,size=10.5;
+    for(const sourceLine of safeText(text).split(/\n/)) {
+      let current='';
+      for(const token of sourceLine.split(/\s+/)) {
+        const proposed=current?current+' '+token:token;
+        if(regular.widthOfTextAtSize(proposed,size)<=allowed){current=proposed;continue;}
+        if(current){line(current);current='';}
+        let part='';
+        for(const character of token) {
+          if(regular.widthOfTextAtSize(part+character,size)>allowed&&part){line(part);part='';}
+          part+=character;
+        }
+        current=part;
+      }
+      line(current);
+    }
+    y-=6;
+  }
+
+  newPage();
+  line(data.include_creator_name&&data.creator_name?data.creator_name:'Kit média',bold,22,32);
+  paragraph('Présentation préparée par le créateur. Les informations sont déclaratives et ne constituent ni une vérification ni une certification.');
+  if(data.include_description&&data.description) {
+    line('À propos',bold,13,22);
+    paragraph(data.description);
+  }
+  if(data.include_niches&&data.niches.length) {
+    line('Niches',bold,13,22);
+    paragraph(data.niches.join(' · '));
+  }
+  if(data.include_formats&&data.formats.length) {
+    line('Formats proposés',bold,13,22);
+    paragraph(data.formats.join(' · '));
+  }
+  if(data.include_public_links&&data.public_links.length) {
+    line('Liens publics fournis',bold,13,22);
+    for(const link of data.public_links)paragraph(link);
+  }
+  if(data.include_contact_email&&data.contact_email) {
+    line('Contact',bold,13,22);
+    paragraph(data.contact_email);
+  }
+  if(data.include_contact_url&&data.contact_url) {
+    if(!(data.include_contact_email&&data.contact_email))line('Contact',bold,13,22);
+    paragraph(data.contact_url);
+  }
+  const pages=document.getPages();
+  pages.forEach((current,index)=>current.drawText('MentionCheck - Média kit informatif - Page '+(index+1)+'/'+pages.length,{
+    x:margin,y:29,font:regular,size:9,color:rgb(.45,.47,.53),
+  }));
   return document.save();
 }
