@@ -34,3 +34,39 @@ Decision MVP:
 - Paiement in-app.
 - Reimplementation native des algorithmes de conformite.
 - Activation de services payants ou modification backend.
+
+## Sous-phase QA offline du 15/11/2026 (issue #140, PR #180)
+
+### Inventaire ecrans Expo/WebView
+
+- Header fixe: titre "MentionCheck mobile" + rappel YouTube-only.
+- Onglets WebView: `Connexion`, `Tableau de bord`, `Verifier`, `Historique`, `Mia`, `Studio`, `Compte`.
+- WebView securisee: allowlist stricte `mentioncheck.app` + staging, cookies partages, blocage des URL non sures.
+- Banniere hors-ligne: message "Connexion indisponible." + action `Reessayer`.
+- Footer legal: liens `Confidentialite` et `CGU` ouverts via navigateur OS.
+
+### Inventaire tests avant QA offline
+
+- `tests/unit/mobile-allowlist.test.ts`: normalisation base URL, allowlist origines, filtrage liens externes.
+
+### Tests de non-regression ajoutes dans ce lot
+
+- `tests/unit/mobile-webview-policy.test.ts`: deep link auth autorise sur origines MentionCheck.
+- `tests/unit/mobile-webview-policy.test.ts`: navigation Back Android conditionnee a l'historique WebView.
+- `tests/unit/mobile-webview-policy.test.ts`: liens externes HTTPS delegues a l'OS uniquement.
+- `tests/unit/mobile-webview-policy.test.ts`: blocage des origines/protocoles non autorises.
+- `tests/unit/mobile-webview-policy.test.ts`: politique permissions WebView explicite (`prompt`).
+- `tests/unit/mobile-webview-policy.test.ts`: affichage hors-ligne explicite (`Connexion indisponible.`).
+
+### Checklist release mobile (AAB/IPA) et recette appareils reels
+
+- [x] QA offline shell mobile + tests unitaires de non-regression.
+- [ ] Build signe Android AAB (keystore, versioning, signature verifiee).
+- [ ] Build signe iOS IPA/Archive (certificats/profils, signature verifiee).
+- [ ] Recette Android sur appareil reel (auth deep link, upload media, liens externes, mode hors-ligne, permissions refusees/acceptees).
+- [ ] Recette iOS sur appareil reel (auth deep link, upload media, liens externes, mode hors-ligne, permissions refusees/acceptees).
+- [ ] Verification RGPD mobile (export, effacement demande, liens legaux visibles).
+- [ ] Verification OAuth YouTube reel sur mobile (si credentials et environnement valides).
+- [ ] Soumission stores Apple/Google avec comptes developpeur actifs et validation exploitant.
+
+Etat: publication stores et controle reel restent bloques tant que signatures, comptes developpeur et recette utilisateur ne sont pas fournis.

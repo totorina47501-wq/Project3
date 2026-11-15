@@ -19,9 +19,13 @@ import {
   buildMentioncheckUrl,
   DEFAULT_ALLOWED_ORIGINS,
   normalizeBaseUrl,
-  isAllowedMentioncheckUrl,
-  getSafeExternalUrl,
 } from './src/security/allowed-web-url';
+import {
+  OFFLINE_NOTICE,
+  WEBVIEW_MEDIA_PERMISSION_GRANT_TYPE,
+  evaluateWebViewNavigation,
+  shouldHandleHardwareBack,
+} from './src/security/webview-policy';
 
 type MobileTab = {
   id: string;
@@ -56,7 +60,7 @@ export default function App() {
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (!canGoBack) return false;
+      if (!shouldHandleHardwareBack(canGoBack)) return false;
       webViewRef.current?.goBack();
       return true;
     });
@@ -112,6 +116,7 @@ export default function App() {
           originWhitelist={[...allowedOrigins]}
           sharedCookiesEnabled
           thirdPartyCookiesEnabled={false}
+          mediaCapturePermissionGrantType={WEBVIEW_MEDIA_PERMISSION_GRANT_TYPE}
           allowsBackForwardNavigationGestures
           onLoadStart={() => {
             setLoading(true);
@@ -124,18 +129,17 @@ export default function App() {
           }}
           onNavigationStateChange={(state) => setCanGoBack(state.canGoBack)}
           onShouldStartLoadWithRequest={(request) => {
-            if (!request.url) return false;
-            if (isAllowedMentioncheckUrl(request.url, allowedOrigins)) {
+            const decision = evaluateWebViewNavigation(request.url, allowedOrigins);
+            if (decision.type === 'allow') {
               return true;
             }
-            const externalUrl = getSafeExternalUrl(request.url);
-            if (!externalUrl) {
-              setNotice('Lien non sécurisé bloqué.');
+            if (decision.type === 'block') {
+              setNotice(decision.notice ?? null);
               return false;
             }
             // Ne jamais afficher l'URL complète : elle peut contenir code OAuth ou token.
-            setNotice(`Lien externe : ${new URL(externalUrl).hostname}`);
-            void Linking.openURL(externalUrl).catch(() => {
+            setNotice(decision.notice);
+            void Linking.openURL(decision.externalUrl).catch(() => {
               setNotice('Ouverture du lien externe impossible.');
             });
             return false;
@@ -143,7 +147,7 @@ export default function App() {
         />
         {networkError ? (
           <View style={styles.warningBanner}>
-            <Text style={styles.warningText}>Connexion indisponible.</Text>
+            <Text style={styles.warningText}>{OFFLINE_NOTICE}</Text>
             <Pressable
               accessibilityRole="button"
               onPress={() => {
