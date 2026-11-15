@@ -59,3 +59,15 @@ L'offre Studio comprend **2 000 créations de vérifications API sans IA par moi
 
 ## Page publique développeurs
 La page `/developpeurs` présente l’API Studio, un exemple curl, les droits et les limites. Elle reste **noindex** et annonce « en préparation commerciale » jusqu’à la validation des prérequis Stripe Live. Le footer de l’accueil et la page Tarifs pointent vers elle.
+
+## Serveur MCP distant (développement fermé)
+
+Le serveur MCP distant privé est exposé sur `POST/GET/DELETE /api/mcp` avec le SDK TypeScript MCP v2 (`@modelcontextprotocol/server`), révision moderne `2026-07-28` et compatibilité legacy stateless gérée par le SDK (pas de transport maison). Le lot MVP n’expose que :
+
+- `check_content` (`checks:write`) : contrôle `rules_only` via `studio_execute_api`.
+- `list_verifications` (`checks:read`) : 100 dernières vérifications du workspace lié à la clé Studio.
+
+Le bearer MCP est distinct d’une clé `mc_studio_` brute : le serveur vérifie signature, expiration, audience resource et scopes avant d’appeler les RPC Studio. Les métadonnées OAuth Resource Server sont publiées via `/.well-known/*` quand la configuration OAuth MCP est fournie.
+
+Voir le guide : [mcp-remote-studio.md](mcp-remote-studio.md)  
+Manifest versionné des tools et statuts : [mcp-tools-manifest.v1.json](mcp-tools-manifest.v1.json)

@@ -536,6 +536,29 @@
       ]
     },
     {
+      "id": "mcp-remote-studio-server",
+      "name": "Serveur MCP distant Studio (dev fermé)",
+      "status": "implemented_code",
+      "anchor": "lib/mcp/server.ts",
+      "test": "tests/unit/mcp-remote-studio.test.ts",
+      "doc": "docs/api/mcp-remote-studio.md",
+      "aliases": [
+        "mcp",
+        "remote mcp",
+        "check_content",
+        "list_verifications"
+      ],
+      "routes": [
+        "app/api/mcp/route.ts"
+      ],
+      "migrations": [],
+      "next": [
+        "MVP limité à check_content/list_verifications avec scopes checks:write/checks:read et clé Studio hashée déléguée. Outils Creator/Mia/collaborations/juridique restent gated dans docs/api/mcp-tools-manifest.v1.json.",
+        "Le bearer MCP est distinct d’une clé mc_studio brute ; validation signature+expiration+audience côté ressource, puis revalidation plan/scopes/quota via studio_execute_api.",
+        "Déploiement production, GO commercial MCP, OAuth fournisseur et certification staging/prod restent hors preuve dans cette branche."
+      ]
+    },
+    {
       "id": "internal-schema",
       "name": "Schéma interne consolidé",
       "status": "implemented_code",
@@ -887,7 +910,7 @@
     },
     {
       "id": "mcp-remote-studio",
-      "status": "pending",
+      "status": "in_progress",
       "scope": "MCP-001 issue #162, lancement développement explicitement autorisé le 15/11/2026, MVP Streamable HTTP privé avec contrôle texte rules_only et lecture des vérifications Studio via API/RPC existants, OAuth délégué à scopes étroits et isolation workspace. Prendre en compte nouveautés Creator/Media Kit/RAG/30 jours dans le catalogue proposé sans les exposer tant que droits, routes et coûts non validés. Une PR Codex unique; implémentation et tests hors ligne, staging seulement après preuves; aucune activation OpenAI payante, Stripe Live, fournisseur payant, migration ou déploiement production. Dépendances #16 et #148 restent en pause et demeurent des conditions du GO commercial MCP.",
       "environment": "development",
       "evidence": [
