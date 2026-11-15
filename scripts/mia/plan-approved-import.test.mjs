@@ -32,6 +32,35 @@ describe('approved import dry run', () => {
       ...doc, source_url: 'https://www.economie.gouv.fr/autre',
     }]));
   });
+  it('refuses an older legal version for an existing reference', () => {
+    assert.throws(() => planApprovedImport({
+      ...manifest,
+      documents: [{ ...doc, effective_on: '2026-11-04' }],
+    }, [doc]));
+  });
+  it('supports shared source URLs and projects the expected 25/0/5 dry-run summary', () => {
+    const existing = Array.from({ length: 5 }, (_value, index) => ({
+      ...doc,
+      article_ref: `L2023-451-ART${index + 1}`,
+      source_url: 'https://www.legifrance.gouv.fr/loda/id/LEGITEXT000047665795/',
+    }));
+    const additions = Array.from({ length: 25 }, (_value, index) => ({
+      ...doc,
+      article_ref: `L121-${index + 1}`,
+      source_url: index % 2 === 0
+        ? `https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI${String(index).padStart(8, '0')}`
+        : `https://www.economie.gouv.fr/dgccrf/publicite-commerciale-${index + 1}`,
+      effective_on: '2026-11-15',
+      reviewed_at: '2026-11-15T10:00:00Z',
+    }));
+    const result = planApprovedImport(
+      { ...manifest, documents: [...existing, ...additions] },
+      existing,
+    );
+    assert.equal(result.inserts, 25);
+    assert.equal(result.updates, 0);
+    assert.equal(result.unchanged, 5);
+  });
   it('refuses forged digests, duplicate refs and unsupported hosts', () => {
     assert.throws(() => planApprovedImport({...manifest, documents:[{...doc, content_sha256:'b'.repeat(64)}]}, []));
     assert.throws(() => planApprovedImport({...manifest, documents:[doc,doc]}, []));

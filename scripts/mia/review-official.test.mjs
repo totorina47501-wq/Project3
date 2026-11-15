@@ -4,8 +4,9 @@ import { inspectOfficialHtml, reviewOfficialCandidates } from './review-official
 
 describe('revue documentaire sans publication', () => {
   it('conserve le statut en attente et calcule une empreinte stable', () => {
-    const result = inspectOfficialHtml('<title>Concours</title><main>Règles des concours</main>', 'https://www.cnil.fr/fr/concours');
+    const result = inspectOfficialHtml('<title>Concours</title><main>Règles des concours</main>', 'https://www.economie.gouv.fr/concours');
     assert.equal(result.status, 'pending_review');
+    assert.equal(result.verification_status, 'not_verified');
     assert.equal(result.approved, false);
     assert.equal(result.title, 'Concours');
     assert.equal(result.contentSha256.length, 64);
@@ -15,8 +16,9 @@ describe('revue documentaire sans publication', () => {
       assert.equal(options.redirect, 'manual');
       return { status: 302, ok: false, headers: new Headers() };
     };
-    const result = await reviewOfficialCandidates([{url:'https://www.cnil.fr/fr/concours'}], {fetcher});
+    const result = await reviewOfficialCandidates([{url:'https://www.economie.gouv.fr/concours'}], {fetcher});
     assert.equal(result[0].status, 'fetch_failed');
+    assert.equal(result[0].verification_status, 'not_verified');
   });
   it('déduplique et borne les pages téléchargées', async () => {
     let calls = 0;
@@ -26,7 +28,7 @@ describe('revue documentaire sans publication', () => {
         headers: {'content-type':'text/html'} });
     };
     const result = await reviewOfficialCandidates([
-      {url:'https://www.cnil.fr/fr/concours'}, {url:'https://www.cnil.fr/fr/concours'},
+      {url:'https://www.economie.gouv.fr/concours'}, {url:'https://www.economie.gouv.fr/concours'},
       {url:'https://example.org/unsafe'},
     ], {fetcher});
     assert.equal(calls,1);
@@ -35,7 +37,8 @@ describe('revue documentaire sans publication', () => {
   });
   it('rejette les réponses volumineuses', async () => {
     const fetcher = async () => new Response('a'.repeat(300_001), {headers:{'content-type':'text/html'}});
-    const result = await reviewOfficialCandidates([{url:'https://www.cnil.fr/fr/concours'}],{fetcher});
+    const result = await reviewOfficialCandidates([{url:'https://www.economie.gouv.fr/concours'}],{fetcher});
     assert.equal(result[0].status,'fetch_failed');
+    assert.equal(result[0].verification_status,'not_verified');
   });
 });

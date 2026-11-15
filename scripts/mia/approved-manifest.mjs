@@ -21,14 +21,12 @@ export function buildApprovedManifest(reviewed, approvals) {
     if (!url || url !== item.url || byUrl.has(url)) throw new Error('Ambiguous review');
     byUrl.set(url, item);
   }
-  const seenUrls = new Set();
   const seenRefs = new Set();
   const documents = [];
   for (const approval of approvals) {
     const { url, contentSha256, articleRef, content, effectiveOn, reviewer, reviewedAt } = approval ?? {};
     const trusted = typeof url === 'string' ? validateOfficialUrl(url) : null;
-    if (!trusted || trusted !== url || seenUrls.has(url)) throw new Error('Invalid or repeated URL');
-    seenUrls.add(url);
+    if (!trusted || trusted !== url) throw new Error('Invalid URL');
     const original = byUrl.get(url);
     if (!original || original.status !== 'pending_review' ||
         original.contentSha256 !== contentSha256 || !SHA.test(contentSha256 ?? ''))

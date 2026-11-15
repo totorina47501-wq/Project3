@@ -3,7 +3,7 @@
 import { createHash } from 'node:crypto';
 
 export const OFFICIAL_HOSTS = new Set([
-  'www.legifrance.gouv.fr', 'www.economie.gouv.fr', 'www.cnil.fr', 'eur-lex.europa.eu',
+  'www.legifrance.gouv.fr', 'www.economie.gouv.fr',
 ]);
 
 export function validateOfficialUrl(value) {
@@ -47,7 +47,8 @@ export async function collectOfficialCandidates({ feeds, fetcher = fetch, max = 
     for (const url of discoverFromSitemap(xml, max)) {
       if (results.size >= max) break;
       results.set(url, { url, sourceHost: new URL(url).hostname,
-        fingerprint: createHash('sha256').update(url).digest('hex'), status: 'pending_review' });
+        fingerprint: createHash('sha256').update(url).digest('hex'),
+        status: 'pending_review', verification_status: 'not_verified' });
     }
   }
   return [...results.values()].sort((a, b) => a.url.localeCompare(b.url));
