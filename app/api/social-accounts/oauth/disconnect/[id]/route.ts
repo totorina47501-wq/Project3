@@ -14,6 +14,19 @@ export const dynamic = 'force-dynamic';
 
 type Context = { params: Promise<{ id: string }> };
 
+function facebookGrantKey(tokenSecret: string): string | null {
+  try {
+    const parsed: unknown = JSON.parse(tokenSecret);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    const userAccessToken = (parsed as { userAccessToken?: unknown }).userAccessToken;
+    return typeof userAccessToken === 'string' && userAccessToken.length > 0
+      ? userAccessToken
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: Request, context: Context) {
   try {
     assertSettingsOrigin(request);
@@ -30,6 +43,49 @@ export async function POST(request: Request, context: Context) {
 
     let revocation: 'confirmed' | 'unavailable' | 'unconfirmed' = 'unavailable';
     const config = socialOAuthConfig(credential.provider);
+    if (credential.provider === 'facebook') {
+      if (config) {
+        revocation = 'unconfirmed';
+        let allCredentialsRead = true;
+        let credentials: string[] = [];
+        try {
+          credentials = await store.readFacebookCredentials({ userId: user.id });
+        } catch {
+          allCredentialsRead = false;
+        }
+        const targetGrant = facebookGrantKey(credential.tokenSecret);
+        const grants = new Map<string, string>();
+        let allRevocationsConfirmed =
+          allCredentialsRead &&
+          targetGrant !== null &&
+          credentials.some((tokenSecret) => facebookGrantKey(tokenSecret) === targetGrant);
+        for (const tokenSecret of [credential.tokenSecret, ...credentials]) {
+          const grant = facebookGrantKey(tokenSecret);
+          if (!grant) {
+            allRevocationsConfirmed = false;
+            continue;
+          }
+          grants.set(grant, tokenSecret);
+        }
+        for (const tokenSecret of grants.values()) {
+          try {
+            await revokeSocialOAuthToken({
+              provider: credential.provider,
+              config,
+              tokenSecret,
+            });
+          } catch {
+            allRevocationsConfirmed = false;
+          }
+        }
+        if (allRevocationsConfirmed) revocation = 'confirmed';
+      }
+      const disconnectedPages = await store.disconnectFacebookPages({ userId: user.id });
+      return Response.json(
+        { disconnected: true, revocation, disconnectedPages },
+        { headers: settingsHeaders },
+      );
+    }
     if (config) {
       try {
         await revokeSocialOAuthToken({

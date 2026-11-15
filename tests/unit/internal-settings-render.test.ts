@@ -34,6 +34,8 @@ describe('Messages OAuth explicites et sûrs par réseau', () => {
     expect(socialOAuthFeedback(new URLSearchParams('social_oauth=connected&provider=youtube'))).toContain('YouTube relié');
     expect(feedback('other', 'channel')).toContain('réseau social');
     expect(socialOAuthFeedback(new URLSearchParams())).toBe('');
+    expect(feedback('youtube', 'token', 'invalid_client')).not.toContain('staging');
+    expect(feedback('youtube', 'token')).not.toContain('staging');
   });
 });
 
@@ -63,12 +65,22 @@ describe('Paramètres rendus sans fournisseur',()=>{
   it('identifie une connexion expirée sans la présenter comme OAuth active',()=>{
     const html=renderToStaticMarkup(createElement(SocialAccounts,{plan:'pro',initialTotal:1,initialItems:[{id:'expired',platform:'youtube',handle:'channel',connection_kind:'expired',connected_at:'2026-11-04'}]}));
     expect(html).toContain('Connexion expirée ou déconnectée');
+    expect(html).toContain('reconnecte le compte pour le réactiver');
     expect(html).not.toContain('Déconnecter');
     expect(html).toContain('Retirer la déclaration @channel');
   });
   it('conserve les comptes historiques en lecture seule',()=>{
     const html=renderToStaticMarkup(createElement(SocialAccounts,{plan:'pro',initialTotal:1,initialItems:[{id:'legacy',platform:'youtube',handle:'archive',connection_kind:'unknown',connected_at:'2026-11-04'}]}));
     expect(html).toContain('connexion non vérifiée');expect(html).not.toContain('Retirer la déclaration @archive');
+  });
+  it('affiche une Page Facebook par son nom et expose le consentement global de déconnexion',()=>{
+    const html=renderToStaticMarkup(createElement(SocialAccounts,{
+      plan:'pro',initialTotal:1,initialConnectedTotal:1,
+      initialItems:[{id:'facebook-page',platform:'facebook',handle:'123456789',display_name:'Page de test',connection_kind:'oauth',connected_at:'2026-11-14'}],
+    }));
+    expect(html).toContain('Facebook · Page de test');
+    expect(html).toContain('Déconnecter les Pages');
+    expect(html).toContain('Connexion indisponible');
   });
   it('montre la préférence persistée sans lancer une réécriture',()=>{
     const html=renderToStaticMarkup(createElement(AIPreferences,{initialTone:'institutionnel'}));

@@ -8,10 +8,17 @@ const mocks = vi.hoisted(() => {
     requireUser: vi.fn(),
     requireSession: vi.fn(),
     exchange: vi.fn(),
+    exchangeFacebook: vi.fn(),
+    refreshFacebook: vi.fn(),
     revoke: vi.fn(),
     save: vi.fn(),
     readCredential: vi.fn(),
+    readFacebookCredentials: vi.fn(),
     disconnect: vi.fn(),
+    stageFacebookPageSelection: vi.fn(),
+    readFacebookPageSelection: vi.fn(),
+    saveFacebookPageSelection: vi.fn(),
+    disconnectFacebookPages: vi.fn(),
     transactions,
     transactionStore: {
       create: vi.fn(async (transaction: Record<string, unknown>) => {
@@ -44,11 +51,18 @@ vi.mock('@/lib/social/oauth/accounts', () => ({
   createSocialOAuthAccountStore: () => ({
     save: mocks.save,
     readCredential: mocks.readCredential,
+    readFacebookCredentials: mocks.readFacebookCredentials,
     disconnect: mocks.disconnect,
+    stageFacebookPageSelection: mocks.stageFacebookPageSelection,
+    readFacebookPageSelection: mocks.readFacebookPageSelection,
+    saveFacebookPageSelection: mocks.saveFacebookPageSelection,
+    disconnectFacebookPages: mocks.disconnectFacebookPages,
   }),
 }));
 vi.mock('@/lib/social/oauth/exchange', () => ({
   exchangeSocialOAuthCode: mocks.exchange,
+  exchangeFacebookOAuthCode: mocks.exchangeFacebook,
+  refreshFacebookPageSelection: mocks.refreshFacebook,
   revokeSocialOAuthToken: mocks.revoke,
   OAuthProviderStageError: class extends Error {
     constructor(
@@ -62,6 +76,8 @@ vi.mock('@/lib/social/oauth/exchange', () => ({
 }));
 
 import { OAuthProviderStageError } from '@/lib/social/oauth/exchange';
+import { HttpError } from '@/lib/security/auth';
+import { GET as listFacebookPages, POST as updateFacebookPages } from '@/app/api/social-accounts/oauth/facebook/pages/route';
 import { GET as listProviders } from '@/app/api/social-accounts/oauth/providers/route';
 import { POST as startOAuth } from '@/app/api/social-accounts/oauth/start/route';
 import { GET as callbackOAuth } from '@/app/api/social-accounts/oauth/callback/[provider]/route';
@@ -71,6 +87,7 @@ const userId = '20000000-0000-0000-0000-000000000001';
 const sessionId = '30000000-0000-0000-0000-000000000001';
 const accountId = '40000000-0000-4000-8000-000000000001';
 const callbackPath = 'https://local.test/api/social-accounts/oauth/callback/youtube';
+const facebookOrigin = 'https://mentioncheck-staging.toto-rina47501.workers.dev';
 
 function enableYouTube() {
   vi.stubEnv('SOCIAL_OAUTH_ENABLED', 'true');
@@ -79,6 +96,15 @@ function enableYouTube() {
   vi.stubEnv('SOCIAL_OAUTH_YOUTUBE_CLIENT_SECRET', 'offline-secret');
   vi.stubEnv('SOCIAL_OAUTH_PUBLIC_ORIGIN', 'https://local.test');
   vi.stubEnv('SOCIAL_OAUTH_ALLOWED_ORIGINS', 'https://local.test');
+}
+
+function enableFacebook() {
+  vi.stubEnv('SOCIAL_OAUTH_ENABLED', 'true');
+  vi.stubEnv('SOCIAL_OAUTH_FACEBOOK_ENABLED', 'true');
+  vi.stubEnv('SOCIAL_OAUTH_FACEBOOK_CLIENT_ID', 'offline-facebook-client');
+  vi.stubEnv('SOCIAL_OAUTH_FACEBOOK_CLIENT_SECRET', 'offline-facebook-secret');
+  vi.stubEnv('SOCIAL_OAUTH_PUBLIC_ORIGIN', facebookOrigin);
+  vi.stubEnv('SOCIAL_OAUTH_ALLOWED_ORIGINS', facebookOrigin);
 }
 
 beforeEach(() => {
@@ -100,13 +126,202 @@ beforeEach(() => {
     expiresAt: '2026-11-10T13:00:00.000Z',
   });
   mocks.save.mockResolvedValue(accountId);
+  mocks.exchangeFacebook.mockResolvedValue({
+    tokenSecret: '{"offline":"server-only"}',
+    expiresAt: '2026-11-14T01:00:00.000Z',
+    pages: [{ id: '123456789', name: 'Page de test' }],
+  });
+  mocks.readFacebookPageSelection.mockResolvedValue({
+    tokenSecret: '{"offline":"server-only"}',
+    pages: [{ id: '123456789', name: 'Page de test' }],
+  });
+  mocks.refreshFacebook.mockResolvedValue({
+    tokenSecret: '{"offline":"refreshed-server-only"}',
+    expiresAt: '2026-11-14T01:00:00.000Z',
+    pages: [{ id: '123456789', name: 'Page actualisée' }],
+  });
+  mocks.saveFacebookPageSelection.mockResolvedValue(1);
+  mocks.disconnectFacebookPages.mockResolvedValue(2);
 });
 
 describe('Routes OAuth sociales', () => {
   it('n’affiche aucun fournisseur avant activation explicite', async () => {
     const response = await listProviders();
     expect(await response.json()).toEqual({
-      providers: { instagram: false, tiktok: false, youtube: false, linkedin: false },
+      providers: { instagram: false, tiktok: false, youtube: false, linkedin: false, facebook: false },
+    });
+  });
+
+  it('ne rend Facebook disponible que sur l’origine staging exacte et avec ses prérequis', async () => {
+    enableFacebook();
+    expect(await (await listProviders()).json()).toMatchObject({
+      providers: { facebook: true },
+    });
+    vi.stubEnv('SOCIAL_OAUTH_PUBLIC_ORIGIN', 'https://mentioncheck.app');
+    vi.stubEnv('SOCIAL_OAUTH_ALLOWED_ORIGINS', 'https://mentioncheck.app');
+    expect(await (await listProviders()).json()).toMatchObject({
+      providers: { facebook: false },
+    });
+  });
+
+  it('garde le jeton Meta côté serveur et laisse le choix explicite des Pages au compte connecté', async () => {
+    enableFacebook();
+    const started = await startOAuth(new Request(`${facebookOrigin}/api/social-accounts/oauth/start`, {
+      method: 'POST',
+      headers: { Origin: facebookOrigin, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider: 'facebook' }),
+    }));
+    const authorization = new URL(
+      (await started.json() as { authorizationUrl: string }).authorizationUrl,
+    );
+    expect(authorization.origin).toBe('https://www.facebook.com');
+    expect(authorization.searchParams.get('scope')).toBe('pages_show_list');
+    const callback = new URL(`${facebookOrigin}/api/social-accounts/oauth/callback/facebook`);
+    callback.searchParams.set('state', authorization.searchParams.get('state')!);
+    callback.searchParams.set('code', 'SIMULATED_FACEBOOK_CODE');
+    callback.searchParams.set('granted_scopes', 'pages_show_list');
+    const completed = await callbackOAuth(
+      new Request(callback),
+      { params: Promise.resolve({ provider: 'facebook' }) },
+    );
+    expect(completed.headers.get('location')).toContain('social_oauth=pages');
+    expect(completed.headers.get('location')).not.toContain('SIMULATED_FACEBOOK_CODE');
+    expect(mocks.stageFacebookPageSelection).toHaveBeenCalledWith({
+      userId,
+      sessionId,
+      tokenSecret: '{"offline":"server-only"}',
+      pages: [{ id: '123456789', name: 'Page de test' }],
+    });
+
+    const listed = await listFacebookPages();
+    const listedBody = await listed.json();
+    expect(listedBody).toEqual({ pages: [{ id: '123456789', name: 'Page de test' }] });
+    expect(JSON.stringify(listedBody)).not.toContain('server-only');
+
+    const selected = await updateFacebookPages(new Request(`${facebookOrigin}/api/social-accounts/oauth/facebook/pages`, {
+      method: 'POST',
+      headers: { Origin: facebookOrigin, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pageIds: ['123456789'] }),
+    }));
+    expect(await selected.json()).toEqual({ selected: 1 });
+    expect(mocks.saveFacebookPageSelection).toHaveBeenCalledWith({
+      userId,
+      sessionId,
+      pageIds: ['123456789'],
+    });
+
+    const refreshed = await updateFacebookPages(new Request(`${facebookOrigin}/api/social-accounts/oauth/facebook/pages`, {
+      method: 'POST',
+      headers: { Origin: facebookOrigin, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh: true }),
+    }));
+    const refreshedBody = await refreshed.json();
+    expect(refreshedBody).toEqual({ pages: [{ id: '123456789', name: 'Page actualisée' }] });
+    expect(JSON.stringify(refreshedBody)).not.toContain('refreshed-server-only');
+    expect(mocks.refreshFacebook).toHaveBeenCalledWith({
+      tokenSecret: '{"offline":"server-only"}',
+    });
+
+    const duplicated = await updateFacebookPages(new Request(`${facebookOrigin}/api/social-accounts/oauth/facebook/pages`, {
+      method: 'POST',
+      headers: { Origin: facebookOrigin, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pageIds: ['123456789', '123456789'] }),
+    }));
+    expect(duplicated.status).toBe(400);
+    expect(mocks.saveFacebookPageSelection).toHaveBeenCalledTimes(1);
+  });
+
+  it('déconnecte toutes les Pages locales quand Facebook confirme la révocation globale', async () => {
+    enableFacebook();
+    const firstGrantPage = JSON.stringify({
+      accessToken: 'offline-page-token',
+      userAccessToken: 'offline-user-token-a',
+      expiresAt: '2026-11-14T01:00:00.000Z',
+    });
+    mocks.readCredential.mockResolvedValue({
+      provider: 'facebook',
+      tokenSecret: firstGrantPage,
+    });
+    mocks.readFacebookCredentials.mockResolvedValue([
+      firstGrantPage,
+      JSON.stringify({
+        accessToken: 'offline-page-token-two',
+        userAccessToken: 'offline-user-token-a',
+        expiresAt: '2026-11-14T01:00:00.000Z',
+      }),
+      JSON.stringify({
+        accessToken: 'offline-page-token-three',
+        userAccessToken: 'offline-user-token-b',
+        expiresAt: '2026-11-14T01:00:00.000Z',
+      }),
+    ]);
+    mocks.revoke.mockResolvedValue(undefined);
+    const response = await disconnectOAuth(
+      new Request(`https://local.test/api/social-accounts/oauth/disconnect/${accountId}`, {
+        method: 'POST',
+        headers: { Origin: 'https://local.test' },
+      }),
+      { params: Promise.resolve({ id: accountId }) },
+    );
+    expect(mocks.revoke).toHaveBeenCalledTimes(2);
+    expect(mocks.revoke.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.disconnectFacebookPages.mock.invocationCallOrder[0]!,
+    );
+    expect(await response.json()).toEqual({
+      disconnected: true,
+      revocation: 'confirmed',
+      disconnectedPages: 2,
+    });
+    expect(mocks.disconnectFacebookPages).toHaveBeenCalledWith({ userId });
+    expect(mocks.disconnect).not.toHaveBeenCalled();
+  });
+
+  it('désactive localement toutes les Pages même si un grant Meta ne peut pas être révoqué', async () => {
+    enableFacebook();
+    const firstGrant = JSON.stringify({
+      accessToken: 'offline-page-token',
+      userAccessToken: 'offline-user-token-a',
+      expiresAt: '2026-11-14T01:00:00.000Z',
+    });
+    const secondGrant = JSON.stringify({
+      accessToken: 'offline-page-token-two',
+      userAccessToken: 'offline-user-token-b',
+      expiresAt: '2026-11-14T01:00:00.000Z',
+    });
+    mocks.readCredential.mockResolvedValue({ provider: 'facebook', tokenSecret: firstGrant });
+    mocks.readFacebookCredentials.mockResolvedValue([firstGrant, secondGrant]);
+    mocks.revoke.mockRejectedValueOnce(new Error('offline provider failure'));
+    mocks.revoke.mockResolvedValueOnce(undefined);
+
+    const response = await disconnectOAuth(
+      new Request(`https://local.test/api/social-accounts/oauth/disconnect/${accountId}`, {
+        method: 'POST',
+        headers: { Origin: 'https://local.test' },
+      }),
+      { params: Promise.resolve({ id: accountId }) },
+    );
+    expect(await response.json()).toEqual({
+      disconnected: true,
+      revocation: 'unconfirmed',
+      disconnectedPages: 2,
+    });
+    expect(mocks.revoke).toHaveBeenCalledTimes(2);
+    expect(mocks.disconnectFacebookPages).toHaveBeenCalledWith({ userId });
+  });
+
+  it('renvoie le conflit de quota Facebook sans le présenter comme une panne', async () => {
+    enableFacebook();
+    mocks.saveFacebookPageSelection.mockRejectedValue(
+      new HttpError(409, 'La limite de 3 comptes du plan Solo est atteinte.'),
+    );
+    const response = await updateFacebookPages(new Request(`${facebookOrigin}/api/social-accounts/oauth/facebook/pages`, {
+      method: 'POST',
+      headers: { Origin: facebookOrigin, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pageIds: ['123456789'] }),
+    }));
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: 'La limite de 3 comptes du plan Solo est atteinte.',
     });
   });
 

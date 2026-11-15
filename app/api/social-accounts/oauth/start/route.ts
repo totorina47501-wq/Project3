@@ -14,7 +14,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const providerSchema = z.object({
-  provider: z.enum(['instagram', 'tiktok', 'youtube', 'linkedin']),
+  provider: z.enum(['instagram', 'tiktok', 'youtube', 'linkedin', 'facebook']),
 }).strict();
 
 export async function POST(request: Request) {
