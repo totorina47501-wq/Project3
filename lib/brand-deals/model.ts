@@ -4,11 +4,62 @@ const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
   const parsed = new Date(value+'T00:00:00Z');
   return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0,10)===value;
 }, 'Date invalide.');
+export const creatorDetailsSchema=z.object({
+  niche:z.string().trim().max(120).default(''),
+  platform:z.enum(['instagram','tiktok','youtube','linkedin','other','']).default(''),
+  format:z.string().trim().max(100).default(''),
+  deliverables:z.string().trim().max(1000).default(''),
+  duration:z.string().trim().max(120).default(''),
+  budget:z.string().trim().max(120).default(''),
+  reuse_rights:z.string().trim().max(200).default(''),
+  exclusivity:z.string().trim().max(200).default(''),
+  proposal:z.string().trim().max(2500).default(''),
+}).strict();
+export type CreatorDetails=z.infer<typeof creatorDetailsSchema>;
+export function createCreatorProposal(input:CreatorDetails):string {
+  const details=creatorDetailsSchema.parse(input);
+  return [
+    'Bonjour,',
+    '',
+    `Je vous contacte au sujet d’une possible collaboration autour de ${details.niche||'mon activité'}.`,
+    `Plateforme : ${details.platform||'à préciser'}. Format : ${details.format||'à préciser'}.`,
+    `Livrables envisagés : ${details.deliverables||'à définir ensemble'}.`,
+    `Durée souhaitée : ${details.duration||'à discuter'}.`,
+    `Budget déclaré : ${details.budget||'à discuter'}.`,
+    `Droits de réutilisation : ${details.reuse_rights||'à préciser'}. Exclusivité : ${details.exclusivity||'à préciser'}.`,
+    '',
+    'Ces éléments sont une base de discussion modifiable, pas un accord ni un avis juridique.',
+    '',
+    'Bonne journée,',
+  ].join('\n');
+}
+const publicUrl=z.string().trim().max(500).url().refine(value=>{
+  try {const url=new URL(value);return url.protocol==='https:'&&!url.username&&!url.password;}
+  catch {return false;}
+},'Utilise un lien HTTPS public.');
+export const creatorMediaKitSchema=z.object({
+  creator_name:z.string().trim().max(120).default(''),
+  description:z.string().trim().max(1200).default(''),
+  niches:z.array(z.string().trim().min(1).max(80)).max(10).default([]),
+  formats:z.array(z.string().trim().min(1).max(80)).max(10).default([]),
+  public_links:z.array(publicUrl).max(10).default([]),
+  contact_email:z.string().trim().max(254).email().or(z.literal('')).default(''),
+  contact_url:z.union([publicUrl,z.literal('')]).default(''),
+  include_creator_name:z.boolean().default(true),
+  include_description:z.boolean().default(true),
+  include_niches:z.boolean().default(true),
+  include_formats:z.boolean().default(true),
+  include_public_links:z.boolean().default(true),
+  include_contact_email:z.boolean().default(false),
+  include_contact_url:z.boolean().default(false),
+}).strict();
+export type CreatorMediaKit=z.infer<typeof creatorMediaKitSchema>;
 export const dealDraftSchema = z.object({
   brand_name:z.string().trim().min(1).max(200),
   start_date:date,
   end_date:date.nullable().default(null),
   contract_url:z.string().min(1).max(500).nullable().default(null),
+  creator_details:creatorDetailsSchema.nullable().default(null),
   verification_ids:z.array(z.string().uuid()).max(50).default([])
     .refine(ids=>new Set(ids).size===ids.length,'Vérifications dupliquées.'),
 }).strict().refine(value=>!value.end_date || value.end_date>=value.start_date, {
@@ -25,10 +76,12 @@ export type DealFilters=z.infer<typeof dealListSchema>;
 export type DealRecord={
   id:string;brand_name:string;start_date:string;end_date:string|null;
   contract_url:string|null;created_at:string;archived_at:string|null;hash_sha256:string|null;
+  creator_details?:CreatorDetails|null;
   archive_payload?:unknown;
   brand_deal_verifications?:Array<{verification_id:string}>;
 };
-export const DEAL_COLUMNS='id,brand_name,start_date,end_date,contract_url,created_at,archived_at,hash_sha256,brand_deal_verifications(verification_id)';
+export const DEAL_EXPORT_COLUMNS='id,brand_name,start_date,end_date,contract_url,created_at,archived_at,hash_sha256,brand_deal_verifications(verification_id)';
+export const DEAL_COLUMNS=DEAL_EXPORT_COLUMNS+',creator_details';
 
 export const DEAL_DETAIL_COLUMNS=DEAL_COLUMNS+',archive_payload';
 

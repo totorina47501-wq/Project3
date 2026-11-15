@@ -6,7 +6,7 @@ const tables = new Set(['users','user_preferences','verifications','brand_deals'
 const functions = {
   studio_execute: [['p_actor','uuid'],['p_workspace','uuid'],['p_action','text'],['p_payload','jsonb']],
   studio_execute_api: [['p_hash','text'],['p_action','text'],['p_payload','jsonb']],
-  save_brand_deal: [['p_id','uuid'],['p_brand_name','text'],['p_start_date','date'],['p_end_date','date'],['p_contract_url','text'],['p_verification_ids','uuid[]']],
+  save_brand_deal: [['p_id','uuid'],['p_brand_name','text'],['p_start_date','date'],['p_end_date','date'],['p_contract_url','text'],['p_creator_details','jsonb'],['p_verification_ids','uuid[]']],
   archive_brand_deal: [['p_id','uuid']], delete_brand_deal_draft: [['p_id','uuid']],
   media_job_enqueue: [['p_user','uuid'],['p_assets','uuid[]'],['p_caption','text'],['p_platform','public.social_platform'],['p_analysis','jsonb']],
   media_job_cancel: [['p_user','uuid'],['p_job','uuid']],
@@ -65,7 +65,9 @@ export function createStatefulFixture({ users, sessionFor }) {
             const fn = name.slice(4), params = functions[fn];
             if (!params || request.method !== 'POST') { await connection.exec('rollback'); return json({message:'RPC locale absente.'},404); }
             const input = await request.json();
-            const args = params.map(([key,type]) => type==='jsonb' ? JSON.stringify(input[key] ?? {}) : input[key] ?? null);
+            const args = params.map(([key,type]) => type==='jsonb'
+              ? key==='p_creator_details'&&input[key]==null?null:JSON.stringify(input[key] ?? {})
+              : input[key] ?? null);
             const sql = `select public.${fn}(${params.map(([,type],i)=>`$${i+1}::${type}`).join(',')}) as result`;
             response = json((await connection.query(sql,args)).rows[0].result);
           } else {
