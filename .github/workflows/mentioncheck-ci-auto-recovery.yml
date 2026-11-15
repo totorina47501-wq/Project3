@@ -32,7 +32,8 @@ jobs:
             const owner=context.repo.owner, repo=context.repo.repo;
             if (owner!=='totorina47501-wq' || repo!=='Project3' || context.ref!=='refs/heads/main') throw Error('Untrusted recovery context');
             const source=context.payload.workflow_run;
-            if (context.eventName==='workflow_run' && (source?.name!=='MentionCheck CI' || !['action_required','failure','timed_out'].includes(source.conclusion))) return;
+            const mainRecovery=source?.name==='MentionCheck CI' && source.conclusion==='success' && source.head_branch==='main' && ['push','workflow_dispatch'].includes(source.event);
+            if (context.eventName==='workflow_run' && (source?.name!=='MentionCheck CI' || (!mainRecovery && !['action_required','failure','timed_out'].includes(source.conclusion)))) return;
             const blockedLabels=new Set(['release:evidence-required','security:manual','do-not-merge','legal:blocked','billing:blocked']);
             const activeAgentLabels=new Set(['agent:codex','agent:approved']);
             const runsFor=async branch=>github.paginate(github.rest.actions.listWorkflowRunsForRepo,{owner,repo,branch,per_page:100});
@@ -42,7 +43,7 @@ jobs:
               if(recovered+requested>=2)break; // Never launch unbounded parallel repairs.
               if(pr.base?.ref!=='main' || pr.head?.repo?.full_name!==owner+'/'+repo ||
                  !/^(?:codex|copilot)\//.test(pr.head?.ref||''))continue;
-              if(source && pr.head.sha!==source.head_sha)continue;
+              if(source && !mainRecovery && pr.head.sha!==source.head_sha)continue;
               if((pr.labels||[]).some(l=>blockedLabels.has(l.name)) ||
                  /EN PAUSE|PAUSED|BLOCKED/i.test(pr.title))continue;
               const issueMatch=String(pr.body||'').match(/-\s*(?:Refs?|Fix(?:es|ed)?|Clos(?:e|es|ed))\s+#(\d+)\s*$/i);

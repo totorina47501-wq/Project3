@@ -25,3 +25,5 @@ Réutiliser `docs/work-registry.json`, `REPRISE.md` et les issues existantes pou
 ## Contrôle automatique de livraison technique
 
 Le workflow `mentioncheck-production-release-evidence.yml` vérifie en lecture seule, sur le **SHA exact** de `main`, la CI avec ses deux jobs réussis, le check `Workers Builds: mentioncheck` réussi et le chargement HTTPS des pages publiques `/` et `/login`. Il s'exécute après CI `main` (ou au planning), sans ouvrir Stripe, envoyer de données, appeler l'IA, déployer, modifier Cloudflare ni déclencher des paiements. Le CI/build succès ne prouve pas l'identité SHA du Worker actif : **l'attestation exacte de déploiement reste distincte** et nécessite les métadonnées de version Cloudflare ou une sonde SHA signée. En cas d'échec, le job échoue fermé ; pas d'auto-rollback aveugle sur la production.
+
+**Réveil immédiat supplémentaire** : une CI verte de `main` (push ou workflow_dispatch) déclenche aussi l'inventaire des PR agents bloquées, sans attendre le cron. Maximum deux récupérations par run et aucune réouverture d'une CI réelle déjà KO autrement que par les règles de retry/agent ci-dessus.

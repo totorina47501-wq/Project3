@@ -11,6 +11,8 @@ describe('MentionCheck CI auto-recovery — gates anti-doublons',()=>{
     expect(source).toContain('concurrency:');
     expect(source).toContain('cancel-in-progress: false');
     expect(source).toContain('if(recovered+requested>=2)break');
+    expect(source).toContain('mainRecovery=source?.name');
+    expect(source).toContain('!mainRecovery && pr.head.sha!==source.head_sha');
     expect(source).not.toContain('actions/checkout@');
   });
   it('refuse les PR de fork, workflows modifiés, pauses et blocs réglementaires',()=>{
