@@ -45,3 +45,14 @@
 4. Confirmer l'assignee Codex **et** une nouvelle session/PR Codex. Si l'API GitHub refuse l'agent partenaire, ne pas contourner ou réassigner à Copilot.
 
 Références : `REPRISE.md`, `docs/work-registry.json`, `docs/49-agent-dispatch-automerge-audit.md`.
+
+
+## Réaffectation orientée produit — 15 novembre 2026
+
+À la demande de l'exploitant, trois missions **bloquées ou dépendantes d'acteurs externes** restent ouvertes mais sont **mises en pause sans consommation de créneaux de dispatch** : certification #16 (Codex), Stripe TEST #148 (Copilot), OAuth fournisseurs #124 (Copilot). Des commentaires de reprise horodatés sont enregistrés dans ces issues. Les labels `agent:codex` / `agent:approved` et les assignees bots ont été retirés ; les labels `release:evidence-required` sont préservés pour empêcher un faux GO. **Les titres des issues commencent par « EN PAUSE »**. La PR OAuth #141 reste en brouillon, non fusionnée. Ni workflow GitHub, ni secret, ni flags Stripe/Cloudflare, ni données Supabase ne sont modifiés.
+
+**Ne pas utiliser le statut `paused` dans `docs/work-registry.json`** : les seuls statuts permis par `scripts/work-inventory.mjs` sont `pending`, `in_progress`, `done`. La pause est notée dans le champ `scope` des entrées existantes ; `in_progress` désigne ici un périmètre non terminé et ne signifie pas un agent en cours d'exécution. Le dispatcher vérifie à la fois l'étiquette d'agent et le registre avant d'attribuer ; une simple exécution `success` n'est pas une session active.
+
+**Capacité produit conservée** : issue mobile #140 / PR #142 gardées actives sous Codex (MVP Expo, sans achat et sans stores). Nouveau périmètre indépendant approuvé : issue #170 `creator-30-day-onboarding`, **pending** et initialement sans label pour réserver le registre avant dispatch Copilot. Développement zéro appel IA payant : programme de 30 jours, progression locale clairement annoncée, liens vers Mia Creator, SafePublish et Media Kit. Préserver les missions #137 corpus juridique (revue humaine requise) et #162 MCP post-GO ; ne pas les réveiller.
+
+**Réactivation d'une mission en pause** : 1) revoir les éléments manquants dans l'issue/PR existante, 2) vérifier les preuves/quotas/permissions, 3) confirmer la décision de reprise, 4) retirer le préfixe de pause du titre et remettre **uniquement** le label de l'agent concerné et son assignee via la file déjà en place ; garder le même `work-id` et les preuves. Pour une mission dont le registre est `in_progress`, ne pas basculer en `pending` sans audit des tâches et commits déjà réalisés. Aucune validation ou activation Stripe Live automatique.

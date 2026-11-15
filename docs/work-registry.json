@@ -760,7 +760,7 @@
     {
       "id": "oauth-provider-review",
       "status": "in_progress",
-      "scope": "YouTube staging : connexion/persistance, reconnexions sans doublon, révocation et refus réels attestés. Expiration réelle et configuration Google publique restent à valider ; production fermée, PR #132 existante",
+      "scope": "YouTube staging : connexion/persistance, reconnexions sans doublon, révocation et refus réels attestés. Expiration réelle et configuration Google publique restent à valider ; production fermée, PR #132 existante PAUSE EXPLICITE 15/11/2026 : issue #124 ouverte, Copilot désaffecté, agent:approved retiré ; PR #141 brouillon préservée et production OAuth fermée ; reprise depuis la PR existante après clés/revues fournisseurs.",
       "environment": "staging",
       "evidence": [
         "https://github.com/totorina47501-wq/Project3/pull/132",
@@ -779,7 +779,7 @@
     {
       "id": "certification-six-gates",
       "status": "in_progress",
-      "scope": "Issue #16 et PR #128 uniquement; pas de seconde mission de certification",
+      "scope": "Issue #16 et PR #128 uniquement; pas de seconde mission de certification PAUSE EXPLICITE 15/11/2026 : issue #16 ouverte, Codex désaffecté, agent:codex retiré ; release:evidence-required conservé. Réactivation uniquement après contrôle des preuves et validation de la reprise, pas de certification fictive.",
       "environment": "staging-to-production",
       "evidence": [
         "https://github.com/totorina47501-wq/Project3/pull/128"
@@ -787,8 +787,8 @@
     },
     {
       "id": "mobile-001",
-      "status": "pending",
-      "scope": "Issue #140 : application Android/iOS, démarrage Codex autorisé le 13/11/2026. Inventaire puis MVP réutilisant le backend, sans bloquer la release web, sans dépense API IA, service payant ni publication stores.",
+      "status": "in_progress",
+      "scope": "Issue #140 : application Android/iOS, démarrage Codex autorisé le 13/11/2026. Inventaire puis MVP réutilisant le backend, sans bloquer la release web, sans dépense API IA, service payant ni publication stores. Développement mobile maintenu ACTIF 15/11/2026 sur issue #140 / PR brouillon #142, Codex reste attribué ; pas de soumission stores ni dépense fournisseur.",
       "environment": "development",
       "evidence": [
         "https://github.com/totorina47501-wq/Project3/issues/140"
@@ -797,7 +797,7 @@
     {
       "id": "stripe-sandbox-consumer-e2e",
       "status": "in_progress",
-      "scope": "Mission P0 Copilot strictement distincte de #16 : certifier les parcours consommateurs Stripe Sandbox existants (Checkout Solo/Pro/Studio, confirmation durable, webhook signé, anti-doublon, factures, portail de résiliation/remboursement et déclassement des droits), avec fixtures/testcards et sans paiement réel, appel IA payant, mutation Cloudflare Live, migration Solo ni activation commercialisation.",
+      "scope": "Mission P0 Copilot strictement distincte de #16 : certifier les parcours consommateurs Stripe Sandbox existants (Checkout Solo/Pro/Studio, confirmation durable, webhook signé, anti-doublon, factures, portail de résiliation/remboursement et déclassement des droits), avec fixtures/testcards et sans paiement réel, appel IA payant, mutation Cloudflare Live, migration Solo ni activation commercialisation. PAUSE EXPLICITE 15/11/2026 : issue #148 ouverte, Copilot désaffecté, agent:approved retiré ; recette TEST incomplète, protections Live inchangées. Réactivation sur le même work-id, sans nouveau ticket ou prix Stripe.",
       "environment": "sandbox/staging",
       "evidence": [
         "https://github.com/totorina47501-wq/Project3/pull/149",
@@ -821,6 +821,15 @@
       "evidence": [
         "https://github.com/totorina47501-wq/Project3/issues/166",
         "https://github.com/totorina47501-wq/Project3/pull/168"
+      ]
+    },
+    {
+      "id": "creator-30-day-onboarding",
+      "status": "pending",
+      "scope": "Issue #170 Copilot P1 : programme débutants/Solo 30 jours déterministe FR, navigation vers Mia Creator/SafePublish/Media Kit existants, suivi local par compte et tests UI mobile/clavier. Aucun fournisseur IA appelé, pas de nouveau stockage serveur, Stripe, OAuth, migration, coût ni déploiement prod. Phase 1 indépendante de #16/#148/#124 en pause.",
+      "environment": "development",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/issues/170"
       ]
     }
   ]
