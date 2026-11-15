@@ -854,11 +854,15 @@
     },
     {
       "id": "creator-first-check-activation",
-      "status": "pending",
-      "scope": "Issue #173 Copilot P1 : parcours premier check gratuit rules_only sur le cockpit et formulaire existants, messages pédagogiques/états vides, orientation honnête vers tarifs Solo depuis quotas réels, sans dupliquer challenge 30 jours #170, Mia Creator #165, kit collaboration #166, Growth #102. Zéro OpenAI payant, Stripe Live, migration, nouveau service, collecte marketing ou déploiement. Dispatch seulement après CI et fusion du registre dans main.",
+      "status": "done",
+      "scope": "Issue #173 : parcours premier check gratuit rules_only dans le cockpit/formulaire existants, états vides et orientation indicative fondée sur les droits/quota réels. Validation locale et CI complète PASS sur le SHA de la PR ; preview de branche Cloudflare PASS, sans déploiement production. Aucune migration, activation OpenAI/Stripe, collecte marketing, E2E distante ou base modifiée.",
       "environment": "development",
+      "verifiedAt": "2026-11-15",
       "evidence": [
-        "https://github.com/totorina47501-wq/Project3/issues/173"
+        "https://github.com/totorina47501-wq/Project3/issues/173",
+        "https://github.com/totorina47501-wq/Project3/pull/175",
+        "https://github.com/totorina47501-wq/Project3/actions/runs/43735781023",
+        "https://github.com/totorina47501-wq/Project3/runs/132878718932"
       ]
     }
   ]

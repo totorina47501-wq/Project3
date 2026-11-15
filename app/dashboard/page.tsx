@@ -24,8 +24,9 @@ export default async function DashboardPage() {
           <h1 className="mt-2 font-heading text-4xl font-bold text-primary">Tableau de bord</h1>
           <p className="mt-2 text-slate-600">Mia t&apos;aide à publier des collaborations plus transparentes.</p>
         </div>
-        <Link href="/dashboard/check" className="rounded-xl bg-accent px-6 py-3 font-bold text-white shadow-md hover:bg-indigo-700">
-          Check ma publication
+        <Link href={!error && checks?.length === 0 ? '/dashboard/check?guided=1' : '/dashboard/check'}
+          className="rounded-xl bg-accent px-6 py-3 font-bold text-white shadow-md hover:bg-indigo-700">
+          {!error && checks?.length === 0 ? 'Faire ma première vérification' : 'Check ma publication'}
         </Link>
       </div>
       {error && <div role="alert" className="space-y-2 rounded-xl bg-red-50 p-4 text-red-800">
@@ -73,7 +74,19 @@ export default async function DashboardPage() {
               </li>
             ))}
           </ul>
-        ) : <p className="mt-4 text-slate-600">Aucune vérification. Lance ton premier check !</p>}
+        ) : <p className="mt-4 text-slate-600">Aucune vérification pour le moment. Utilise « Faire ma première vérification » pour choisir un cas, rédiger ou importer une légende et lancer un premier contrôle sans IA.</p>}
+      </section>
+      <section aria-labelledby="dashboard-rights-title" className="rounded-2xl border border-slate-200 bg-white p-6">
+        <h2 id="dashboard-rights-title" className="font-heading text-xl font-bold">Droits et limites</h2>
+        <p className="mt-2 text-sm text-slate-600">Consulte les quotas réellement associés à ton compte dans les paramètres. La page des offres précise si les abonnements sont indicatifs ou disponibles.</p>
+        <div className="mt-4 flex flex-wrap gap-4">
+          <Link href="/dashboard/settings" className="font-semibold text-accent underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">
+            Voir mes quotas et mes droits
+          </Link>
+          <Link href="/tarifs" className="font-semibold text-accent underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">
+            Comparer les offres
+          </Link>
+        </div>
       </section>
     </div>
   );

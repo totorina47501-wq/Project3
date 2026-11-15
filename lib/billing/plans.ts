@@ -24,6 +24,10 @@ export function remainingPlanQuota(plan:AccessTier,action:PlanQuota,used:number)
   if(limit===null)throw new Error('Quota inconnu.');
   return Math.max(0,limit-used);
 }
+export function isQuotaNearLimit(used:number,limit:number):boolean {
+  return Number.isSafeInteger(used)&&used>=0&&Number.isSafeInteger(limit)&&limit>0&&
+    used>=limit*0.8;
+}
 // Prix publics indicatifs. Une simulation ne facture rien et ne calcule pas de TVA/prorata.
 export function simulatedPlanQuote(plan:AccountPlan){
   planEntitlements(plan);

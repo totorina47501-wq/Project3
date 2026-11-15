@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { useLocalSession } from './fixtures/local-session';
+import { localScenario, useScenarioActor } from './fixtures/scenario';
 
 // Opt-in uniquement au serveur Supabase HTTP local de la suite hors ligne.
 // Ce cookie factice n'est accepté par aucun service de production.
@@ -60,6 +61,70 @@ test('le check mobile choisit sans IA et explique le score provisoire', async ({
   expect(submitted?.execution).toBe('rules_only');
   expect(submitted?.mediaType).toBe('none');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('nouveau compte : première vérification guidée, confirmation rules_only et brouillon non persistant', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  let submitted: Record<string, unknown> | undefined;
+  await page.route('**/api/check', async (route) => {
+    submitted = route.request().postDataJSON() as Record<string, unknown>;
+    await route.fulfill({ contentType: 'text/event-stream', body: events(result()) });
+  });
+  await page.goto('/dashboard');
+  await expect(page.getByRole('link', { name: 'Faire ma première vérification' }).first()).toHaveAttribute('href', '/dashboard/check?guided=1');
+  await page.goto('/dashboard/archive');
+  await expect(page.getByText('Aucune vérification enregistrée pour le moment.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Faire ma première vérification' })).toHaveAttribute('href', '/dashboard/check?guided=1');
+  await page.goto('/dashboard');
+  await page.getByRole('link', { name: 'Faire ma première vérification' }).first().click();
+  await expect(page).toHaveURL(/\/dashboard\/check\?guided=1/);
+  await expect(page.getByRole('heading', { name: 'Ta première vérification en 3 étapes' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Revenir au formulaire normal' })).toBeVisible();
+  await expect(page.getByLabel('Étape 2 — Légende à vérifier')).toHaveValue('');
+  await expect(page.getByRole('button', { name: 'Confirmer et lancer le contrôle sans IA' })).toBeDisabled();
+  expect(submitted).toBeUndefined();
+  await page.getByLabel('Cas de publication').selectOption('gift');
+  await page.getByLabel('Importer une légende texte').setInputFiles({
+    name: 'legende.txt', mimeType: 'text/plain', buffer: Buffer.from('Cadeau reçu — exemple de test.'),
+  });
+  await expect(page.getByLabel('Étape 2 — Légende à vérifier')).toHaveValue('Cadeau reçu — exemple de test.');
+  await expect(page.getByText('Elle ne sera envoyée qu’après ta confirmation.')).toBeVisible();
+  await page.getByRole('checkbox', { name: /Je confirme le lancement du contrôle automatique sans IA/ }).check();
+  await page.getByRole('button', { name: 'Confirmer et lancer le contrôle sans IA' }).click();
+  await expect(page.getByRole('heading', { name: 'Contrôle automatique des mentions terminé' })).toBeVisible();
+  expect(submitted?.execution).toBe('rules_only');
+  expect(submitted?.mediaType).toBe('none');
+  expect(submitted?.mediaUrl).toBeUndefined();
+  expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain('Cadeau reçu');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('la légende du formulaire guidé ne fuit pas entre deux comptes', async ({ browser, request, baseURL }) => {
+  const scenario = await localScenario(request);
+  const ownerContext = await browser.newContext();
+  const otherContext = await browser.newContext();
+  try {
+    await useScenarioActor(ownerContext, baseURL!, scenario.actors.owner);
+    await useScenarioActor(otherContext, baseURL!, scenario.actors.outsider);
+    const ownerPage = await ownerContext.newPage();
+    const otherPage = await otherContext.newPage();
+    for (const page of [ownerPage, otherPage]) {
+      await page.route('**/*', async (route) => {
+        const url = new URL(route.request().url());
+        if (url.origin === new URL(baseURL!).origin) return route.continue();
+        throw new Error(`Requête externe interdite : ${url.origin}`);
+      });
+    }
+    await ownerPage.goto('/dashboard/check?guided=1');
+    await ownerPage.getByLabel('Étape 2 — Légende à vérifier').fill('Brouillon privé du compte A.');
+    await otherPage.goto('/dashboard/check?guided=1');
+    await expect(otherPage.getByLabel('Étape 2 — Légende à vérifier')).toHaveValue('');
+    expect(await ownerPage.evaluate(() => JSON.stringify(localStorage))).not.toContain('Brouillon privé');
+    expect(await otherPage.evaluate(() => JSON.stringify(localStorage))).not.toContain('Brouillon privé');
+  } finally {
+    await ownerContext.close();
+    await otherContext.close();
+  }
 });
 
 test('le flux Check accepte CRLF, chunks fractionnés et un done final à EOF', async ({ page }) => {

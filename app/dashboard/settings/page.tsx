@@ -9,9 +9,10 @@ import { SOCIAL_COLUMNS, SOCIAL_PAGE_SIZE, type SocialAccount } from '@/lib/soci
 import { toneSchema } from '@/lib/ai/schemas';
 import { subscriptionAccessTier, accessTierWithPromotion } from '@/lib/billing/events';
 import { createAdminSupabase } from '@/lib/supabase/admin';
-import { planEntitlements } from '@/lib/billing/plans';
+import { isQuotaNearLimit, planEntitlements } from '@/lib/billing/plans';
 import { BillingPortal } from '@/components/BillingPortal';
 import { billingGate } from '@/lib/billing/config';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 export default async function SettingsPage() {
@@ -51,6 +52,16 @@ export default async function SettingsPage() {
   const { data: usage, error: usageError } = await supabase.from('usage_monthly')
     .select('checks_used,rewrites_used,mia_messages_used,period_start')
     .order('period_start', { ascending:false }).limit(1).maybeSingle();
+  const quotaEntries = [
+    { label:'Checks', value:usage?.checks_used ?? 0, limit:rights?.checksMonthly },
+    { label:'Réécritures', value:usage?.rewrites_used ?? 0, limit:rights?.rewritesMonthly },
+    { label:'Messages Mia', value:usage?.mia_messages_used ?? 0, limit:rights?.miaMonthly },
+  ];
+  const approachingQuota = !usageError && quotaEntries.some(({ value, limit }) =>
+    limit !== undefined && isQuotaNearLimit(value, limit));
+  const liveOffersAvailable = stripe.enabled && stripe.mode === 'live' &&
+    (process.env.STRIPE_LIVE_BUYER_SCOPE === 'general_public' ||
+      process.env.STRIPE_LIVE_BUYER_SCOPE === 'verified_b2b_fr');
   let socialExpiryFailed=false;
   if(userData){
     try{
@@ -98,16 +109,18 @@ export default async function SettingsPage() {
         {usageError ? <p role="alert" className="mt-5 text-sm text-red-800">Quotas momentanément indisponibles.{' '}
           <a className="font-semibold underline" href="/dashboard/settings">Réessayer le chargement</a>
         </p> : <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          {[
-            { label:'Checks', value:usage?.checks_used ?? 0, limit:rights?.checksMonthly },
-            { label:'Réécritures', value:usage?.rewrites_used ?? 0, limit:rights?.rewritesMonthly },
-            { label:'Messages Mia', value:usage?.mia_messages_used ?? 0, limit:rights?.miaMonthly },
-          ].map((entry) => <div key={entry.label} className="rounded-xl bg-slate-50 p-4">
+          {quotaEntries.map((entry) => <div key={entry.label} className="rounded-xl bg-slate-50 p-4">
             <p className="text-xs text-slate-500">{entry.label}</p>
             <p className="mt-1 text-2xl font-bold">{entry.value}{entry.limit !== undefined ? <span className="text-sm font-normal text-slate-600"> / {entry.limit}</span> : null}</p>
           </div>)}
         </div>}
         <p className="mt-3 text-xs text-slate-500">Dernière période enregistrée. Les contrôles sans IA ne consomment pas de quota de vérifications payantes.</p>
+        {approachingQuota && <div role="status" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <p>Tu approches ou as atteint une limite mensuelle de ton offre. {liveOffersAvailable ? 'Compare les offres disponibles ; aucun achat ne sera lancé sans action distincte.' : 'Les offres sont indicatives : aucun achat ni déblocage immédiat n’est proposé.'}</p>
+          <Link href="/tarifs" className="mt-2 inline-flex min-h-11 items-center font-semibold text-indigo-800 underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">
+            {liveOffersAvailable ? 'Comparer les offres disponibles' : 'Comparer les offres indicatives'}
+          </Link>
+        </div>}
         {stripe.enabled && stripe.mode && !billingProfileError && billingProfile?.stripe_customer_id &&
           <BillingPortal mode={stripe.mode} />}
         {!stripe.enabled && tier !== 'free' && !promotionalSolo && <p className="mt-3 text-sm text-slate-600">La gestion de facturation est momentanément indisponible. Les droits existants restent consultables.</p>}
