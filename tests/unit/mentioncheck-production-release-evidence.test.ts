@@ -18,8 +18,9 @@ describe('Production release evidence never bypasses approval',()=>{
     expect(workflow).toContain("!link.pathname.includes('/previews/')");
     expect(workflow).toContain('workers.conclusion!==\'success\'');
     expect(workflow).toContain('curl --fail --location');
-    const script=workflow.split('          script: |\\n')[1]?.split('      - name: Public HTTPS smoke')[0] ?? '';
-    for(const line of script.split('\\n')) {
+    const script=workflow.split('          script: |\n')[1]?.split('      - name: Public HTTPS smoke')[0] ?? '';
+    expect(script.length).toBeGreaterThan(0);
+    for(const line of script.split('\n')) {
       if(line.trim())expect(line.match(/^ */)?.[0].length).toBeGreaterThanOrEqual(12);
     }
 
