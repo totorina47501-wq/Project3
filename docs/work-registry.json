@@ -825,11 +825,12 @@
     },
     {
       "id": "mobile-001",
-      "status": "in_progress",
-      "scope": "Issue #140 : application Android/iOS, démarrage Codex autorisé le 13/11/2026. Inventaire puis MVP réutilisant le backend, sans bloquer la release web, sans dépense API IA, service payant ni publication stores. Développement mobile maintenu ACTIF 15/11/2026 sur issue #140 / PR brouillon #142, Codex reste attribué ; pas de soumission stores ni dépense fournisseur.",
+      "status": "pending",
+      "scope": "Issue #140 — nouveau lot QA offline uniquement, autorisé 15/11/2026. MVP Android/iOS PR #142 déjà fusionné (aucune re-implémentation) ; tests supplémentaires navigation/deep links/origines/erreurs hors ligne et checklist vérifiable pour appareils/signatures/stores. Une PR Codex de QA sans appel fournisseur, aucune signature, publication store, compte développeur, dépense IA payante, migration ou déploiement. CGV/société/Stripe/certification #16 restent en pause. Vérifier anti-doublons et CI SHA exact. Après livraison du lot, repasser status en in_progress/blocked pour la recette réelle et store, pas done.",
       "environment": "development",
       "evidence": [
-        "https://github.com/totorina47501-wq/Project3/issues/140"
+        "https://github.com/totorina47501-wq/Project3/issues/140",
+        "https://github.com/totorina47501-wq/Project3/pull/142"
       ]
     },
     {
@@ -887,11 +888,21 @@
     },
     {
       "id": "mcp-remote-studio",
-      "status": "pending",
+      "status": "in_progress",
       "scope": "MCP-001 issue #162, lancement développement explicitement autorisé le 15/11/2026, MVP Streamable HTTP privé avec contrôle texte rules_only et lecture des vérifications Studio via API/RPC existants, OAuth délégué à scopes étroits et isolation workspace. Prendre en compte nouveautés Creator/Media Kit/RAG/30 jours dans le catalogue proposé sans les exposer tant que droits, routes et coûts non validés. Une PR Codex unique; implémentation et tests hors ligne, staging seulement après preuves; aucune activation OpenAI payante, Stripe Live, fournisseur payant, migration ou déploiement production. Dépendances #16 et #148 restent en pause et demeurent des conditions du GO commercial MCP.",
       "environment": "development",
       "evidence": [
-        "https://github.com/totorina47501-wq/Project3/issues/162"
+        "https://github.com/totorina47501-wq/Project3/issues/162",
+        "https://github.com/totorina47501-wq/Project3/pull/177"
+      ]
+    },
+    {
+      "id": "mia-legal-corpus-review-offline",
+      "status": "pending",
+      "scope": "Issue #137 — GO Codex 15/11/2026 limité au préflight documentaire et tests offline du pipeline juridique existant : références officielles réellement vérifiables et dates, candidats 25 fiches sous réserve de revue, preuve anti-doublons, dry-run idempotent et contrôles RAG sans IA payante. Ne jamais marquer manifeste approuvé sans preuve. Aucune écriture Supabase, aucun import, aucune activation d'embeddings, aucun déploiement, aucun travail CGV/société/médiation/paiements/Stripe; tâches 3–4 en pause. Une PR Codex dédiée, CI et preuve SHA exact.",
+      "environment": "development",
+      "evidence": [
+        "https://github.com/totorina47501-wq/Project3/issues/137"
       ]
     }
   ]
