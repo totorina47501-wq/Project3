@@ -481,7 +481,7 @@
         "app/api/brand-deals/export/route.ts"
       ],
       "migrations": [
-        "supabase/migrations/20261114235600_creator_brand_deal_details.sql"
+        "supabase/migrations/20261115101752_creator_brand_deal_details.sql"
       ],
       "next": [
         "Kit média PDF et parcours déterministe disponibles dans le code ; application distante de la migration et recette authentifiée séparées. Aucun envoi, appel IA ou chiffre de performance généré."

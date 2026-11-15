@@ -90,7 +90,7 @@ Après avoir appliqué les migrations + le seed, exécuter `tests/sql/security_s
 - Bloc 7 : ingestion réelle du corpus officiel, embeddings et versionnage documentaire.
 - Bloc 8 : politiques de conservation des données et purge des objets externes.
 
-La migration `20261114235600_creator_brand_deal_details.sql` ajoute le champ
+La migration `20261115101752_creator_brand_deal_details.sql` ajoute le champ
 JSONB `brand_deals.creator_details` à la table existante, avec validation de
 taille, de structure et de limites dans le RPC de sauvegarde. Les nouvelles
 archives v2 couvrent aussi ce champ. La migration est présente dans le dépôt ;

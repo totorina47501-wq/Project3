@@ -76,7 +76,7 @@ virgules ; dates UTC au format milliseconde. Le snapshot couvre ces valeurs,
 aucune signature électronique qualifiée et aucun certificat juridique ne sont
 émis. Les archives historiques sans snapshot restent affichables et signalées.
 
-La migration `20261114235600_creator_brand_deal_details.sql` ajoute à la table
+La migration `20261115101752_creator_brand_deal_details.sql` ajoute à la table
 existante `brand_deals` les détails structurés d'une proposition de créateur
 (activité, plateforme, format, livrables, durée, budget déclaré, droits,
 exclusivité et message éditable). Aucun second registre n'est créé. Les
