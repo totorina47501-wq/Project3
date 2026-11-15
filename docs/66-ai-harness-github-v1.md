@@ -21,3 +21,7 @@ Une CI verte n'est pas un certificat de conformité. Les workflows de fusion exi
 **Restent fermés :** CGV, société, médiateur, facturation/Stripe Live, changements de permissions/Auth/RLS, migrations, activation IA payante et publication d'applications stores. Un script automatique ne peut pas inventer les documents ou autorisations externes ; aucun test local ne les débloque. Ne pas supprimer ces garde-fous pour obtenir un faux full-auto.
 
 Réutiliser `docs/work-registry.json`, `REPRISE.md` et les issues existantes pour la traçabilité. Tout déblocage de production doit se faire sans contourner les protections GitHub et avec vérification de déploiement réelle.
+
+## Contrôle automatique de livraison technique
+
+Le workflow `mentioncheck-production-release-evidence.yml` vérifie en lecture seule, sur le **SHA exact** de `main`, la CI avec ses deux jobs réussis, le check `Workers Builds: mentioncheck` réussi et le chargement HTTPS des pages publiques `/` et `/login`. Il s'exécute après CI `main` (ou au planning), sans ouvrir Stripe, envoyer de données, appeler l'IA, déployer, modifier Cloudflare ni déclencher des paiements. Le CI/build succès ne prouve pas l'identité SHA du Worker actif : **l'attestation exacte de déploiement reste distincte** et nécessite les métadonnées de version Cloudflare ou une sonde SHA signée. En cas d'échec, le job échoue fermé ; pas d'auto-rollback aveugle sur la production.
