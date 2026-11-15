@@ -687,7 +687,7 @@
       "name": "Application mobile Android/iOS (Expo shell)",
       "status": "partial",
       "anchor": "apps/mobile/App.tsx",
-      "test": "tests/unit/mobile-allowlist.test.ts",
+      "test": "tests/unit/mobile-webview-policy.test.ts",
       "doc": "docs/65-mobile-mvp-001.md",
       "aliases": [
         "mobile",
@@ -699,6 +699,7 @@
       "migrations": [],
       "next": [
         "MVP shell Expo implemente avec allowlist d'origines et navigation vers les parcours web existants.",
+        "QA offline 15/11/2026: tests de non-regression deep link auth, navigation Back, liens externes, permissions et hors-ligne ajoutes sans reimplementation metier.",
         "Publication stores, signatures AAB/IPA et recettes appareils reels restent hors de ce lot et necessitent GO explicite."
       ]
     }
@@ -825,12 +826,13 @@
     },
     {
       "id": "mobile-001",
-      "status": "pending",
-      "scope": "Issue #140 — nouveau lot QA offline uniquement, autorisé 15/11/2026. MVP Android/iOS PR #142 déjà fusionné (aucune re-implémentation) ; tests supplémentaires navigation/deep links/origines/erreurs hors ligne et checklist vérifiable pour appareils/signatures/stores. Une PR Codex de QA sans appel fournisseur, aucune signature, publication store, compte développeur, dépense IA payante, migration ou déploiement. CGV/société/Stripe/certification #16 restent en pause. Vérifier anti-doublons et CI SHA exact. Après livraison du lot, repasser status en in_progress/blocked pour la recette réelle et store, pas done.",
+      "status": "in_progress",
+      "scope": "Issue #140 — lot QA offline mobile en cours (GO 15/11/2026). MVP Android/iOS PR #142 deja fusionne (aucune reimplementation) ; tests de non-regression deep link auth/navigation Back/liens externes/origines autorisees/permissions/hors-ligne et checklist appareils/signatures/stores ajoutes dans la PR #180. Publication stores, signatures et recette appareils reels restent bloquees en attente des prerequis operateur.",
       "environment": "development",
       "evidence": [
         "https://github.com/totorina47501-wq/Project3/issues/140",
-        "https://github.com/totorina47501-wq/Project3/pull/142"
+        "https://github.com/totorina47501-wq/Project3/pull/142",
+        "https://github.com/totorina47501-wq/Project3/pull/180"
       ]
     },
     {
