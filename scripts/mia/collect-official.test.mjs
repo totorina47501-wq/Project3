@@ -15,11 +15,12 @@ function assertExpect(actual) {
 describe('collecteur juridique hors ligne', () => {
   it('refuse les hôtes trompeurs et les liens non HTTPS', () => {
     assertExpect(validateOfficialUrl('https://www.legifrance.gouv.fr.evil.test/a')).toBeNull();
-    assertExpect(validateOfficialUrl('http://www.cnil.fr/a')).toBeNull();
-    assertExpect(validateOfficialUrl('https://www.cnil.fr/a')).toBe('https://www.cnil.fr/a');
+    assertExpect(validateOfficialUrl('http://www.economie.gouv.fr/a')).toBeNull();
+    assertExpect(validateOfficialUrl('https://www.economie.gouv.fr/a')).toBe('https://www.economie.gouv.fr/a');
+    assertExpect(validateOfficialUrl('https://www.cnil.fr/a')).toBeNull();
   });
   it('déduplique et ignore les liens non officiels', () => {
-    assertExpect(discoverFromSitemap('<urlset><url><loc>https://www.cnil.fr/fr/guide</loc></url><url><loc>https://www.cnil.fr/fr/guide</loc></url><url><loc>https://evil.test/</loc></url></urlset>')).toEqual(['https://www.cnil.fr/fr/guide']);
+    assertExpect(discoverFromSitemap('<urlset><url><loc>https://www.legifrance.gouv.fr/loda/id/TEST</loc></url><url><loc>https://www.legifrance.gouv.fr/loda/id/TEST</loc></url><url><loc>https://evil.test/</loc></url></urlset>')).toEqual(['https://www.legifrance.gouv.fr/loda/id/TEST']);
   });
   it('produit des candidats à valider sans ingestion automatique', async () => {
     let called = 0;
@@ -28,12 +29,13 @@ describe('collecteur juridique hors ligne', () => {
     const result = await collectOfficialCandidates({ feeds:['https://www.economie.gouv.fr/sitemap.xml'],fetcher });
     assertExpect(result).toHaveLength(1);
     assertExpect(result[0]?.status).toBe('pending_review');
+    assertExpect(result[0]?.verification_status).toBe('not_verified');
     assertExpect(result[0]?.fingerprint).toHaveLength(64);
     assert.equal(called,1);
   });
   it('rejette les redirections et les entités XML', async () => {
     const fetcher = async () => ({ok:false,status:302,headers:new Headers(),text:async()=>''});
-    await assertExpect(collectOfficialCandidates({feeds:['https://www.cnil.fr/sitemap.xml'],fetcher})).rejects.toThrow();
+    await assertExpect(collectOfficialCandidates({feeds:['https://www.legifrance.gouv.fr/sitemap.xml'],fetcher})).rejects.toThrow();
     assertExpect(()=>discoverFromSitemap('<!DOCTYPE foo><urlset/>')).toThrow();
   });
 });

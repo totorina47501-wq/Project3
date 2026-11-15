@@ -13,7 +13,7 @@ export function inspectOfficialHtml(html, url) {
     .replace(/<[^>]*>/g, ' ').replace(/&(?:nbsp|amp|quot);/g, ' ')
     .replace(/\s+/g, ' ').trim().slice(0, 4000);
   return { url, title, description, preview: text, contentSha256: createHash('sha256').update(text).digest('hex'),
-    status: 'pending_review', approved: false };
+    status: 'pending_review', verification_status: 'not_verified', approved: false };
 }
 
 export async function reviewOfficialCandidates(candidates, { fetcher = fetch, max = 20 } = {}) {
@@ -49,7 +49,7 @@ export async function reviewOfficialCandidates(candidates, { fetcher = fetch, ma
       for (const part of parts) { buffer.set(part, offset); offset += part.byteLength; }
       output.push(inspectOfficialHtml(new TextDecoder().decode(buffer), url));
     } catch {
-      output.push({ url, status: 'fetch_failed', approved: false });
+      output.push({ url, status: 'fetch_failed', verification_status: 'not_verified', approved: false });
     }
   }
   return output;

@@ -43,6 +43,8 @@ export function planApprovedImport(manifest, existing) {
     const old = current.get(doc.article_ref);
     if (old && old.source_url !== doc.source_url)
       throw new Error('Source URL changed for an existing reference');
+    if (old?.effective_on && doc.effective_on < old.effective_on)
+      throw new Error('Older legal version rejected for an existing reference');
     const action = !old ? 'insert' : old.content === doc.content &&
       (old.effective_on ?? null) === doc.effective_on ? 'unchanged' : 'update';
     operations.push({

@@ -30,12 +30,26 @@ describe('manual approval manifest', () => {
       { ...approval, reviewer: '' },
     ]));
   });
-  it('refuses duplicate article references and URLs', () => {
+  it('refuses duplicate article references', () => {
     const second = 'https://www.legifrance.gouv.fr/loda/id/TEST2';
     assert.throws(() => buildApprovedManifest(
       [...reviewed, { url: second, contentSha256: sha, status: 'pending_review' }],
       [approval, { ...approval, url: second }],
     ));
+  });
+  it('accepts multiple references from the same official source URL', () => {
+    const manifest = buildApprovedManifest(reviewed, [
+      approval,
+      {
+        ...approval,
+        articleRef: 'LTEST-2',
+        content: 'Seconde synthèse juridique validée, tirée de la même source officielle.',
+      },
+    ]);
+    assert.equal(manifest.documents.length, 2);
+    assert.equal(manifest.documents[0]?.source_url, manifest.documents[1]?.source_url);
+  });
+  it('refuses duplicate approvals using the same article reference', () => {
     assert.throws(() => buildApprovedManifest(reviewed, [approval, approval]));
   });
   it('rejects invalid calendar dates, short text and unknown sources', () => {
