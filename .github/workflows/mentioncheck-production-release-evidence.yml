@@ -56,15 +56,15 @@ jobs:
             for(let attempt=0;attempt<8;attempt++){
               const result=await github.rest.checks.listForRef({owner,repo,ref:current,per_page:100});
               const builds=(result.data.check_runs||[]).filter(c=>{
-            if(c.name!=='Workers Builds: mentioncheck'||!c.details_url)return false;
-            try{
-              const link=new URL(c.details_url);
-              return link.hostname==='dash.cloudflare.com' &&
-                link.protocol==='https:' &&
-                link.pathname.startsWith('/f9b14d5d93b1fe8ef3982d3ddb87131d/workers/services/view/mentioncheck/production/builds/') &&
-                !link.pathname.includes('/previews/');
-            }catch{return false;}
-          })
+                if(c.name!=='Workers Builds: mentioncheck'||!c.details_url)return false;
+                try{
+                  const link=new URL(c.details_url);
+                  return link.hostname==='dash.cloudflare.com' &&
+                    link.protocol==='https:' &&
+                    link.pathname.startsWith('/f9b14d5d93b1fe8ef3982d3ddb87131d/workers/services/view/mentioncheck/production/builds/') &&
+                    !link.pathname.includes('/previews/');
+                }catch{return false;}
+              })
                 .sort((a,b)=>Date.parse(b.started_at||b.created_at)-Date.parse(a.started_at||a.created_at));
               workers=builds[0];
               if(workers && workers.status==='completed')break;
