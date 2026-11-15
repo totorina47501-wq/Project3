@@ -22,6 +22,12 @@ test('progression locale accessible, conservée et séparée entre comptes hors 
     await page.goto('/dashboard/creator-challenge');
     await expect(page.getByRole('heading', { name: 'Mon programme créateur — 30 jours' })).toBeVisible();
     await expect(page.getByText('Progression uniquement sur cet appareil.')).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Niche' })).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Plateforme' })).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Objectif' })).toBeVisible();
+    await expect(page.getByRole('progressbar', { name: 'Progression du programme' })).toHaveAttribute('value', '0');
+    await expect(page.getByText('0 sur 30 missions terminées')).toHaveAttribute('aria-live', 'polite');
+    await expect(page.getByRole('button', { name: 'Commencer le jour 1' })).toBeVisible();
     await page.getByLabel('Niche').selectOption('cuisine');
     await page.getByLabel('Plateforme').selectOption('tiktok');
     await page.getByLabel('Objectif').selectOption('communaute');
@@ -42,6 +48,9 @@ test('progression locale accessible, conservée et séparée entre comptes hors 
     await dayOne.focus();
     await page.keyboard.press('Space');
     await expect(dayOne).toBeChecked();
+    await expect(dayOne).toBeFocused();
+    await expect(dayOne).toHaveCSS('outline-style', 'solid');
+    await expect(dayOne).not.toHaveCSS('outline-width', '0px');
     await expect(page.getByText('1 sur 30 missions terminées')).toBeVisible();
     await expect(page.getByText(/sujets de Cuisine/i)).toBeVisible();
     await expect(page.getByRole('link', { name: 'Préparer un brouillon avec Mia Creator' }))
@@ -71,6 +80,10 @@ test('progression locale accessible, conservée et séparée entre comptes hors 
     await useScenarioActor(context, baseURL!, scenario.actors.owner);
     await page.reload();
     await expect(page.getByText('1 sur 30 missions terminées')).toBeVisible();
+    page.once('dialog', (dialog) => dialog.dismiss());
+    await page.getByRole('button', { name: 'Réinitialiser ma progression' }).click();
+    await expect(dayOne).toBeChecked();
+    await expect(page.getByText('1 sur 30 missions terminées')).toBeVisible();
     page.once('dialog', (dialog) => dialog.accept());
     await page.getByRole('button', { name: 'Réinitialiser ma progression' }).click();
     await expect(page.getByRole('button', { name: 'Commencer le jour 1' })).toBeVisible();
@@ -79,6 +92,53 @@ test('progression locale accessible, conservée et séparée entre comptes hors 
     await page.reload();
     await expect(page.getByText('0 sur 30 missions terminées')).toBeVisible();
     await expect(page.getByLabel('Niche')).toHaveValue('autre');
+  } finally {
+    await context.close();
+  }
+});
+
+test('le parcours reste utilisable pendant la session si localStorage refuse son accès', async ({ browser, request, baseURL }) => {
+  test.skip(process.env.E2E_OFFLINE_AUTH !== '1', 'Nécessite la fixture Supabase HTTP locale.');
+  const scenario = await localScenario(request);
+  const context = await browser.newContext();
+  try {
+    await useScenarioActor(context, baseURL!, scenario.actors.owner);
+    await context.addInitScript((storagePrefix) => {
+      const getItem = Storage.prototype.getItem;
+      const setItem = Storage.prototype.setItem;
+      const removeItem = Storage.prototype.removeItem;
+      Storage.prototype.getItem = function (key) {
+        if (key.startsWith(storagePrefix)) throw new DOMException('Storage access denied', 'SecurityError');
+        return getItem.call(this, key);
+      };
+      Storage.prototype.setItem = function (key, value) {
+        if (key.startsWith(storagePrefix)) throw new DOMException('Storage access denied', 'SecurityError');
+        return setItem.call(this, key, value);
+      };
+      Storage.prototype.removeItem = function (key) {
+        if (key.startsWith(storagePrefix)) throw new DOMException('Storage access denied', 'SecurityError');
+        return removeItem.call(this, key);
+      };
+    }, 'mentioncheck:creator-challenge:v1:');
+    await context.route('**/*', async (route) => {
+      const url = new URL(route.request().url());
+      if (url.origin === new URL(baseURL!).origin) return route.continue();
+      throw new Error(`Requête externe interdite : ${url.origin}`);
+    });
+    const page = await context.newPage();
+    await page.goto('/dashboard/creator-challenge');
+    await expect(page.getByRole('status')).toContainText('Le stockage local est indisponible');
+    await page.getByRole('button', { name: 'Commencer le jour 1' }).click();
+    const dayOne = page.getByRole('checkbox', { name: /Jour 1 —/ });
+    await dayOne.focus();
+    await page.keyboard.press('Space');
+    await expect(dayOne).toBeChecked();
+    await expect(page.getByText('1 sur 30 missions terminées')).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByRole('status')).toContainText('Le stockage local est indisponible');
+    await expect(page.getByText('0 sur 30 missions terminées')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Commencer le jour 1' })).toBeVisible();
   } finally {
     await context.close();
   }
