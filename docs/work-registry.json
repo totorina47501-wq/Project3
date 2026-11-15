@@ -490,6 +490,24 @@
       ]
     },
     {
+      "id": "creator-30-day-onboarding",
+      "name": "Programme créateur débutant de 30 jours",
+      "status": "implemented_code",
+      "anchor": "lib/creator-challenge/model.ts",
+      "test": "tests/unit/creator-challenge.test.ts",
+      "doc": "docs/04-mia-archives.md",
+      "aliases": [
+        "creator challenge",
+        "programme créateur",
+        "30 jours"
+      ],
+      "routes": [],
+      "migrations": [],
+      "next": [
+        "Parcours local déterministe avec progression navigateur par compte ; aucun fournisseur IA, stockage serveur ou publication automatique. CI, staging et déploiement restent à qualifier séparément."
+      ]
+    },
+    {
       "id": "studio",
       "name": "Studio, équipes et API sans IA",
       "status": "implemented_code",
@@ -825,11 +843,13 @@
     },
     {
       "id": "creator-30-day-onboarding",
-      "status": "pending",
-      "scope": "Issue #170 Copilot P1 : programme débutants/Solo 30 jours déterministe FR, navigation vers Mia Creator/SafePublish/Media Kit existants, suivi local par compte et tests UI mobile/clavier. Aucun fournisseur IA appelé, pas de nouveau stockage serveur, Stripe, OAuth, migration, coût ni déploiement prod. Phase 1 indépendante de #16/#148/#124 en pause.",
+      "status": "done",
+      "scope": "Issue #170 Copilot P1 : code du programme débutants/Solo 30 jours déterministe FR, navigation vers Mia Creator/SafePublish/Media Kit existants, suivi local par compte et validation locale. CI de la PR, staging, déploiement et recette production restent distincts et non attestés. Aucun fournisseur IA appelé, pas de nouveau stockage serveur, Stripe, OAuth, migration ni coût. Phase 1 indépendante de #16/#148/#124 en pause.",
       "environment": "development",
+      "verifiedAt": "2026-11-15",
       "evidence": [
-        "https://github.com/totorina47501-wq/Project3/issues/170"
+        "https://github.com/totorina47501-wq/Project3/issues/170",
+        "https://github.com/totorina47501-wq/Project3/pull/172"
       ]
     }
   ]
