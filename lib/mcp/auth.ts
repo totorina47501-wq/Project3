@@ -9,7 +9,7 @@ type McpTokenPayload = {
   scopes: string[];
   studioKeyHash: string;
   exp: number;
-  resource?: string;
+  resource: string;
 };
 
 function hmacSecret(): string {
@@ -49,7 +49,7 @@ function parsePayload(payloadB64: string): McpTokenPayload {
     !Number.isInteger(record.exp)
   ) throw new OAuthError(OAuthErrorCode.InvalidToken, 'Invalid bearer token.');
   const typed = record as unknown as McpTokenPayload;
-  if (typed.resource !== undefined && typeof typed.resource !== 'string')
+  if (typeof typed.resource !== 'string' || !typed.resource.trim())
     throw new OAuthError(OAuthErrorCode.InvalidToken, 'Invalid bearer token.');
   return typed;
 }
@@ -79,7 +79,7 @@ export function createMcpTokenVerifier(request: Request): OAuthTokenVerifier {
       await verifySignature(payloadB64, signatureB64);
       if (payload.exp <= Math.floor(Date.now() / 1000))
         throw new OAuthError(OAuthErrorCode.InvalidToken, 'Expired bearer token.');
-      if (payload.resource && payload.resource !== resource)
+      if (payload.resource !== resource)
         throw new OAuthError(OAuthErrorCode.InvalidTarget, 'Bearer token audience mismatch.');
       return {
         token,

@@ -135,6 +135,33 @@ describe('MCP distant Studio', () => {
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['absence d’audience resource', undefined],
+    ['audience d’une autre ressource', 'https://example.invalid/api/mcp'],
+  ])('refuse le bearer signé : %s', async (_name, resource) => {
+    const bearer = await token(['checks:read'], { resource });
+    const response = await mcpPost(modernRequest('tools/list', {
+      jsonrpc: '2.0',
+      id: 31,
+      method: 'tools/list',
+      params: {},
+    }, bearer));
+    expect([401, 403]).toContain(response.status);
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it('refuse un bearer MCP expiré sans toucher Studio', async () => {
+    const bearer = await token(['checks:read'], { exp: Math.floor(Date.now() / 1000) - 1 });
+    const response = await mcpPost(modernRequest('tools/list', {
+      jsonrpc: '2.0',
+      id: 32,
+      method: 'tools/list',
+      params: {},
+    }, bearer));
+    expect([401, 403]).toContain(response.status);
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
   it('n’autorise pas check_content sans scope checks:write', async () => {
     const auth = await token(['checks:read']);
     const response = await mcpPost(modernRequest('tools/call', {
