@@ -67,6 +67,11 @@ export async function studioApiRpc(request: Request, action: 'checks' | 'save_ch
   const secret = parseApiKey(request.headers.get('authorization'));
   if (!secret) throw new HttpError(401, 'Clé API Studio requise (Bearer).');
   const hash = await hashSecret(secret);
+  return studioApiRpcWithHash(hash, action, input);
+}
+
+export async function studioApiRpcWithHash(hash: string, action: 'checks' | 'save_check', input?: { caption: string; platform: Platform }) {
+  if (!/^[0-9a-f]{64}$/.test(hash)) throw new HttpError(401, 'Jeton MCP invalide.');
   await checkRateLimit(`studio-api:${hash}`, 'studio');
   const payload = input ? { ...input, result: evaluateStudioText(input) } : {};
   const { data, error } = await createAdminSupabase().rpc('studio_execute_api', {

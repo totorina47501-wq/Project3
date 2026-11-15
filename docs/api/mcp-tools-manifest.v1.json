@@ -1,0 +1,110 @@
+{
+  "version": "2026-11-15",
+  "server": {
+    "id": "mentioncheck-remote-studio",
+    "protocol": "2026-07-28",
+    "transport": "streamable-http",
+    "compatibility": "legacy-stateless-via-sdk"
+  },
+  "tools": [
+    {
+      "name": "check_content",
+      "status": "implemented",
+      "scope": "checks:write",
+      "profile": "studio_member_authorized",
+      "backend": "rpc:studio_execute_api(action=save_check)",
+      "kind": "write",
+      "cost": "none",
+      "limits": [
+        "caption: 1..10000",
+        "platform: instagram|tiktok|youtube|linkedin",
+        "workspace fixed by delegated token + Studio key hash",
+        "studio quota/rate-limit enforced by existing backend"
+      ],
+      "testEvidence": [
+        "tests/unit/mcp-remote-studio.test.ts"
+      ]
+    },
+    {
+      "name": "list_verifications",
+      "status": "implemented",
+      "scope": "checks:read",
+      "profile": "studio_member_authorized",
+      "backend": "rpc:studio_execute_api(action=checks)",
+      "kind": "read",
+      "cost": "none",
+      "limits": [
+        "max 100 rows from authorized workspace",
+        "no free tenant selector parameter"
+      ],
+      "testEvidence": [
+        "tests/unit/mcp-remote-studio.test.ts"
+      ]
+    },
+    {
+      "name": "get_verification",
+      "status": "gated",
+      "scope": "checks:read",
+      "profile": "studio_member_authorized",
+      "backend": "not_exposed_no_workspace_bounded_by_id_endpoint",
+      "kind": "read"
+    },
+    {
+      "name": "get_usage",
+      "status": "gated",
+      "scope": "usage:read",
+      "profile": "oauth_user_or_workspace",
+      "backend": "missing_dedicated_read_only_contract",
+      "kind": "read"
+    },
+    {
+      "name": "search_legal_sources",
+      "status": "gated",
+      "scope": "legal:read",
+      "profile": "oauth_user_authorized",
+      "backend": "corpus_audit_and_source_contract_required",
+      "kind": "read"
+    },
+    {
+      "name": "check_legal_document",
+      "status": "gated",
+      "scope": "legal:write",
+      "profile": "oauth_user_authorized",
+      "backend": "no_validated_document_check_route",
+      "kind": "write"
+    },
+    {
+      "name": "get_creator_program",
+      "status": "gated",
+      "scope": "creator:read",
+      "profile": "oauth_user_authorized",
+      "backend": "deterministic_model_exists_without_remote_progress_endpoint",
+      "kind": "read"
+    },
+    {
+      "name": "generate_creator_draft",
+      "status": "gated",
+      "scope": "creator:write",
+      "profile": "oauth_user_authorized",
+      "backend": "mia_creator_route_cost_and_consent_controls_not_enabled_for_mcp",
+      "kind": "write",
+      "cost": "potential_ai"
+    },
+    {
+      "name": "list_collaborations",
+      "status": "gated",
+      "scope": "collaborations:read",
+      "profile": "oauth_user_owner_only",
+      "backend": "user_oauth_adaptation_required_for_existing_private_routes",
+      "kind": "read"
+    },
+    {
+      "name": "get_media_kit",
+      "status": "gated",
+      "scope": "collaborations:read",
+      "profile": "oauth_user_owner_only",
+      "backend": "private_export_route_not_exposed_to_mcp",
+      "kind": "read"
+    }
+  ]
+}
