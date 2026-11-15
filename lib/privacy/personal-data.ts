@@ -7,7 +7,7 @@ type ExportUser = { id: string; email?: string | undefined; phone?: string | und
 export const PERSONAL_COLLECTIONS = [
   ['verifications','verifications','id,user_id,platform,content_text,media_url,media_type,ai_score,ai_risk_level,ai_explanation,ai_rewrite_suggestion,accepted_caption,hash_sha256,prompt_version,status,created_at,completed_at,updated_at','user_id','id'],
   ['conversations','assistant_conversations','id,verification_id,messages,created_at,updated_at','user_id','id'],
-  ['deals','brand_deals','id,brand_name,start_date,end_date,contract_url,archived_at,archive_payload,hash_sha256,created_at','user_id','id'],
+  ['deals','brand_deals','id,brand_name,start_date,end_date,contract_url,creator_details,archived_at,archive_payload,hash_sha256,created_at','user_id','id'],
   ['dealVerifications','brand_deal_verifications','deal_id,verification_id','user_id','deal_id,verification_id'],
   ['subscriptions','subscriptions','id,stripe_subscription_id,plan,status,current_period_end,created_at,updated_at','user_id','id'],
   ['social','social_accounts','id,platform,handle,connection_kind,connected_at','user_id','id'],

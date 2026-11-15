@@ -480,9 +480,11 @@
         "app/api/brand-deals/[id]/archive/route.ts",
         "app/api/brand-deals/export/route.ts"
       ],
-      "migrations": [],
+      "migrations": [
+        "supabase/migrations/20261114235600_creator_brand_deal_details.sql"
+      ],
       "next": [
-        "Archivage et exports informatifs ; téléversement contrat signé tiers non activé."
+        "Kit média PDF et parcours déterministe disponibles dans le code ; application distante de la migration et recette authentifiée séparées. Aucun envoi, appel IA ou chiffre de performance généré."
       ]
     },
     {
@@ -811,11 +813,12 @@
     },
     {
       "id": "creator-first-brand-deal-kit",
-      "status": "pending",
+      "status": "in_progress",
       "scope": "Issue #166 Copilot P1 : premier partenariat créateur, kit média personnalisable, brouillon de prospection, checklist brief/contrat fondée sur sources si disponibles ; réutiliser registre brand_deals, PDF/export et protections RLS, modèles déterministes sans coût IA. Pas d'envoi automatique, promesse juridique, OCR/vidéo, Stripe ou production. Préserver propriété de #165.",
       "environment": "development",
       "evidence": [
-        "https://github.com/totorina47501-wq/Project3/issues/166"
+        "https://github.com/totorina47501-wq/Project3/issues/166",
+        "https://github.com/totorina47501-wq/Project3/pull/168"
       ]
     }
   ]

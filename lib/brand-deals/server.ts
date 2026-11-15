@@ -17,6 +17,27 @@ export function dealFilters(request:Request):DealFilters {
 export function assertDealOrigin(request:Request):void {
   if(!isSameOrigin(request))throw new HttpError(403,'Origine de la requête refusée.');
 }
+export async function creatorMediaKitRequest(request:Request):Promise<unknown> {
+  assertDealOrigin(request);
+  const maxBytes=16000;
+  const declared=Number(request.headers.get('content-length'));
+  if(Number.isFinite(declared)&&declared>maxBytes)throw new HttpError(413,'Media kit trop volumineux.');
+  const reader=request.body?.getReader();
+  if(!reader)throw new HttpError(400,'Requête JSON invalide.');
+  const chunks:Uint8Array[]=[];let length=0;
+  try {
+    for(;;) {
+      const next=await reader.read();if(next.done)break;
+      length+=next.value.byteLength;
+      if(length>maxBytes){await reader.cancel();throw new HttpError(413,'Media kit trop volumineux.');}
+      chunks.push(next.value);
+    }
+  }finally{reader.releaseLock();}
+  const bytes=new Uint8Array(length);let offset=0;
+  for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
+  try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}
+  catch{throw new HttpError(400,'Requête JSON invalide.');}
+}
 export async function draftRequest(request:Request,userId:string) {
   assertDealOrigin(request);
   const text=await request.text();

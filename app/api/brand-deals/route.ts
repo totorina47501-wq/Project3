@@ -22,7 +22,8 @@ export async function POST(request:Request) {
     const draft=await draftRequest(request,user.id);
     const {data,error}=await client.rpc('save_brand_deal',{
       p_id:null,p_brand_name:draft.brand_name,p_start_date:draft.start_date,p_end_date:draft.end_date,
-      p_contract_url:draft.contract_url,p_verification_ids:draft.verification_ids,
+      p_contract_url:draft.contract_url,p_creator_details:draft.creator_details,
+      p_verification_ids:draft.verification_ids,
     });
     dealRpcError(error);
     return Response.json({id:data},{status:201,headers:dealHeaders});

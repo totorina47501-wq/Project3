@@ -20,7 +20,8 @@ export async function PATCH(request:Request,{params}:Context) {
     const draft=await draftRequest(request,user.id);
     const {data,error}=await client.rpc('save_brand_deal',{
       p_id:id,p_brand_name:draft.brand_name,p_start_date:draft.start_date,p_end_date:draft.end_date,
-      p_contract_url:draft.contract_url,p_verification_ids:draft.verification_ids,
+      p_contract_url:draft.contract_url,p_creator_details:draft.creator_details,
+      p_verification_ids:draft.verification_ids,
     });
     dealRpcError(error);
     return Response.json({id:data},{headers:dealHeaders});

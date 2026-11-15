@@ -12,6 +12,7 @@ select set_config('request.jwt.claim.sub','20000000-0000-0000-0000-000000000001'
 do $$ begin
  if has_function_privilege('anon','public.archive_brand_deal(uuid)','execute')
  or has_function_privilege('anon','public.save_brand_deal(uuid,text,date,date,text,uuid[])','execute')
+ or has_function_privilege('anon','public.save_brand_deal(uuid,text,date,date,text,jsonb,uuid[])','execute')
  or has_table_privilege('authenticated','public.brand_deals','update')
  or has_table_privilege('authenticated','public.brand_deals','delete')
  or has_table_privilege('authenticated','public.brand_deal_verifications','insert') then
@@ -26,16 +27,30 @@ begin
   perform public.save_brand_deal(null,'Étranger','2026-11-04',null,null,array['21000000-0000-0000-0000-000000000002'::uuid]);
   raise exception 'Vérification étrangère acceptée' using errcode='XX000';
  exception when invalid_parameter_value then null; end;
- deal_id:=public.save_brand_deal(null,'Marque été','2026-11-04',null,null,array['21000000-0000-0000-0000-000000000001'::uuid]);
- perform public.save_brand_deal(deal_id,'Marque modifiée','2026-11-04','2026-11-05',null,array['21000000-0000-0000-0000-000000000001'::uuid]);
+ deal_id:=public.save_brand_deal(null,'Marque été','2026-11-04',null,null,
+   '{"niche":"Cuisine","platform":"instagram","format":"Vidéo","deliverables":"Une publication","duration":"1 mois","budget":"À discuter","reuse_rights":"À préciser","exclusivity":"Non défini","proposal":"Message modifiable"}'::jsonb,
+   array['21000000-0000-0000-0000-000000000001'::uuid]);
+ perform public.save_brand_deal(deal_id,'Marque modifiée','2026-11-04','2026-11-05',null,
+   array['21000000-0000-0000-0000-000000000001'::uuid]);
  perform set_config('mentioncheck.test_deal',deal_id::text,true);
  original:=public.archive_brand_deal(deal_id);
  repeated:=public.archive_brand_deal(deal_id);
  if original.archived_at is null or original.archive_payload is null
  or original.hash_sha256 is distinct from repeated.hash_sha256
- or original.archived_at is distinct from repeated.archived_at then
+ or original.archived_at is distinct from repeated.archived_at
+ or original.creator_details->>'niche'<>'Cuisine'
+ or original.archive_payload->>0<>'mentioncheck-deal-v2'
+ or original.archive_payload->>7<>original.creator_details::text then
   raise exception 'Archivage absent ou non idempotent';
  end if;
+ begin
+  perform public.save_brand_deal(null,'Invalide','2026-11-04',null,null,'{"invented":"field"}'::jsonb,'{}');
+  raise exception 'Détail inattendu accepté' using errcode='XX000';
+ exception when invalid_parameter_value then null; end;
+ begin
+  perform public.save_brand_deal(null,'Invalide','2026-11-04',null,null,'{"platform":"fake"}'::jsonb,'{}');
+  raise exception 'Plateforme invalide acceptée' using errcode='XX000';
+ exception when invalid_parameter_value then null; end;
  begin
   perform public.save_brand_deal(deal_id,'Altérée','2026-11-04',null,null,'{}');
   raise exception 'Archive modifiable' using errcode='XX000';
