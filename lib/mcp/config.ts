@@ -28,23 +28,35 @@ function readHttpsUrl(name: string): URL | null {
   } catch { return null; }
 }
 
-export function mcpResourceServerUrl(request: Request): URL {
-  const configured = readHttpsUrl('MCP_RESOURCE_SERVER_URL');
-  if (configured) return configured;
-  return new URL('/api/mcp', new URL(request.url).origin);
+/**
+ * The resource identifier is operator-controlled: never derive a bearer
+ * audience from the untrusted Host / forwarded request URL.
+ */
+function configuredResourceUrl(): URL | null {
+  const url = readHttpsUrl('MCP_RESOURCE_SERVER_URL');
+  if (!url || url.pathname !== '/api/mcp' || url.search || url.hash
+    || url.username || url.password) return null;
+  return url;
 }
 
-export function mcpOAuthConfig(request: Request): McpOAuthConfig | null {
+export function mcpResourceServerUrl(_request: Request): URL {
+  const url = configuredResourceUrl();
+  if (!url) throw new Error('MCP resource configuration unavailable.');
+  return url;
+}
+
+export function mcpOAuthConfig(_request: Request): McpOAuthConfig | null {
   const issuer = readHttpsUrl('MCP_OAUTH_ISSUER');
   const authorizationEndpoint = readHttpsUrl('MCP_OAUTH_AUTHORIZATION_ENDPOINT');
   const tokenEndpoint = readHttpsUrl('MCP_OAUTH_TOKEN_ENDPOINT');
-  if (!issuer || !authorizationEndpoint || !tokenEndpoint) return null;
+  const resourceServerUrl = configuredResourceUrl();
+  if (!issuer || !authorizationEndpoint || !tokenEndpoint || !resourceServerUrl) return null;
   const jwks = readHttpsUrl('MCP_OAUTH_JWKS_URI');
   const registration = readHttpsUrl('MCP_OAUTH_REGISTRATION_ENDPOINT');
   const revocation = readHttpsUrl('MCP_OAUTH_REVOCATION_ENDPOINT');
   const docs = readHttpsUrl('MCP_SERVICE_DOCUMENTATION_URL');
   return {
-    resourceServerUrl: mcpResourceServerUrl(request),
+    resourceServerUrl,
     oauthMetadata: {
       issuer: issuer.toString(),
       authorization_endpoint: authorizationEndpoint.toString(),

@@ -162,6 +162,56 @@ describe('MCP distant Studio', () => {
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
 
+  it('reste fermé sans audience canonique configurée', async () => {
+    delete process.env.MCP_RESOURCE_SERVER_URL;
+    const bearer = await token(['checks:read']);
+    const response = await mcpPost(modernRequest('tools/list', {
+      jsonrpc: '2.0', id: 41, method: 'tools/list', params: {},
+    }, bearer));
+    expect(response.status).toBe(503);
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it('refuse un Origin tiers avant les tools et l’accès Studio', async () => {
+    const bearer = await token(['checks:read']);
+    const request = modernRequest('tools/list', {
+      jsonrpc: '2.0', id: 42, method: 'tools/list', params: {},
+    }, bearer);
+    const headers = new Headers(request.headers);
+    headers.set('origin', 'https://attacker.invalid');
+    const response = await mcpPost(new Request(request, { headers }));
+    expect(response.status).toBe(403);
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it('refuse un token signé avec une durée supérieure à une heure', async () => {
+    const bearer = await token(['checks:read'], { exp: Math.floor(Date.now() / 1000) + 7200 });
+    const response = await mcpPost(modernRequest('tools/list', {
+      jsonrpc: '2.0', id: 43, method: 'tools/list', params: {},
+    }, bearer));
+    expect(response.status).toBe(401);
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['P0001', 429],
+    ['42501', 403],
+  ])('préserve le statut métier %s sans divulguer de détails internes', async (code, expectedStatus) => {
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: { code, message: 'SECRET_INTERNAL_DB_ERROR' } });
+    const bearer = await token(['checks:write']);
+    const response = await mcpPost(modernRequest('tools/call', {
+      jsonrpc: '2.0',
+      id: 44,
+      method: 'tools/call',
+      params: { name: 'check_content', arguments: { caption: 'Publicité', platform: 'instagram' } },
+    }, bearer, 'check_content'));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.result?.isError).toBe(true);
+    expect(body.result?.structuredContent?.status).toBe(expectedStatus);
+    expect(JSON.stringify(body)).not.toContain('SECRET_INTERNAL_DB_ERROR');
+  });
+
   it('n’autorise pas check_content sans scope checks:write', async () => {
     const auth = await token(['checks:read']);
     const response = await mcpPost(modernRequest('tools/call', {

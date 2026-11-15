@@ -11,6 +11,7 @@ import {
   requireScopes,
 } from '@modelcontextprotocol/server';
 import { studioApiRpcWithHash } from '@/lib/studio/server';
+import { publicError } from '@/lib/security/auth';
 import { studioCheckSchema } from '@/lib/studio/schemas';
 import { mcpOAuthConfig, mcpResourceServerUrl } from '@/lib/mcp/config';
 import { createMcpTokenVerifier } from '@/lib/mcp/auth';
@@ -26,12 +27,32 @@ const listOutputSchema = z.object({
   limit: z.literal(100),
 });
 
-function mcpError(message: string, status: number) {
+function mcpError(error: unknown) {
+  // Preserve known business statuses without returning SDK/DB internals.
+  const { status, message } = publicError(error);
   return {
     isError: true,
     content: [{ type: 'text' as const, text: message }],
     structuredContent: { ok: false, status, error: message },
   };
+}
+
+function isAllowedOrigin(request: Request, resourceUrl: URL): boolean {
+  const origin = request.headers.get('origin');
+  if (!origin) return true; // Native/non-browser MCP clients often omit Origin.
+  try {
+    const parsed = new URL(origin);
+    if (origin !== parsed.origin || parsed.protocol !== 'https:') return false;
+    const extra = (process.env.MCP_ALLOWED_ORIGINS ?? '')
+      .split(',').map(value => value.trim()).filter(Boolean)
+      .filter(value => {
+        try {
+          const url = new URL(value);
+          return url.protocol === 'https:' && url.origin === value;
+        } catch { return false; }
+      });
+    return origin === resourceUrl.origin || extra.includes(origin);
+  } catch { return false; }
 }
 
 function studioKeyHash(authInfo: AuthInfo | undefined): string {
@@ -72,8 +93,7 @@ const mcpHandler = createMcpHandler(() => {
           structuredContent: checkOutputSchema.parse(verification),
         };
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Studio indisponible.';
-        return mcpError(message, 403);
+        return mcpError(error);
       }
     },
   );
@@ -98,8 +118,7 @@ const mcpHandler = createMcpHandler(() => {
           structuredContent: listOutputSchema.parse(checks),
         };
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Studio indisponible.';
-        return mcpError(message, 403);
+        return mcpError(error);
       }
     },
   );
@@ -113,6 +132,12 @@ export async function handleMcpRequest(request: Request): Promise<Response> {
     return Response.json(
       { error: 'MCP OAuth metadata unavailable.' },
       { status: 503, headers: { 'Cache-Control': 'private, no-store' } },
+    );
+  }
+  if (!isAllowedOrigin(request, oauth.resourceServerUrl)) {
+    return Response.json(
+      { error: 'MCP origin not allowed.' },
+      { status: 403, headers: { 'Cache-Control': 'private, no-store' } },
     );
   }
   const gate = requireBearerAuth({

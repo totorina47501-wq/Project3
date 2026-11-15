@@ -77,8 +77,9 @@ export function createMcpTokenVerifier(request: Request): OAuthTokenVerifier {
       const { payloadB64, signatureB64 } = parseToken(token);
       const payload = parsePayload(payloadB64);
       await verifySignature(payloadB64, signatureB64);
-      if (payload.exp <= Math.floor(Date.now() / 1000))
-        throw new OAuthError(OAuthErrorCode.InvalidToken, 'Expired bearer token.');
+      const now = Math.floor(Date.now() / 1000);
+      if (payload.exp <= now || payload.exp > now + 3600)
+        throw new OAuthError(OAuthErrorCode.InvalidToken, 'Expired or overlong bearer token.');
       if (payload.resource !== resource)
         throw new OAuthError(OAuthErrorCode.InvalidTarget, 'Bearer token audience mismatch.');
       return {
