@@ -5,7 +5,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 function metadata(request: Request): Response {
-  const config = mcpOAuthConfig(request);
+  const config = mcpOAuthConfig();
   if (!config) {
     return Response.json(
       { error: 'MCP OAuth metadata unavailable.' },

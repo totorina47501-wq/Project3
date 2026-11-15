@@ -39,13 +39,13 @@ function configuredResourceUrl(): URL | null {
   return url;
 }
 
-export function mcpResourceServerUrl(_request: Request): URL {
+export function mcpResourceServerUrl(): URL {
   const url = configuredResourceUrl();
   if (!url) throw new Error('MCP resource configuration unavailable.');
   return url;
 }
 
-export function mcpOAuthConfig(_request: Request): McpOAuthConfig | null {
+export function mcpOAuthConfig(): McpOAuthConfig | null {
   const issuer = readHttpsUrl('MCP_OAUTH_ISSUER');
   const authorizationEndpoint = readHttpsUrl('MCP_OAUTH_AUTHORIZATION_ENDPOINT');
   const tokenEndpoint = readHttpsUrl('MCP_OAUTH_TOKEN_ENDPOINT');

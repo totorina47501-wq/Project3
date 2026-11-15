@@ -127,7 +127,7 @@ const mcpHandler = createMcpHandler(() => {
 });
 
 export async function handleMcpRequest(request: Request): Promise<Response> {
-  const oauth = mcpOAuthConfig(request);
+  const oauth = mcpOAuthConfig();
   if (!oauth) {
     return Response.json(
       { error: 'MCP OAuth metadata unavailable.' },
@@ -141,8 +141,8 @@ export async function handleMcpRequest(request: Request): Promise<Response> {
     );
   }
   const gate = requireBearerAuth({
-    verifier: createMcpTokenVerifier(request),
-    resourceMetadataUrl: getOAuthProtectedResourceMetadataUrl(mcpResourceServerUrl(request)),
+    verifier: createMcpTokenVerifier(),
+    resourceMetadataUrl: getOAuthProtectedResourceMetadataUrl(mcpResourceServerUrl()),
   });
   const auth = await gate(request);
   if (auth instanceof Response) return auth;

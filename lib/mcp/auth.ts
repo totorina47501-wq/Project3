@@ -70,8 +70,8 @@ async function verifySignature(payloadB64: string, signatureB64: string) {
     throw new OAuthError(OAuthErrorCode.InvalidToken, 'Invalid bearer token.');
 }
 
-export function createMcpTokenVerifier(request: Request): OAuthTokenVerifier {
-  const resource = mcpResourceServerUrl(request).toString();
+export function createMcpTokenVerifier(): OAuthTokenVerifier {
+  const resource = mcpResourceServerUrl().toString();
   return {
     verifyAccessToken: async (token) => {
       const { payloadB64, signatureB64 } = parseToken(token);
