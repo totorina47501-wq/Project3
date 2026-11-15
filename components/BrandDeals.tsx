@@ -1,5 +1,5 @@
 'use client';
-import { useEffect,useState,type FormEvent } from 'react';
+import { useEffect,useRef,useState,type FormEvent } from 'react';
 import Link from 'next/link';
 import { createCreatorProposal,creatorMediaKitSchema,type CreatorDetails,type DealRecord } from '@/lib/brand-deals/model';
 
@@ -17,6 +17,40 @@ const emptyMediaKit=():MediaKitForm=>({
   include_creator_name:true,include_description:true,include_niches:true,include_formats:true,
   include_public_links:true,include_contact_email:false,include_contact_url:false,
 });
+type MediaKitExportResult={status:'invalid'|'cancelled'|'failed'}|{status:'download';blob:Blob};
+export async function requestCreatorMediaKitPdf(
+  mediaKit:MediaKitForm,signal:AbortSignal,fetcher:typeof fetch=fetch,
+):Promise<MediaKitExportResult> {
+  const splitLines=(value:string)=>value.split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
+  const parsed=creatorMediaKitSchema.safeParse({
+    creator_name:mediaKit.creator_name,
+    description:mediaKit.description,
+    niches:splitLines(mediaKit.niches),
+    formats:splitLines(mediaKit.formats),
+    public_links:splitLines(mediaKit.public_links),
+    contact_email:mediaKit.contact_email,
+    contact_url:mediaKit.contact_url,
+    include_creator_name:mediaKit.include_creator_name,
+    include_description:mediaKit.include_description,
+    include_niches:mediaKit.include_niches,
+    include_formats:mediaKit.include_formats,
+    include_public_links:mediaKit.include_public_links,
+    include_contact_email:mediaKit.include_contact_email,
+    include_contact_url:mediaKit.include_contact_url,
+  });
+  if(!parsed.success)return {status:'invalid'};
+  try {
+    const response=await fetcher('/api/brand-deals/export',{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(parsed.data),signal,
+    });
+    if(signal.aborted)return {status:'cancelled'};
+    if(!response.ok)return {status:'failed'};
+    const blob=await response.blob();
+    return signal.aborted?{status:'cancelled'}:{status:'download',blob};
+  }catch {
+    return signal.aborted?{status:'cancelled'}:{status:'failed'};
+  }
+}
 const briefChecks=[
   'Rémunération et échéances',
   'Livrables et formats attendus',
@@ -32,7 +66,11 @@ export function BrandDeals() {
   const [mediaKit,setMediaKit]=useState<MediaKitForm>(emptyMediaKit);
   const [briefText,setBriefText]=useState('');
   const [mediaKitError,setMediaKitError]=useState('');
+  const [mediaKitMessage,setMediaKitMessage]=useState('');
   const [mediaKitPending,setMediaKitPending]=useState(false);
+  const mediaKitAbortRef=useRef<AbortController|null>(null);
+  const mediaKitErrorRef=useRef<HTMLParagraphElement>(null);
+  const mediaKitMessageRef=useRef<HTMLParagraphElement>(null);
   const [editing,setEditing]=useState<string|null>(null);
   const [listing,setListing]=useState<Listing|null>(null);
   const [state,setState]=useState('all');
@@ -70,6 +108,10 @@ export function BrandDeals() {
     }catch(cause){setSnapshots(previous=>({...previous,[id]:{error:cause instanceof Error?cause.message:'Snapshot indisponible.'}}));}
   }
   useEffect(()=>{if(confirmation)document.getElementById('deal-confirm-title')?.focus();},[confirmation]);
+  useEffect(()=>{
+    if(mediaKitError)mediaKitErrorRef.current?.focus();
+    else if(mediaKitMessage)mediaKitMessageRef.current?.focus();
+  },[mediaKitError,mediaKitMessage]);
   function cancelConfirmation() {
     if(confirmation)document.getElementById('deal-'+confirmation.action+'-'+confirmation.item.id)?.focus();
     setConfirmation(null);
@@ -113,29 +155,31 @@ export function BrandDeals() {
     changeDetail('proposal',createCreatorProposal(form.creator_details));
   }
   async function downloadMediaKit() {
+    const controller=new AbortController();
+    mediaKitAbortRef.current=controller;
     setMediaKitPending(true);setMediaKitError('');
+    setMediaKitMessage('');
     try {
-      const splitLines=(value:string)=>value.split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
-      const parsed=creatorMediaKitSchema.safeParse({
-        ...mediaKit,
-        niches:splitLines(mediaKit.niches),
-        formats:splitLines(mediaKit.formats),
-        public_links:splitLines(mediaKit.public_links),
-      });
-      if(!parsed.success){setMediaKitError('Vérifie les champs, les adresses email et les liens HTTPS du kit.');return;}
-      const response=await fetch('/api/brand-deals/export',{
-        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(parsed.data),
-      });
-      if(!response.ok){
-        const result=await response.json().catch(()=>({})) as {error?:string};
-        setMediaKitError(result.error??'Export PDF impossible.');return;
+      const result=await requestCreatorMediaKitPdf(mediaKit,controller.signal);
+      if(result.status==='invalid') {
+        setMediaKitError('Vérifie les champs, les adresses email et les liens HTTPS du kit.');
+      }else if(result.status==='cancelled') {
+        setMediaKitMessage('Téléchargement annulé.');
+      }else if(result.status==='failed') {
+        setMediaKitError('Téléchargement impossible. Vérifie ta connexion et réessaie.');
+      }else if(result.status==='download') {
+        const href=URL.createObjectURL(result.blob);
+        const link=document.createElement('a');link.href=href;link.download='media-kit-createur.pdf';link.click();
+        window.setTimeout(()=>URL.revokeObjectURL(href),1000);
+        setMediaKitMessage('Téléchargement du PDF lancé.');
       }
-      const href=URL.createObjectURL(await response.blob());
-      const link=document.createElement('a');link.href=href;link.download='media-kit-createur.pdf';link.click();
-      window.setTimeout(()=>URL.revokeObjectURL(href),1000);
-    }catch{setMediaKitError('Export PDF impossible.');}
-    finally{setMediaKitPending(false);}
+    }catch{setMediaKitError('Téléchargement impossible. Vérifie ta connexion et réessaie.');}
+    finally{
+      if(mediaKitAbortRef.current===controller)mediaKitAbortRef.current=null;
+      setMediaKitPending(false);
+    }
   }
+  function cancelMediaKitDownload(){mediaKitAbortRef.current?.abort();}
   const inputClass='mt-1 w-full rounded-lg border border-slate-300 p-2.5';
   return <div className="space-y-6">
     <form onSubmit={save} className="space-y-4 rounded-2xl border bg-white p-6" aria-labelledby="deal-form-title">
@@ -182,7 +226,7 @@ export function BrandDeals() {
         <label className="flex items-start gap-2 rounded-lg border p-3"><input type="checkbox" className="mt-1" aria-label={'Point vérifié : '+question}/><span>As-tu clarifié : {question.toLowerCase()} ?</span></label>
       </li>)}</ul>
     </section>
-    <section className="space-y-4 rounded-2xl border bg-white p-6" aria-labelledby="media-kit-title">
+    <section className="space-y-4 rounded-2xl border bg-white p-6" aria-labelledby="media-kit-title" aria-busy={mediaKitPending}>
       <h2 id="media-kit-title" className="text-xl font-bold">Créer mon media kit PDF</h2>
       <p className="text-sm text-slate-600">Renseigne uniquement les informations que tu souhaites partager. Aucune statistique, audience, portée, performance, collaboration passée ou attestation n’est inventée ou ajoutée au PDF.</p>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -196,8 +240,14 @@ export function BrandDeals() {
           <div><label htmlFor="kit-contact-url">Site ou lien de contact HTTPS</label><input id="kit-contact-url" type="url" maxLength={500} value={mediaKit.contact_url} onChange={event=>changeMediaKit('contact_url',event.target.value)} className={inputClass}/><label className="mt-2 flex items-center gap-2"><input type="checkbox" checked={mediaKit.include_contact_url} onChange={event=>changeMediaKit('include_contact_url',event.target.checked)}/>Inclure le lien de contact dans le PDF</label></div>
         </div>
       </div>
-      {mediaKitError&&<p role="alert" className="rounded-xl bg-red-50 p-4 text-red-800">{mediaKitError}</p>}
-      <button type="button" disabled={mediaKitPending} onClick={()=>void downloadMediaKit()} className="rounded-xl bg-accent px-4 py-2 font-semibold text-white disabled:opacity-50">{mediaKitPending?'Préparation…':'Télécharger mon media kit PDF'}</button>
+      {mediaKitError&&<p ref={mediaKitErrorRef} tabIndex={-1} role="alert" className="rounded-xl bg-red-50 p-4 text-red-800">{mediaKitError}</p>}
+      <p ref={mediaKitMessageRef} tabIndex={mediaKitMessage?-1:undefined} role="status" aria-live="polite" aria-atomic="true">
+        {mediaKitPending?'Préparation du PDF…':mediaKitMessage}
+      </p>
+      <div className="flex flex-wrap gap-3">
+        <button type="button" disabled={mediaKitPending} onClick={()=>void downloadMediaKit()} className="rounded-xl bg-accent px-4 py-2 font-semibold text-white disabled:opacity-50">{mediaKitPending?'Préparation…':'Télécharger mon media kit PDF'}</button>
+        {mediaKitPending&&<button type="button" onClick={cancelMediaKitDownload} className="rounded-xl border px-4 py-2">Annuler le téléchargement</button>}
+      </div>
     </section>
     <form onSubmit={event=>{event.preventDefault();setQuery(search);setPage(1);}} className="flex flex-wrap items-end gap-3" aria-label="Filtrer les collaborations">
       <div><label htmlFor="deal-search" className="block text-sm font-semibold">Rechercher une marque</label><input id="deal-search" type="search" maxLength={100} value={search} onChange={event=>setSearch(event.target.value)} className={inputClass}/></div>
