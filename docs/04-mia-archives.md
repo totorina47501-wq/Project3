@@ -8,6 +8,15 @@ Mia : page /dashboard/mia avec dialogues privés, historique, suppression,
 références juridiques consultées et contexte d'une vérification personnelle.
 Les réponses ne remplacent jamais un avis juridique.
 
+Mia Creator : page /dashboard/mia/creator pour débutants et Solo. Entrées
+niche, plateforme (Instagram/TikTok/YouTube), objectif, sujet et partenariat
+oui/non. Sortie structurée modifiable (accroches, script 30-60 s, légende, CTA)
+et étape SafePublish guidée vers le contrôle existant `/dashboard/check`
+(`rules_only` prérempli), sans nouveau moteur juridique ni second score.
+La route `POST /api/mia/creator` applique auth, same-origin, rate limit, quota
+`mia`, fail-closed (`OPENAI_PAUSED`, clé absente, quota atteint) et journalise
+uniquement des métriques minimisées.
+
 RAG documentaire v1 : cinq synthèses du seed, classement lexical côté serveur.
 Les références affichées sont filtrées sur Legifrance et economie.gouv.fr.
 **Vérification Supabase du 4 novembre 2026 : 0/5 embeddings.** Colonne vector(1536), index HNSW et fonction match_law_documents déjà présents et réutilisés. Le mode hybride ne sera actif qu'après indexation complète et autorisation explicite.

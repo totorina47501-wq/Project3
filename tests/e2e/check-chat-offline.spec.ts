@@ -227,3 +227,44 @@ test('une suggestion Mia remplit le brouillon et redonne le focus au champ', asy
   await page.getByRole('button', { name: 'Nouvelle discussion' }).click();
   await expect(page.getByLabel('Ta question')).toHaveValue('');
 });
+
+test('Mia Creator mobile génère un brouillon puis transfère vers SafePublish existant', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 780 });
+  await page.route('**/api/mia/creator', async (route) => {
+    await route.fulfill({
+      json: {
+        hooks: ['Hook 1', 'Hook 2', 'Hook 3'],
+        script: { durationSeconds: 45, lines: ['L1', 'L2', 'L3', 'L4'] },
+        caption: 'Publicité — Test produit en conditions réelles.',
+        cta: 'Dis-moi si tu veux le comparatif.',
+        manualPlatformChecks: ['r1', 'r2', 'r3'],
+        safePublish: {
+          supportedRules: [{ code: 'R1', label: 'Mention commerciale absente', detail: 'x' }],
+          precheckViolations: [{ code: 'R1', severity: 'critical', title: 'Mention commerciale absente', explanation: 'x', source: 'x' }],
+          omissions: ['Partenariat déclaré: la mention commerciale doit rester explicite et visible avant publication.'],
+          limits: ['Generation de texte != verification juridique != garantie de conformite.'],
+        },
+        disclaimer: 'Generation de texte != verification juridique != garantie de conformite.',
+      },
+    });
+  });
+
+  await page.goto('/dashboard');
+  await page.getByRole('button', { name: 'Menu' }).click();
+  await page.getByRole('navigation', { name: 'Navigation secondaire' })
+    .getByRole('link', { name: 'Mia Creator' }).click();
+  await expect(page).toHaveURL(/\/dashboard\/mia\/creator/);
+
+  await page.getByLabel('Ta niche').fill('sport maison');
+  await page.getByLabel('Plateforme').selectOption('tiktok');
+  await page.getByLabel('Objectif').selectOption('conversion');
+  await page.getByLabel('Sujet de la publication').fill('routine du matin');
+  await page.getByRole('radio', { name: 'Oui' }).check();
+  await page.getByRole('button', { name: 'Générer mon brouillon avec Mia Creator' }).click();
+
+  await expect(page.getByRole('heading', { name: 'SafePublish', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Ouvrir Check ma publication (SafePublish)' }).click();
+  await expect(page).toHaveURL(/\/dashboard\/check\?/);
+  await expect(page.getByLabel('Plateforme')).toHaveValue('tiktok');
+  await expect(page.getByLabel('Légende sponsorisée')).toHaveValue('Publicité — Test produit en conditions réelles.');
+});
