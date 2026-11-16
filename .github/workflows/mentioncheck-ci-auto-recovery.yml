@@ -26,13 +26,15 @@ jobs:
         uses: actions/github-script@v7
         env:
           HAS_COPILOT_TOKEN: ${{ (secrets.COPILOT_DISPATCH_TOKEN != '' || secrets.GH_AW_AGENT_TOKEN != '') && 'true' || 'false' }}
+          COPILOT_REPAIR_TOKEN: ${{ secrets.COPILOT_DISPATCH_TOKEN || secrets.GH_AW_AGENT_TOKEN }}
         with:
-          github-token: ${{ secrets.COPILOT_DISPATCH_TOKEN || secrets.GH_AW_AGENT_TOKEN || github.token }}
+          github-token: ${{ github.token }}
           script: |
             const owner=context.repo.owner, repo=context.repo.repo;
             if (owner!=='totorina47501-wq' || repo!=='Project3' || context.ref!=='refs/heads/main') throw Error('Untrusted recovery context');
             const source=context.payload.workflow_run;
-            if (context.eventName==='workflow_run' && (source?.name!=='MentionCheck CI' || !['action_required','failure','timed_out'].includes(source.conclusion))) return;
+            const mainRecovery=source?.name==='MentionCheck CI' && source.conclusion==='success' && source.head_branch==='main' && ['push','workflow_dispatch'].includes(source.event);
+            if (context.eventName==='workflow_run' && (source?.name!=='MentionCheck CI' || (!mainRecovery && !['action_required','failure','timed_out'].includes(source.conclusion)))) return;
             const blockedLabels=new Set(['release:evidence-required','security:manual','do-not-merge','legal:blocked','billing:blocked']);
             const activeAgentLabels=new Set(['agent:codex','agent:approved']);
             const runsFor=async branch=>github.paginate(github.rest.actions.listWorkflowRunsForRepo,{owner,repo,branch,per_page:100});
@@ -42,7 +44,7 @@ jobs:
               if(recovered+requested>=2)break; // Never launch unbounded parallel repairs.
               if(pr.base?.ref!=='main' || pr.head?.repo?.full_name!==owner+'/'+repo ||
                  !/^(?:codex|copilot)\//.test(pr.head?.ref||''))continue;
-              if(source && pr.head.sha!==source.head_sha)continue;
+              if(source && !mainRecovery && pr.head.sha!==source.head_sha)continue;
               if((pr.labels||[]).some(l=>blockedLabels.has(l.name)) ||
                  /EN PAUSE|PAUSED|BLOCKED/i.test(pr.title))continue;
               const issueMatch=String(pr.body||'').match(/-\s*(?:Refs?|Fix(?:es|ed)?|Clos(?:e|es|ed))\s+#(\d+)\s*$/i);
@@ -107,7 +109,17 @@ jobs:
                 'ne déploie pas et ne fusionne pas avant CI verte sur le SHA final. '+
                 'Si la cause exige une permission ou un fournisseur externe, signale BLOCKED au lieu de contourner la protection.\n'+
                 '**Maximum deux demandes auto par PR ; aucune revue Copilot automatique.**';
-              await github.rest.issues.createComment({owner,repo,issue_number:pr.number,body:comment});
+              const response=await fetch('https://api.github.com/repos/'+owner+'/'+repo+'/issues/'+pr.number+'/comments',{
+                method:'POST',
+                headers:{
+                  'Authorization':'Bearer '+process.env.COPILOT_REPAIR_TOKEN,
+                  'Accept':'application/vnd.github+json',
+                  'X-GitHub-Api-Version':'2022-11-28'
+                },
+                body:JSON.stringify({body:comment}),
+                signal:AbortSignal.timeout(15000)
+              });
+              if(!response.ok)throw Error('Approved Copilot repair token could not post a PR comment (HTTP '+response.status+').');
               requested++;
               core.notice('Asked Copilot once to fix actual CI failure on PR #'+pr.number+'; head '+pr.head.sha);
             }

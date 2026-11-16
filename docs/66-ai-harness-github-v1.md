@@ -21,3 +21,13 @@ Une CI verte n'est pas un certificat de conformité. Les workflows de fusion exi
 **Restent fermés :** CGV, société, médiateur, facturation/Stripe Live, changements de permissions/Auth/RLS, migrations, activation IA payante et publication d'applications stores. Un script automatique ne peut pas inventer les documents ou autorisations externes ; aucun test local ne les débloque. Ne pas supprimer ces garde-fous pour obtenir un faux full-auto.
 
 Réutiliser `docs/work-registry.json`, `REPRISE.md` et les issues existantes pour la traçabilité. Tout déblocage de production doit se faire sans contourner les protections GitHub et avec vérification de déploiement réelle.
+
+## Contrôle automatique de livraison technique
+
+Le workflow `mentioncheck-production-release-evidence.yml` vérifie en lecture seule, sur le **SHA exact** de `main`, la CI avec ses deux jobs réussis, le check `Workers Builds: mentioncheck` réussi et le chargement HTTPS des pages publiques `/` et `/login`. Il s'exécute après CI `main` (ou au planning), sans ouvrir Stripe, envoyer de données, appeler l'IA, déployer, modifier Cloudflare ni déclencher des paiements. Le CI/build succès ne prouve pas l'identité SHA du Worker actif : **l'attestation exacte de déploiement reste distincte** et nécessite les métadonnées de version Cloudflare ou une sonde SHA signée. En cas d'échec, le job échoue fermé ; pas d'auto-rollback aveugle sur la production.
+
+**Réveil immédiat supplémentaire** : une CI verte de `main` (push ou workflow_dispatch) déclenche aussi l'inventaire des PR agents bloquées, sans attendre le cron. Maximum deux récupérations par run et aucune réouverture d'une CI réelle déjà KO autrement que par les règles de retry/agent ci-dessus.
+
+**Contrôle anti-fausse-preuve Cloudflare :** les checks `Workers Builds: mentioncheck` qui correspondent à des URLs `/production/previews/<branche>/builds/...` sont rejetés, même s'ils sont attachés par GitHub au même SHA que `main`. Seul le check de **production du Worker `mentioncheck`** dont l'URL contient exactement `/workers/services/view/mentioncheck/production/builds/` (compte Cloudflare attendu, HTTPS) est admissible. Un build de `mentioncheck-media-retention` n'est jamais compté pour `mentioncheck`.
+
+**Deux jetons, deux droits distincts :** la récupération des CI utilise exclusivement le `GITHUB_TOKEN` du workflow GitHub (acteur `github-actions[bot]` attendu par le contrôleur d'auto-merge Codex). Le commentaire `@copilot` de correction utilise seulement le PAT existant `COPILOT_DISPATCH_TOKEN` ou `GH_AW_AGENT_TOKEN` depuis le contexte `main` de confiance et ne l'affiche jamais. Ce découplage évite que le fallback CI soit attribué à l'utilisateur PAT et refusé par le garde-fou SHA/acteur du merge sécurisé.

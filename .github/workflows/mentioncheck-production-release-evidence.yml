@@ -1,0 +1,92 @@
+name: MentionCheck production release evidence
+# Read-only: verify native Cloudflare Workers Builds and public HTTP after green main CI.
+on:
+  workflow_run:
+    workflows: ["MentionCheck CI"]
+    types: [completed]
+  schedule:
+    - cron: '11 */4 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+  checks: read
+concurrency:
+  group: mentioncheck-release-evidence
+  cancel-in-progress: false
+jobs:
+  attest:
+    if: >-
+      github.repository == 'totorina47501-wq/Project3' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       (github.event.workflow_run.event == 'push' ||
+        github.event.workflow_run.event == 'workflow_dispatch')))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Verify exact main CI and native Cloudflare build
+        id: attest
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner=context.repo.owner,repo=context.repo.repo;
+            if(owner!=='totorina47501-wq'||repo!=='Project3'||context.ref!=='refs/heads/main')throw Error('Untrusted release evidence context');
+            const source=context.payload.workflow_run;
+            const current=(await github.rest.repos.getBranch({owner,repo,branch:'main'})).data.commit.sha;
+            if(source && (source.head_sha!==current || source.head_branch!=='main' ||
+              !['push','workflow_dispatch'].includes(source.event) || source.conclusion!=='success')){
+              core.notice('Ignoring stale or non-main CI; no release attestation.');
+              return;
+            }
+            const workflows=await github.paginate(github.rest.actions.listWorkflowRunsForRepo,{owner,repo,branch:'main',per_page:100});
+            const ci=workflows.filter(r=>r.name==='MentionCheck CI' && r.head_sha===current &&
+              ['push','workflow_dispatch'].includes(r.event) && r.conclusion==='success' && r.status==='completed')
+              .sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at))[0];
+            if(!ci){core.setFailed('No successful main CI on the exact current SHA '+current);return;}
+            const jobs=await github.paginate(github.rest.actions.listJobsForWorkflowRun,
+              {owner,repo,run_id:ci.id,filter:'latest',per_page:100});
+            if(!['quality','Image du runner média (sans fournisseur)'].every(name=>
+              jobs.some(j=>j.name===name && j.conclusion==='success'))){
+              core.setFailed('Both quality and media jobs must pass on the exact main SHA');return;
+            }
+            let workers=null;
+            for(let attempt=0;attempt<8;attempt++){
+              const result=await github.rest.checks.listForRef({owner,repo,ref:current,per_page:100});
+              const builds=(result.data.check_runs||[]).filter(c=>{
+                if(c.name!=='Workers Builds: mentioncheck'||!c.details_url)return false;
+                try{
+                  const link=new URL(c.details_url);
+                  return link.hostname==='dash.cloudflare.com' &&
+                    link.protocol==='https:' &&
+                    link.pathname.startsWith('/f9b14d5d93b1fe8ef3982d3ddb87131d/workers/services/view/mentioncheck/production/builds/') &&
+                    !link.pathname.includes('/previews/');
+                }catch{return false;}
+              })
+                .sort((a,b)=>Date.parse(b.started_at||b.created_at)-Date.parse(a.started_at||a.created_at));
+              workers=builds[0];
+              if(workers && workers.status==='completed')break;
+              await new Promise(resolve=>setTimeout(resolve,10000));
+            }
+            if(!workers || workers.conclusion!=='success'){
+              core.setFailed('Cloudflare Workers Build for the exact main SHA is absent or not successful. No production proof.');return;
+            }
+            core.setOutput('sha',current);
+            core.notice('Main CI + Cloudflare Workers Build succeeded on '+current);
+            core.summary.addHeading('MentionCheck — preuve de release technique');
+            core.summary.addRaw('Main exact SHA: '+current+'; CI: '+ci.html_url+'; Workers Build: '+(workers.html_url||'provider check success')+'.');
+            core.summary.addRaw('A green build does not by itself prove the exact Worker deployment is active; public HTTP smoke follows.');
+      - name: Public HTTPS smoke; no secrets or user data
+        if: steps.attest.outputs.sha != ''
+        env:
+          EXPECTED_SHA: ${{ steps.attest.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in / /login; do
+            curl --fail --location --silent --show-error --retry 3 --retry-delay 2 --max-time 25               --proto '=https' --proto-redir '=https' "https://mentioncheck.app$path" --output /dev/null
+          done
+          echo "PUBLIC_HTTP_SMOKE_OK; expected main commit: $EXPECTED_SHA"
+          echo "HTTP success does NOT prove exact version of active Cloudflare deployment." >> "$GITHUB_STEP_SUMMARY"
